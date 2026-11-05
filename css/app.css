@@ -1,0 +1,140 @@
+/* JA Scoring System — scorer + admin styles. Colours come from theme.css. */
+@import url("theme.css");
+
+:root{
+  --sport:#B3162D;
+  /* aliases used by the page scripts */
+  --panel:var(--card); --panel2:var(--bg2); --text:var(--ink); --muted:var(--mute);
+  --a:#2B5DA8; --b:var(--acc); --r:16px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--acc)} a > button{color:var(--ink)}
+button{cursor:pointer;border:1px solid var(--line);border-radius:11px;background:var(--card);color:var(--ink);padding:10px 14px;font-weight:600;transition:background .15s,border-color .15s,transform .05s}
+button:hover:not(:disabled){border-color:color-mix(in srgb,var(--acc) 35%,var(--line))}
+button:active:not(:disabled){transform:translateY(1px)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.primary{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+button.primary:hover:not(:disabled){filter:brightness(1.06)}
+button.ghost{background:transparent}
+button.danger{background:color-mix(in srgb,var(--bad) 12%,var(--card));border-color:color-mix(in srgb,var(--bad) 35%,var(--line));color:var(--bad)}
+button.small{padding:6px 11px;font-size:13px;border-radius:9px}
+input,select,textarea{background:var(--field);border:1px solid var(--line);border-radius:11px;padding:11px 12px;width:100%;color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:2px solid color-mix(in srgb,var(--acc) 60%,transparent);outline-offset:1px;border-color:transparent}
+textarea{min-height:110px;resize:vertical}
+label{display:block;font-size:11px;font-weight:600;color:var(--mute);margin:12px 0 5px;text-transform:uppercase;letter-spacing:.08em}
+.muted{color:var(--mute)} .hide{display:none!important}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin:14px 0;box-shadow:var(--shadow)}
+.card h3{margin:0 0 8px;font-size:16px;font-weight:700}
+
+/* ---------- header ---------- */
+header.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:10px 20px;min-height:64px;
+  background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);box-shadow:inset 0 -3px 0 var(--sport);color:var(--ink)}
+header.top .title{font-family:Rajdhani,Inter,sans-serif;font-weight:700;font-size:22px;letter-spacing:.06em;text-transform:uppercase;line-height:1.05;display:flex;align-items:center;gap:8px}
+header.top .title:before{content:"";width:10px;height:10px;border-radius:3px;background:var(--sport);flex:none}
+header.top .sub{font-size:12px;color:var(--mute)}
+header.top .sp{flex:1}
+header.top button.ghost{color:var(--ink)!important;border-color:var(--line)!important}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--bad);flex:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--bad) 20%,transparent)}
+.dot.on{background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 20%,transparent)}
+main{max-width:1100px;margin:0 auto;padding:16px 20px 40px}
+
+.tabs{display:flex;gap:6px;margin:8px 0 4px;background:var(--bg2);border:1px solid var(--line);padding:4px;border-radius:14px;width:max-content;max-width:100%;overflow-x:auto}
+.tabs button{background:transparent;border:0;color:var(--mute);border-radius:10px}
+.tabs button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px #0002}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
+.chips button{padding:7px 14px;border-radius:999px;font-size:13px;background:var(--card);color:var(--mute)}
+.chips button.on{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+
+.group-title{margin:20px 0 8px;font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:.14em;font-weight:700}
+.mcard{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);
+  border-left:4px solid var(--line);border-radius:14px;padding:13px 15px;margin:8px 0;font-weight:400;box-shadow:var(--shadow)}
+.mcard.live{border-left-color:var(--live)} .mcard.done{opacity:.72}
+.mtop{display:flex;gap:10px;font-size:12px;color:var(--mute);flex-wrap:wrap}
+.mteams{display:grid;grid-template-columns:1fr auto;gap:3px 10px;margin-top:7px;font-size:17px;font-weight:600}
+.mteams b{font-variant-numeric:tabular-nums;font-weight:800}
+.badge{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--bg2);color:var(--ink);font-weight:700;border:1px solid var(--line)}
+.badge.live{background:var(--live);border-color:var(--live);color:#fff}
+.badge.lock{background:color-mix(in srgb,var(--warn) 18%,var(--card));border-color:color-mix(in srgb,var(--warn) 45%,var(--line));color:var(--warn)}
+.win{color:var(--gold);font-weight:800}
+
+/* ---------- scoring screen ---------- */
+.shead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.shead .info{flex:1;min-width:200px}
+.shead .info b{font-size:18px}
+.banner{border-radius:12px;padding:12px 14px;margin:10px 0;font-weight:600;border:1px solid}
+.banner.warn{background:color-mix(in srgb,var(--warn) 12%,var(--card));border-color:color-mix(in srgb,var(--warn) 35%,var(--line));color:var(--warn)}
+.banner.ok{background:color-mix(in srgb,var(--ok) 12%,var(--card));border-color:color-mix(in srgb,var(--ok) 35%,var(--line));color:var(--ok)}
+.banner.bad{background:color-mix(in srgb,var(--bad) 12%,var(--card));border-color:color-mix(in srgb,var(--bad) 35%,var(--line));color:var(--bad)}
+.court{display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px}
+@media (orientation:landscape),(min-width:800px){.court{grid-template-columns:1fr 1fr}}
+.side{position:relative;border-radius:22px;padding:16px;min-height:34vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:4px;color:#fff;background:var(--bg2);border:3px solid transparent;
+  user-select:none;touch-action:manipulation;box-shadow:0 8px 24px #0000001f}
+.side.A{background:linear-gradient(160deg,#2F5FA6,#1A3766)} .side.B{background:linear-gradient(160deg,#B3162D,#6E0D1C)}
+.side.serving{border-color:var(--gold);box-shadow:0 0 0 4px color-mix(in srgb,var(--gold) 30%,transparent),0 8px 24px #0000001f}
+.side .sname{font-size:clamp(18px,4vw,28px);font-weight:800;text-align:center}
+.side .sscore{font-size:clamp(84px,22vw,180px);font-weight:900;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.side .ssmall{font-size:14px;opacity:.9}
+.side .stag{position:absolute;top:12px;right:14px;font-size:12px;font-weight:800;background:#fff;color:#111;border-radius:7px;padding:3px 9px}
+.side .sserve{position:absolute;top:12px;left:14px;font-size:12px;font-weight:800;color:#F5D58E}
+.side .hint{font-size:12px;opacity:.65}
+button.side{border-width:3px}
+button.side:active{transform:scale(.985)}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.controls button{flex:1;min-width:120px;padding:14px}
+.hist{margin-top:8px;color:var(--mute);font-variant-numeric:tabular-nums}
+.clock{font-size:clamp(48px,12vw,96px);font-weight:900;text-align:center;font-variant-numeric:tabular-nums;margin:8px 0 0;letter-spacing:-.02em}
+.clock.over{color:var(--bad)}
+.ptitle{text-align:center;font-weight:700;color:var(--mute)}
+.ptitle b{color:var(--acc)!important}
+.gbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.gbtns button{padding:18px;font-size:18px;border:0}
+.gbtns .ga{background:linear-gradient(160deg,#2F5FA6,#1A3766);color:#fff} .gbtns .gb{background:linear-gradient(160deg,#B3162D,#6E0D1C);color:#fff}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.keypad button{padding:18px;font-size:22px}
+.quick{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px}
+.quick button{padding:10px 0}
+.entry{font-size:40px;font-weight:900;text-align:center;background:var(--field);border:1px solid var(--line);border-radius:14px;padding:8px;margin-top:10px;min-height:64px}
+
+details.menu{position:relative}
+details.menu summary{list-style:none;cursor:pointer;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:10px 14px;font-weight:700}
+details.menu summary::-webkit-details-marker{display:none}
+details.menu .items{position:absolute;right:0;top:110%;z-index:30;background:var(--card);border:1px solid var(--line);
+  border-radius:14px;padding:6px;min-width:240px;display:flex;flex-direction:column;gap:4px;box-shadow:0 14px 40px #00000033}
+details.menu .items button{text-align:left;background:transparent;border:0}
+details.menu .items button:hover{background:var(--bg2)}
+
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:left}
+th{color:var(--mute);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+
+.login{max-width:420px;margin:8vh auto}
+.login h3{font-size:20px}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;transition:.2s;
+  background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:12px;font-weight:700;z-index:99;pointer-events:none;max-width:90vw;text-align:center;box-shadow:0 10px 30px #0004}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (max-width:640px){
+  header.top{padding:8px 14px;gap:9px;min-height:58px}
+  header.top .title{font-size:18px}
+  header.top .sub{display:none}
+  .logo-dragon{width:36px;height:36px}
+  .logo-org{display:none}
+  #who{display:none!important}
+  header.top button.small{padding:6px 9px;font-size:12px}
+  .themetog button{padding:5px 7px}
+  main{padding:12px 14px 30px}
+}
+@media (max-width:520px){.grid3{grid-template-columns:1fr 1fr}}
+
+/* team list (Setup) */
+table.teams td{vertical-align:middle}
+tr.tedit td{background:var(--acc-soft);border-radius:12px}
+.tegrid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px}
+.tegrid label{margin-top:0}
+@media (max-width:520px){.tegrid{grid-template-columns:1fr 1fr}.tegrid div:first-child{grid-column:1/-1}}

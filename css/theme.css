@@ -1,0 +1,48 @@
+/* =====================================================================
+   JA Scoring System — theme (Scheme A · Crimson & Silver)
+   Shared by every page. Light + dark mode via <html data-theme="...">
+   (set by js/theme.js). Change colours here only.
+   ===================================================================== */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Rajdhani:wght@600;700&display=swap");
+
+:root,
+:root[data-theme="light"]{
+  --bg:#F6F4F2; --bg2:#EEEAE6; --card:#FFFFFF; --field:#FBFAF9; --line:#E4DFDA;
+  --ink:#1E2024; --mute:#6E7178;
+  --acc:#B3162D; --acc-ink:#FFFFFF; --acc-soft:#B3162D14;
+  --acc2:#8A9099; --gold:#B8925A; --live:#D92D3F;
+  --ok:#1E9E5A; --warn:#B7791F; --bad:#C53030;
+  --hero:linear-gradient(120deg,#B3162D,#7E0F21);
+  --shadow:0 1px 2px #0000000d, 0 4px 14px #00000008;
+  color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --bg:#1C1E24; --bg2:#16181D; --card:#262931; --field:#1F2229; --line:#343844;
+  --ink:#ECEDEF; --mute:#9A9FAA;
+  --acc:#E0364F; --acc-ink:#FFFFFF; --acc-soft:#E0364F1F;
+  --acc2:#B8BEC7; --gold:#D2AC70; --live:#FF4D63;
+  --ok:#3DD68C; --warn:#F2B544; --bad:#FF6B7A;
+  --hero:linear-gradient(120deg,#8E1325,#4C0B16);
+  --shadow:0 1px 2px #0000004d;
+  color-scheme:dark;
+}
+html,body{background:var(--bg);color:var(--ink);transition:background-color .25s,color .25s}
+.font-display{font-family:Rajdhani,Inter,system-ui,sans-serif}
+
+/* ---------- brand header pieces ---------- */
+.logo-dragon{width:42px;height:42px;border-radius:50%;object-fit:cover;flex:none;box-shadow:0 0 0 2px var(--card),0 2px 8px #0003}
+.logo-org{height:24px;width:auto;flex:none;display:block}
+
+/* ---------- light/dark toggle ---------- */
+.themetog{display:inline-flex;background:var(--bg2);border:1px solid var(--line);border-radius:999px;padding:3px;flex:none}
+.themetog button{border:0;background:none;color:var(--mute);font:600 14px/1 Inter,system-ui,sans-serif;padding:6px 9px;border-radius:999px;cursor:pointer;min-width:0}
+.themetog button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px #0002}
+
+/* ---------- "Powered by" footer ---------- */
+.jafoot{display:flex;align-items:center;justify-content:center;gap:10px;color:var(--mute);font:600 11px/1 Inter,system-ui,sans-serif;letter-spacing:2px;text-transform:uppercase;padding:28px 16px 34px}
+.jamark{width:30px;height:18px;background:currentColor;-webkit-mask:url(../img/ja.png) center/contain no-repeat;mask:url(../img/ja.png) center/contain no-repeat;flex:none}
+
+/* live pulse dot */
+.pulse{display:inline-flex;align-items:center;gap:6px;color:var(--live);font-weight:800;font-size:11px;letter-spacing:1px}
+.pulse:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--live);animation:japulse 1.6s infinite}
+@keyframes japulse{0%{box-shadow:0 0 0 0 var(--live)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}

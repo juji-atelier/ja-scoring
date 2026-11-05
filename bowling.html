@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Bowling · HQ Games 2026 — Live Scores</title>
+<link rel="icon" type="image/png" sizes="48x48" href="img/favicon-48.png">
+<link rel="icon" type="image/png" sizes="192x192" href="img/icon-192.png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<meta name="description" content="Live tenpin bowling standings — teams, men, women and high game.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="HQ Games 2026">
+<meta property="og:title" content="HQ Games 2026 · Tenpin Bowling Live">
+<meta property="og:description" content="Live tenpin bowling standings — teams, men, women and high game.">
+<meta property="og:image" content="https://juji-atelier.github.io/ja-scoring/img/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<!--
+  JA SCORING SYSTEM — TENPIN BOWLING
+  One file, three screens (choose with ?v= in the link):
+    bowling.html?v=board     -> public page for spectators (QR)       [default]
+    bowling.html?v=scorer    -> AJK enters scores (needs password)
+    bowling.html?v=overlay   -> OBS browser source 1920x1080, transparent
+       extra: &show=team|men|women|high  (fix one table, no rotation)
+              &side=left|right            (panel position, default right)
+
+  SETUP: already connected to Firebase project "JA Scoring System".
+  Scorer PIN is SCORER_PIN below (same idea as the badminton demo).
+  Set FIREBASE_CONFIG = null to run in TEST MODE (saves in this browser only).
+-->
+<script>
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAGIMpCdDe9WQJEc4aLaJQTvfcEYKyFXXI",
+  authDomain: "ja-scoring-system.firebaseapp.com",
+  databaseURL: "https://ja-scoring-system-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "ja-scoring-system",
+  storageBucket: "ja-scoring-system.firebasestorage.app",
+  messagingSenderId: "674691787189",
+  appId: "1:674691787189:web:7d01dbba44e95c578751fc"
+};
+const SCORER_PIN = "2026";   // give this to the bowling committee
+const USE_LOGIN = true;      // true = use Firebase email/password login instead of PIN (for later, with proper rules)
+const SCORER_EMAIL = "bowling@ja-scoring.app"; // only used when USE_LOGIN = true
+const DB_ROOT = "bowling2026";
+const GAMES = 5;
+const POLL_MS = 10000;   // public board refresh (ms)
+const DEFAULT_TITLE = "SESB (HQ) Closed Tenpin Bowling Championship 2026";
+const ROSTER = [{"id":"b01","n":"Nas Norniza","t":"NGEKET","g":"P"},{"id":"b02","n":"Presley Kimsang","t":"NGEKET","g":"L"},{"id":"b03","n":"Sili Landah @ Roslee","t":"NGEKET","g":"L"},{"id":"b04","n":"Ismail Mijan","t":"NGEKET","g":"L"},{"id":"b05","n":"Masmujahidah binti Masrin","t":"DRAGGIES HQ","g":"P"},{"id":"b06","n":"Wan Nazirah binti Wan Shah Jaman","t":"DRAGGIES HQ","g":"P"},{"id":"b07","n":"Elfiraroza binti Basri","t":"DRAGGIES HQ","g":"P"},{"id":"b08","n":"Frederick Assin","t":"DRAGGIES HQ","g":"L"},{"id":"b09","n":"Nur Fatihah Azhan binti Borhan","t":"LEGACY","g":"P"},{"id":"b10","n":"Siti Nurfaizah binti Muhammad Azrie","t":"LEGACY","g":"P"},{"id":"b11","n":"Roziana binti Lambang","t":"LEGACY","g":"P"},{"id":"b12","n":"Muhd Saharudin Sainuddin","t":"LEGACY","g":"L"},{"id":"b13","n":"Muhammad Syahrizan bin Iskandar","t":"JR TEAM","g":"L"},{"id":"b14","n":"S. Yasser bin S. Abdul Wahid","t":"JR TEAM","g":"L"},{"id":"b15","n":"Tahar bin Talib","t":"JR TEAM","g":"L"},{"id":"b16","n":"Cherry Carol Robert Meisin","t":"JR TEAM","g":"P"},{"id":"b17","n":"Mohd Nazrin bin Ramdin","t":"LEPA LEPA","g":"L"},{"id":"b18","n":"Ben Lee","t":"LEPA LEPA","g":"L"},{"id":"b19","n":"Merryana binti Kinti","t":"LEPA LEPA","g":"P"},{"id":"b20","n":"Masri bin Lamsun","t":"LEPA LEPA","g":"L"},{"id":"b21","n":"Rafia binti Pelin @ Pilin","t":"PANGAYAU","g":"P"},{"id":"b22","n":"Syed Suffian bin Syed Hassan","t":"PANGAYAU","g":"L"},{"id":"b23","n":"Masri bin Mayasin","t":"PANGAYAU","g":"L"},{"id":"b24","n":"Mohammad Ikhwan bin Kuslan","t":"PANGAYAU","g":"L"},{"id":"b25","n":"Mohd Zulhilmi","t":"NBR","g":"L"},{"id":"b26","n":"Asidah Hussin","t":"NBR","g":"P"},{"id":"b27","n":"Nurazleen Mohamad","t":"NBR","g":"P"},{"id":"b28","n":"Amanda Azmira","t":"NBR","g":"P"},{"id":"b29","n":"Smith Robert","t":"KAYH ESHH ARGHHH","g":"L"},{"id":"b30","n":"Desiree Dessy Maidi","t":"KAYH ESHH ARGHHH","g":"P"},{"id":"b31","n":"Roslee bin Ismail","t":"KAYH ESHH ARGHHH","g":"L"},{"id":"b32","n":"Mohd Badrul Kamal bin Yassin","t":"KAYH ESHH ARGHHH","g":"L"},{"id":"b33","n":"Mohammad Norhazman bin Osman","t":"ELITE LADIES TEAM","g":"L"},{"id":"b34","n":"Surianih Awang Daud","t":"ELITE LADIES TEAM","g":"P"},{"id":"b35","n":"Sazleena binti Resnin","t":"ELITE LADIES TEAM","g":"P"},{"id":"b36","n":"Dayangku Noor Jehan Awang Othman","t":"ELITE LADIES TEAM","g":"P"},{"id":"b37","n":"Khairul Anwar bin Azalan","t":"KILAR","g":"L"},{"id":"b38","n":"Jasri bin Jamateh","t":"KILAR","g":"L"},{"id":"b39","n":"Tahir bin Md Japar","t":"KILAR","g":"L"},{"id":"b40","n":"Norasidah binti Musaat","t":"KILAR","g":"P"},{"id":"b41","n":"Zamri bin Assah","t":"SIMPLE BOWLER TEAM","g":"L"},{"id":"b42","n":"Mohd Faisal bin Jufri","t":"SIMPLE BOWLER TEAM","g":"L"},{"id":"b43","n":"Ridzuan bin Shukri","t":"SIMPLE BOWLER TEAM","g":"L"},{"id":"b44","n":"Debbie Kong","t":"SIMPLE BOWLER TEAM","g":"P"}];
+</script>
+<link rel="stylesheet" href="css/theme.css">
+<script src="js/theme.js"></script>
+<style>
+:root{--silver:#A7AEB8;--bronze:#B07A4A;--f:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:var(--f);-webkit-font-smoothing:antialiased}
+.num{font-variant-numeric:tabular-nums}
+button{font:inherit;cursor:pointer}
+.hide{display:none!important}
+
+/* ---------- brand header ---------- */
+.bh{position:sticky;top:0;z-index:6;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.bh .in{max-width:860px;margin:0 auto;padding:0 18px;display:flex;align-items:center;gap:12px;height:66px}
+.bh .brand b{display:block;font-family:Rajdhani,Inter;font-size:22px;letter-spacing:1.4px;line-height:1;text-transform:uppercase;white-space:nowrap}
+.bh .brand small{color:var(--mute);font-size:12px}
+.bh .sp{flex:1}
+.wrap{max-width:860px;margin:0 auto;padding:0 18px 10px}
+.hero{background:var(--hero);color:#fff;border-radius:22px;margin:18px 0 14px;padding:22px 26px;position:relative;overflow:hidden}
+.hero:after{content:"";position:absolute;right:-70px;top:-90px;width:320px;height:320px;border-radius:50%;background:radial-gradient(#ffffff26,transparent 65%);pointer-events:none}
+.hero h1{margin:0;font-family:Rajdhani,Inter;font-size:30px;letter-spacing:.6px;line-height:1.05;text-transform:uppercase;position:relative}
+.hero .sub{display:flex;gap:8px;align-items:center;font-size:13px;margin-top:8px;opacity:.9;flex-wrap:wrap;position:relative}
+.hero .sub a{color:#fff}
+.dot{width:8px;height:8px;border-radius:50%;background:#ffffff80;display:inline-block}
+.dot.on{background:#3DD68C;box-shadow:0 0 0 3px #3dd68c40}
+.dot.off{background:#FF6B7A}
+.pill{background:#ffffff26;border-radius:99px;padding:2px 9px;font-size:11px;font-weight:700;letter-spacing:.5px}
+
+/* tabs (phone) */
+.tabs{display:flex;gap:4px;margin:4px 0 12px;background:var(--bg2);border:1px solid var(--line);padding:4px;border-radius:14px;overflow-x:auto;scrollbar-width:none}
+.tabs button{flex:1 0 auto;background:none;border:0;color:var(--mute);padding:9px 12px;border-radius:10px;font-size:13px;font-weight:600}
+.tabs button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px #0002}
+
+/* ---------- board rows ---------- */
+.list{display:flex;flex-direction:column;gap:8px}
+.row{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px;display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:center;box-shadow:var(--shadow)}
+.row .rk{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-weight:800;background:var(--bg2);color:var(--mute);font-size:13px}
+.row.r1 .rk{background:var(--gold);color:#fff}.row.r2 .rk{background:var(--silver);color:#fff}.row.r3 .rk{background:var(--bronze);color:#fff}
+.row .nm{font-weight:700;font-size:15px;line-height:1.2;overflow:hidden;text-overflow:ellipsis}
+.row .meta{color:var(--mute);font-size:12px;margin-top:3px;display:flex;gap:8px;flex-wrap:wrap}
+.row .tot{text-align:right}
+.row .tot b{display:block;font-size:21px;font-weight:800}
+.row.r1 .tot b{color:var(--acc)}
+.row .tot small{color:var(--mute);font-size:10px;font-weight:600;letter-spacing:.6px;text-transform:uppercase}
+.games{display:flex;gap:4px;margin-top:7px;flex-wrap:wrap}
+.games span{background:var(--bg2);border:1px solid var(--line);border-radius:7px;padding:1px 6px;font-size:12px;min-width:34px;text-align:center}
+.games span.e{color:color-mix(in srgb,var(--mute) 55%,transparent)}
+.row.click{cursor:pointer}
+.row.click:hover{border-color:color-mix(in srgb,var(--acc) 35%,var(--line))}
+.members{grid-column:1/-1;border-top:1px dashed var(--line);margin-top:6px;padding-top:10px;display:flex;flex-direction:column;gap:8px}
+.mem{display:grid;grid-template-columns:1fr auto;gap:8px;font-size:13px;align-items:start}
+.tg{font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;margin-left:6px;vertical-align:1px}
+.tg.L{background:#2F5FA622;color:#3E77C9}.tg.P{background:var(--acc-soft);color:var(--acc)}
+.empty{color:var(--mute);text-align:center;padding:30px 10px;font-size:14px}
+.note{color:var(--mute);font-size:12px;margin-top:14px;line-height:1.5}
+
+/* ---------- PC layout (public board, wide screens) ---------- */
+body.pc .tabs{display:none}
+body.pc .wrap,body.pc .bh .in{max-width:1800px}
+body.pc .hero h1{font-size:34px}
+.cols{display:grid;grid-template-columns:1.25fr 1fr 1fr .8fr;gap:18px;align-items:start}
+.col{min-width:0}
+.col h2{margin:2px 2px 10px;font-size:12px;letter-spacing:1.6px;text-transform:uppercase;color:var(--mute);font-weight:700}
+.col .list{max-height:calc(100vh - 300px);overflow-y:auto;padding:2px 4px 4px 2px}
+@media (max-width:1400px){.cols{grid-template-columns:1fr 1fr}}
+
+/* ---------- scorer ---------- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.field label{font-size:11px;color:var(--mute);font-weight:600;text-transform:uppercase;letter-spacing:.08em}
+input,select{font:inherit;background:var(--field);color:var(--ink);border:1px solid var(--line);border-radius:11px;padding:11px 12px;font-size:16px;width:100%}
+input:focus,select:focus{outline:2px solid color-mix(in srgb,var(--acc) 60%,transparent);outline-offset:1px;border-color:transparent}
+.btn{background:var(--acc);color:var(--acc-ink);border:0;border-radius:11px;padding:12px 16px;font-weight:700;font-size:15px}
+.btn.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line);font-weight:600}
+.btn.small{padding:8px 12px;font-size:13px}
+.teamchips{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.teamchips button{background:var(--bg2);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:10px 12px;text-align:left;font-size:13px;font-weight:700}
+.teamchips button small{display:block;color:var(--mute);font-weight:500;margin-top:2px}
+.teamchips button.on{border-color:var(--acc);background:var(--acc-soft);box-shadow:inset 0 0 0 1px var(--acc)}
+.teamchips button.done small{color:var(--ok)}
+.sgrid{width:100%;border-collapse:separate;border-spacing:0 6px;table-layout:fixed}
+.sgrid col.c-n{width:30%}.sgrid col.c-t{width:13%}
+.sgrid th{font-size:11px;color:var(--mute);font-weight:600;text-align:center;padding:0 2px}
+.sgrid th:first-child{text-align:left}
+.sgrid td{padding:0 2px}
+.sgrid td.nm{font-size:13px;font-weight:700;line-height:1.2;padding-right:6px;overflow-wrap:anywhere}
+.sgrid td.nm small{display:block;color:var(--mute);font-weight:500;font-size:11px}
+.sgrid input{padding:10px 0;text-align:center;font-size:17px;font-weight:700;min-width:0}
+.sgrid input.saved{border-color:var(--ok);box-shadow:0 0 0 2px color-mix(in srgb,var(--ok) 30%,transparent)}
+.sgrid input.err{border-color:var(--bad);color:var(--bad)}
+.sgrid td.t{text-align:right;font-weight:800;font-size:16px;padding-left:4px}
+.sgrid tr.sum td{border-top:1px solid var(--line);padding-top:8px;font-weight:800;text-align:center;font-size:14px;color:var(--acc)}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:var(--bg);font-weight:700;padding:9px 16px;border-radius:99px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;box-shadow:0 8px 24px #0004}
+.toast.show{opacity:1}
+.toast.bad{background:var(--bad);color:#fff}
+.row2{display:flex;gap:8px;flex-wrap:wrap}
+@media (max-width:600px){.bh .in{height:60px;gap:8px;padding:0 14px}.bh .brand b{font-size:18px}.bh .brand small{display:none}.logo-org{height:16px}.logo-dragon{width:36px;height:36px}.wrap{padding:0 14px 10px}.hero{padding:20px}.hero h1{font-size:24px}}
+@media (max-width:420px){.sgrid input{font-size:15px;padding:9px 0;border-radius:8px}.sgrid td.nm{font-size:12px}.sgrid td.t{font-size:14px}.sgrid td{padding:0 1px}}
+
+/* ---------- OBS overlay (always dark) ---------- */
+html:has(body.ov){background:transparent}
+body.ov{background:transparent;overflow:hidden;width:1920px;height:1080px}
+.ovp{position:absolute;top:60px;right:60px;width:660px;font-family:var(--f)}
+.ovp.left{right:auto;left:60px}
+.ovh{background:linear-gradient(110deg,#B3162D,#6E0D1C);color:#fff;border-radius:20px 20px 0 0;padding:16px 22px;display:flex;align-items:center;gap:16px}
+.ovh img{width:58px;height:58px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 3px #ffffff33}
+.ovh .k{font-size:14px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;opacity:.8}
+.ovh .t{font-family:Rajdhani,Inter;font-size:34px;font-weight:700;letter-spacing:.5px;line-height:1.05;margin-top:2px;text-transform:uppercase}
+.ovb{background:rgba(28,30,36,.94);border-radius:0 0 20px 20px;padding:10px 12px 14px;backdrop-filter:blur(6px)}
+.ovr{display:grid;grid-template-columns:48px 1fr 110px;align-items:center;gap:12px;padding:9px 10px;border-bottom:1px solid #ffffff12;font-size:24px;color:#fff;animation:inr .5s both}
+.ovr:last-child{border-bottom:0}
+.ovr .rk{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-weight:900;background:#ffffff14}
+.ovr.r1 .rk{background:#D2AC70;color:#fff}.ovr.r2 .rk{background:#A7AEB8;color:#fff}.ovr.r3 .rk{background:#B07A4A;color:#fff}
+.ovr .nm{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ovr .nm small{display:block;font-size:16px;font-weight:600;color:#9A9FAA;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ovr .sc{text-align:right;font-weight:900;font-size:30px;color:#FF4D63}
+.ovf{display:flex;justify-content:space-between;align-items:center;color:#9A9FAA;font-size:15px;padding:8px 10px 0}
+.ovf .jamark{width:26px;height:16px;display:inline-block;vertical-align:-3px;margin-right:6px}
+@keyframes inr{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+<script>
+/* =================== helpers =================== */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const params = new URLSearchParams(location.search);
+const VIEW = (params.get("v") || location.hash.replace("#", "") || "board").toLowerCase();
+const WIDE = matchMedia("(min-width:1100px)");
+const TEAMS = [...new Set(ROSTER.map(p => p.t))];
+const G = Array.from({ length: GAMES }, (_, i) => i + 1);
+let toastT;
+function toast(msg, bad) { const t = $("#toast"); t.textContent = msg; t.className = "toast show" + (bad ? " bad" : ""); clearTimeout(toastT); toastT = setTimeout(() => t.className = "toast", 1600); }
+const fmtTime = ts => ts ? new Date(ts).toLocaleTimeString("en-MY", { hour: "2-digit", minute: "2-digit" }) : "—";
+
+/* =================== data store =================== */
+// state = { scores: { b01: { g1: 180, ... } }, settings: { hdcW, title }, updated }
+const Store = {
+  mode: FIREBASE_CONFIG ? "firebase" : "local",
+  state: { scores: {}, settings: { hdcW: 0, title: DEFAULT_TITLE }, updated: 0 },
+  listeners: [], online: null, user: null,
+  on(cb) { this.listeners.push(cb); cb(this.state); },
+  emit() { this.listeners.forEach(cb => cb(this.state)); },
+  merge(v) {
+    v = v || {};
+    this.state = { scores: v.scores || {}, settings: Object.assign({ hdcW: 0, title: DEFAULT_TITLE }, v.settings || {}), updated: v.updated || 0 };
+    this.emit();
+  },
+  init() {
+    if (this.mode === "firebase" && VIEW !== "scorer" && VIEW !== "overlay") {
+      // Public board: check for new scores every few seconds over plain HTTPS
+      // instead of a live connection, so spectators don't use up the free plan's
+      // ~100 connection limit (scorers + OBS keep their live connection).
+      const url = FIREBASE_CONFIG.databaseURL.replace(/\/$/, "") + "/" + DB_ROOT + ".json";
+      let timer = null, lastJSON = "";
+      const poll = async () => {
+        clearTimeout(timer);
+        if (document.hidden) return;                       // pause while the phone screen is off / tab hidden
+        try {
+          const r = await fetch(url, { cache: "no-store" });
+          if (!r.ok) throw new Error(r.status);
+          const txt = await r.text();
+          this.online = true;
+          if (txt !== lastJSON) { lastJSON = txt; this.merge(JSON.parse(txt)); } else this.emit();
+        } catch (e) { this.online = false; this.emit(); }
+        timer = setTimeout(poll, POLL_MS);
+      };
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
+      poll();
+      return;
+    }
+    if (this.mode === "firebase") {
+      this.app = firebase.initializeApp(FIREBASE_CONFIG, "ja-bowling"); // own login, separate from admin & other sports
+      this.db = this.app.database();
+      this.db.ref(DB_ROOT).on("value", s => this.merge(s.val()));
+      this.db.ref(".info/connected").on("value", s => { this.online = !!s.val(); this.emit(); });
+      if (USE_LOGIN) this.app.auth().onAuthStateChanged(u => { this.user = u; this.emit(); });
+      else { let ok = false; try { ok = sessionStorage.getItem("bowlPin") === SCORER_PIN; } catch (e) {} this.user = ok ? { email: "PIN" } : null; }
+    } else {
+      const load = () => { try { this.merge(JSON.parse(localStorage.getItem(DB_ROOT) || "{}")); } catch (e) { this.merge({}); } };
+      addEventListener("storage", e => { if (e.key === DB_ROOT) load(); });
+      this.online = true; this.user = { local: true }; load();
+    }
+  },
+  _localSave() { try { localStorage.setItem(DB_ROOT, JSON.stringify(this.state)); } catch (e) {} this.emit(); },
+  async setScore(id, g, val) {
+    const now = Date.now();
+    if (this.mode === "firebase") {
+      await this.db.ref().update({ [`${DB_ROOT}/scores/${id}/g${g}`]: val, [`${DB_ROOT}/updated`]: now });
+    } else {
+      const s = this.state.scores[id] = this.state.scores[id] || {};
+      if (val === null) delete s["g" + g]; else s["g" + g] = val;
+      this.state.updated = now; this._localSave();
+    }
+  },
+  async setSetting(k, v) {
+    if (this.mode === "firebase") await this.db.ref(`${DB_ROOT}/settings/${k}`).set(v);
+    else { this.state.settings[k] = v; this._localSave(); }
+  },
+  async replaceScores(scores) {
+    if (this.mode === "firebase") await this.db.ref(DB_ROOT).update({ scores, updated: Date.now() });
+    else { this.state.scores = scores; this.state.updated = Date.now(); this._localSave(); }
+  },
+  async login(pw) {
+    if (this.mode !== "firebase") return true;
+    if (!USE_LOGIN) {
+      if (pw.trim() !== SCORER_PIN) throw { code: "wrong PIN" };
+      try { sessionStorage.setItem("bowlPin", SCORER_PIN); } catch (e) {}
+      this.user = { email: "PIN" }; this.emit(); return true;
+    }
+    await this.app.auth().signInWithEmailAndPassword(SCORER_EMAIL, pw);
+    return true;
+  },
+  logout() {
+    if (this.mode !== "firebase") return;
+    if (USE_LOGIN) this.app.auth().signOut();
+    else { try { sessionStorage.removeItem("bowlPin"); } catch (e) {} this.user = null; this.emit(); }
+  }
+};
+
+/* =================== calculations =================== */
+function compute(state) {
+  const hdc = +state.settings.hdcW || 0;
+  const players = ROSTER.map(p => {
+    const sc = state.scores[p.id] || {};
+    const games = G.map(g => (typeof sc["g" + g] === "number" ? sc["g" + g] : null));
+    const played = games.filter(x => x !== null);
+    const scratch = played.reduce((a, b) => a + b, 0);
+    const h = p.g === "P" ? hdc * played.length : 0;
+    return { ...p, games, played: played.length, scratch, hdc: h, total: scratch + h,
+      avg: played.length ? scratch / played.length : 0, high: played.length ? Math.max(...played) : 0 };
+  });
+  const teams = TEAMS.map(t => {
+    const mem = players.filter(p => p.t === t);
+    const games = G.map((g, i) => { const v = mem.map(m => m.games[i]); return v.every(x => x === null) ? null : v.reduce((a, b) => a + (b || 0) + 0, 0) + mem.reduce((a, m) => a + (m.g === "P" && m.games[i] !== null ? hdc : 0), 0); });
+    const total = mem.reduce((a, m) => a + m.total, 0);
+    const done = mem.reduce((a, m) => a + m.played, 0);
+    return { t, mem, games, total, done, slots: mem.length * GAMES, high: Math.max(0, ...games.filter(x => x !== null)) };
+  });
+  // ranking: total desc, then best single game desc, then name
+  const byTot = (a, b) => b.total - a.total || b.high - a.high || (a.n || a.t).localeCompare(b.n || b.t);
+  teams.sort(byTot);
+  const men = players.filter(p => p.g === "L").sort(byTot);
+  const women = players.filter(p => p.g === "P").sort(byTot);
+  const highs = players.filter(p => p.played).sort((a, b) => b.high - a.high || b.total - a.total);
+  return { hdc, players, teams, men, women, highs, anyScore: players.some(p => p.played) };
+}
+function rankOf(list, i, key = "total") { // shared rank for exact ties (same total + same high)
+  let r = i; while (r > 0 && list[r - 1][key] === list[i][key] && list[r - 1].high === list[i].high) r--; return r + 1;
+}
+
+/* =================== PUBLIC BOARD =================== */
+function viewBoard() {
+  const app = $("#app");
+  let tab = "team", open = new Set();
+  try { tab = localStorage.getItem("bolTab") || "team"; } catch (e) {}
+  app.innerHTML = `
+    <header class="bh"><div class="in">
+      <img class="logo-dragon" src="img/dragon.jpg" alt="HQ Dragon">
+      <div class="brand"><b>HQ Games 2026</b><small>Tenpin Bowling · Live</small></div>
+      <div class="sp"></div>
+      <img class="logo-org" src="img/sesb.png" alt="Sabah Electricity">
+      <div data-theme-toggle></div>
+    </div></header>
+    <div class="wrap">
+      <section class="hero"><h1 id="ttl"></h1>
+        <div class="sub"><span class="dot" id="dot"></span><span id="st">Connecting…</span><span>·</span><span>Updated <b id="upd" class="num">—</b></span><span class="pill" id="mode"></span></div></section>
+      <div class="tabs" id="tabs">
+        <button data-t="team">Teams</button><button data-t="men">Men</button>
+        <button data-t="women">Women</button><button data-t="high">High Game</button>
+      </div>
+      <div class="list" id="list"></div><div class="note" id="note"></div></div>
+    <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>`;
+  let last;
+  const draw = () => {
+    const c = compute(last), s = last.settings;
+    $("#ttl").textContent = s.title || DEFAULT_TITLE;
+    $("#upd").textContent = fmtTime(last.updated);
+    $("#dot").className = "dot " + (Store.online ? "on" : "off");
+    $("#st").textContent = Store.online ? "Live" : "No connection";
+    $("#mode").textContent = Store.mode === "local" ? "TEST MODE" : `${GAMES} games`;
+    $("#mode").style.display = Store.mode === "local" ? "" : "none";
+    [...$("#tabs").children].forEach(b => b.classList.toggle("on", b.dataset.t === tab));
+    const L = $("#list");
+    const hdcTxt = c.hdc ? ` Women's handicap: +${c.hdc} pins per game (included in totals).` : "";
+    const wide = WIDE.matches;
+    document.body.classList.toggle("pc", wide);
+    if (!c.anyScore) { L.innerHTML = `<div class="empty">No scores yet. This page updates automatically.</div>`; $("#note").textContent = ""; return; }
+    const gamesHTML = arr => `<div class="games num">${arr.map((v, i) => `<span class="${v === null ? "e" : ""}">${v === null ? "G" + (i + 1) : v}</span>`).join("")}</div>`;
+    const section = k => {
+      if (k === "team") return c.teams.map((t, i) => { const r = rankOf(c.teams, i); return `
+        <div class="row click r${r}" data-team="${esc(t.t)}">
+          <div class="rk num">${r}</div>
+          <div><div class="nm">${esc(t.t)}</div><div class="meta"><span>${t.done}/${t.slots} games done</span>${t.high ? `<span>Best game ${t.high}</span>` : ""}</div>${gamesHTML(t.games)}</div>
+          <div class="tot num"><b>${t.total}</b><small>TPF</small></div>
+          ${open.has(t.t) ? `<div class="members">${t.mem.map(m => `<div class="mem"><div>${esc(m.n)}<span class="tg ${m.g}">${m.g === "P" ? "F" : "M"}</span>${gamesHTML(m.games)}</div><div class="num"><b>${m.total}</b></div></div>`).join("")}</div>` : ""}
+        </div>`; }).join("");
+      if (k === "high") return c.highs.slice(0, wide ? 10 : 20).map((p, i) => `
+        <div class="row r${i + 1}"><div class="rk num">${i + 1}</div>
+          <div><div class="nm">${esc(p.n)} <span class="tg ${p.g}">${p.g === "P" ? "F" : "M"}</span></div><div class="meta"><span>${esc(p.t)}</span></div></div>
+          <div class="tot num"><b>${p.high}</b><small>scratch</small></div></div>`).join("");
+      const list = c[k].filter(p => p.played);
+      return list.length ? list.map((p, i) => { const r = rankOf(list, i); return `
+        <div class="row r${r}"><div class="rk num">${r}</div>
+          <div><div class="nm">${esc(p.n)}</div><div class="meta"><span>${esc(p.t)}</span><span>Avg ${p.avg.toFixed(1)}</span>${p.hdc ? `<span>+${p.hdc} hdc</span>` : ""}</div>${gamesHTML(p.games)}</div>
+          <div class="tot num"><b>${p.total}</b><small>${p.played}/${GAMES} games</small></div></div>`; }).join("")
+        : `<div class="empty">No scores yet.</div>`;
+    };
+    if (wide) {
+      const H = { team: "Team Standings", men: "Men's Individual", women: "Women's Individual", high: "High Game" };
+      L.innerHTML = `<div class="cols">${["team", "men", "women", "high"].map(k => `<section class="col"><h2>${H[k]}</h2><div class="list">${section(k)}</div></section>`).join("")}</div>`;
+      $("#note").textContent = "Click a team to see each member's scores. Ties are broken by the highest single game. High Game is scratch (no handicap)." + hdcTxt;
+      return;
+    }
+    L.innerHTML = section(tab);
+    $("#note").textContent = tab === "team" ? "Tap a team to see each member's scores. Ties are broken by the highest team game." + hdcTxt
+      : tab === "high" ? "Highest single game (scratch, no handicap)." : "Ties are broken by the highest single game." + hdcTxt;
+  };
+  $("#tabs").onclick = e => { const b = e.target.closest("button"); if (!b) return; tab = b.dataset.t; try { localStorage.setItem("bolTab", tab); } catch (e) {} draw(); scrollTo({ top: 0 }); };
+  $("#list").onclick = e => { const r = e.target.closest("[data-team]"); if (!r) return; const t = r.dataset.team; open.has(t) ? open.delete(t) : open.add(t); draw(); };
+  WIDE.addEventListener("change", () => last && draw());
+  Store.on(s => { last = s; draw(); });
+}
+
+/* =================== SCORER =================== */
+function viewScorer() {
+  if (window.jaKeepAwake) jaKeepAwake();   // stop the phone sleeping during games
+  const app = $("#app");
+  let team = null, last = Store.state;
+  try { team = sessionStorage.getItem("bolTeam"); } catch (e) {}
+  app.innerHTML = `
+    <header class="bh"><div class="in">
+      <img class="logo-dragon" src="img/dragon.jpg" alt="HQ Dragon">
+      <div class="brand"><b>HQ Games 2026</b><small>Bowling · Score entry</small></div>
+      <div class="sp"></div>
+      <img class="logo-org" src="img/sesb.png" alt="Sabah Electricity">
+      <div data-theme-toggle></div>
+    </div></header>
+    <div class="wrap">
+      <section class="hero"><h1>Bowling score entry</h1>
+        <div class="sub"><span class="dot" id="dot"></span><span id="st"></span><span class="pill" id="mode"></span><span style="flex:1"></span><a href="?v=board" target="_blank">Open public board ↗</a></div></section>
+      <div id="login" class="card hide">
+        <div class="field"><label>${USE_LOGIN ? "Bowling committee password" : "Bowling committee PIN"}</label><input id="pw" type="password" autocomplete="off"></div>
+        <button class="btn" id="go" style="width:100%">Sign in</button>
+        <div class="note" id="lerr"></div>
+      </div>
+      <div id="main" class="hide">
+        <div class="card"><div style="font-size:12px;color:var(--mute);margin-bottom:8px">Choose a team</div><div class="teamchips" id="chips"></div></div>
+        <div class="card" id="grid"><div class="empty">Choose a team above to enter scores.</div></div>
+        <details class="card"><summary style="cursor:pointer;font-weight:700">Settings & export</summary>
+          <div style="margin-top:12px">
+            <div class="field"><label>Tournament title</label><input id="sTitle"></div>
+            <div class="field"><label>Women's handicap (pins per game, 0 = none)</label><input id="sHdc" type="number" inputmode="numeric" min="0" max="50"></div>
+            <div class="row2"><button class="btn small" id="save">Save settings</button><button class="btn ghost small" id="csv">Download results (CSV/Excel)</button>
+            <button class="btn ghost small" id="demo">Fill sample scores</button><button class="btn ghost small" id="wipe" style="color:var(--bad)">Delete all scores</button><button class="btn ghost small" id="out">Sign out</button></div>
+          </div></details>
+      </div>
+    </div>
+    <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>`;
+  const authed = () => !!Store.user;
+  const drawChips = c => {
+    $("#chips").innerHTML = c.teamsAlpha.map(t => `<button data-t="${esc(t.t)}" class="${t.t === team ? "on" : ""} ${t.done === t.slots ? "done" : ""}">${esc(t.t)}<small class="num">${t.done}/${t.slots} · ${t.total}</small></button>`).join("");
+  };
+  const drawGrid = () => {
+    if (!team) return;
+    const mem = ROSTER.filter(p => p.t === team);
+    $("#grid").innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><b style="font-size:16px">${esc(team)}</b><span style="color:var(--mute);font-size:12px">0–300 · clear a box to delete</span></div>
+      <table class="sgrid"><colgroup><col class="c-n">${G.map(()=>"<col>").join("")}<col class="c-t"></colgroup><thead><tr><th>Name</th>${G.map(g => `<th>G${g}</th>`).join("")}<th style="text-align:right">TPF</th></tr></thead>
+      <tbody>${mem.map(p => `<tr data-id="${p.id}"><td class="nm">${esc(p.n)}<small>${p.g === "P" ? "Female" : "Male"}</small></td>
+        ${G.map(g => `<td><input class="num" inputmode="numeric" pattern="[0-9]*" maxlength="3" data-id="${p.id}" data-g="${g}"></td>`).join("")}<td class="t num" data-tot="${p.id}"></td></tr>`).join("")}
+      <tr class="sum"><td style="text-align:left">Team</td>${G.map(g => `<td class="num" data-gt="${g}"></td>`).join("")}<td class="num" style="text-align:right" id="teamTot"></td></tr></tbody></table>`;
+    fillGrid();
+  };
+  const fillGrid = () => {
+    if (!team || !$("#grid input")) return;
+    const c = compute(last), t = c.teams.find(x => x.t === team);
+    document.querySelectorAll("#grid input").forEach(inp => {
+      if (inp === document.activeElement) return;
+      const v = (last.scores[inp.dataset.id] || {})["g" + inp.dataset.g];
+      inp.value = typeof v === "number" ? v : "";
+      inp.classList.remove("err");
+    });
+    t.mem.forEach(m => { const el = $(`[data-tot="${m.id}"]`); if (el) el.textContent = m.played ? m.total : ""; });
+    G.forEach((g, i) => { $(`[data-gt="${g}"]`).textContent = t.games[i] ?? ""; });
+    $("#teamTot").textContent = t.total || "";
+  };
+  const draw = () => {
+    $("#dot").className = "dot " + (Store.online ? "on" : "off");
+    $("#st").textContent = Store.online ? "Connected" : "No connection — scores will send when internet returns";
+    $("#mode").textContent = Store.mode === "local" ? "TEST MODE (saved in this browser only)" : (Store.user && Store.user.email !== "PIN" ? "Signed in: " + Store.user.email : "");
+    $("#login").classList.toggle("hide", authed());
+    $("#main").classList.toggle("hide", !authed());
+    $("#demo").classList.toggle("hide", Store.mode !== "local");
+    if (!authed()) return;
+    const c = compute(last); c.teamsAlpha = TEAMS.map(n => c.teams.find(t => t.t === n));
+    drawChips(c);
+    if (team && !$("#grid input")) drawGrid(); else fillGrid();
+    if (document.activeElement !== $("#sTitle")) $("#sTitle").value = last.settings.title || DEFAULT_TITLE;
+    if (document.activeElement !== $("#sHdc")) $("#sHdc").value = last.settings.hdcW || 0;
+  };
+  const commit = async inp => {
+    const raw = inp.value.trim(); const id = inp.dataset.id, g = +inp.dataset.g;
+    const cur = (last.scores[id] || {})["g" + g];
+    if (raw === "" && typeof cur !== "number") return;
+    let val = null;
+    if (raw !== "") { val = Number(raw); if (!Number.isInteger(val) || val < 0 || val > 300) { inp.classList.add("err"); toast("Score must be 0 to 300", true); return; } }
+    if (val === cur) return;
+    inp.classList.remove("err");
+    try { await Store.setScore(id, g, val); inp.classList.add("saved"); setTimeout(() => inp.classList.remove("saved"), 900); toast(val === null ? "Deleted" : "Saved ✓"); }
+    catch (e) { inp.classList.add("err"); toast("Save failed: " + (e.code || e.message), true); }
+  };
+  $("#chips").onclick = e => { const b = e.target.closest("button"); if (!b) return; team = b.dataset.t; try { sessionStorage.setItem("bolTeam", team); } catch (e) {} drawGrid(); draw(); $("#grid").scrollIntoView({ behavior: "smooth", block: "start" }); };
+  $("#grid").addEventListener("change", e => { if (e.target.matches("input")) commit(e.target); });
+  $("#grid").addEventListener("keydown", e => {
+    if (e.key !== "Enter" || !e.target.matches("input")) return;
+    e.preventDefault(); const all = [...document.querySelectorAll("#grid input")]; const i = all.indexOf(e.target);
+    commit(e.target); // move down the same game column, then to next column
+    const per = GAMES, row = Math.floor(i / per), col = i % per, rows = all.length / per;
+    const next = row + 1 < rows ? all[(row + 1) * per + col] : all[col + 1];
+    next && next.focus(); next && next.select();
+  });
+  $("#grid").addEventListener("input", e => { if (e.target.matches("input")) e.target.value = e.target.value.replace(/\D/g, "").slice(0, 3); });
+  $("#go").onclick = async () => {
+    $("#lerr").textContent = "";
+    try { await Store.login($("#pw").value); } catch (e) { $("#lerr").textContent = (USE_LOGIN ? "Wrong password" : "Wrong PIN") + " or no connection. (" + (e.code || e.message) + ")"; }
+  };
+  $("#pw").onkeydown = e => { if (e.key === "Enter") $("#go").click(); };
+  $("#save").onclick = async () => {
+    const h = Math.max(0, Math.min(50, parseInt($("#sHdc").value || "0", 10) || 0));
+    try { await Store.setSetting("hdcW", h); await Store.setSetting("title", $("#sTitle").value.trim() || DEFAULT_TITLE); toast("Settings saved ✓"); } catch (e) { toast("Failed: " + (e.code || e.message), true); }
+  };
+  $("#csv").onclick = () => {
+    const c = compute(last); const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const rows = [["NAME", "TEAM", "GENDER (L=M, P=F)", ...G.map(g => "G" + g), "SCRATCH", "HANDICAP", "TPF", "AVERAGE", "HIGH GAME"]];
+    c.players.forEach(p => rows.push([p.n, p.t, p.g, ...p.games.map(x => x ?? ""), p.scratch, p.hdc, p.total, p.played ? p.avg.toFixed(2) : "", p.high || ""]));
+    rows.push([]); rows.push(["TEAM STANDINGS"]); rows.push(["RANK", "TEAM", ...G.map(g => "G" + g), "TPF"]);
+    c.teams.forEach((t, i) => rows.push([rankOf(c.teams, i), t.t, ...t.games.map(x => x ?? ""), t.total]));
+    const blob = new Blob(["﻿" + rows.map(r => r.map(q).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "SESB_Bowling_2026_Results.csv"; a.click();
+  };
+  $("#demo").onclick = async () => {
+    const sc = {}; ROSTER.forEach(p => { sc[p.id] = {}; G.forEach(g => { if (Math.random() < .85) sc[p.id]["g" + g] = Math.round(Math.max(60, Math.min(279, (p.g === "L" ? 150 : 128) + (Math.random() - .5) * 110))); }); });
+    await Store.replaceScores(sc); toast("Sample scores added");
+  };
+  $("#wipe").onclick = async () => {
+    const w = prompt('Type DELETE to remove ALL bowling scores.'); if (w !== "DELETE") return;
+    try { await Store.replaceScores({}); toast("All scores deleted"); } catch (e) { toast("Failed: " + (e.code || e.message), true); }
+  };
+  $("#out").onclick = () => Store.logout();
+  Store.on(s => { last = s; draw(); });
+}
+
+/* =================== OBS OVERLAY =================== */
+function viewOverlay() {
+  document.body.classList.add("ov"); document.documentElement.setAttribute("data-theme", "dark");
+  const fixed = params.get("show"), side = params.get("side") === "left" ? "left" : "";
+  const secs = Math.max(5, +params.get("sec") || 12), N = Math.max(3, Math.min(12, +params.get("n") || 8));
+  const order = fixed ? [fixed] : ["team", "men", "women", "high"];
+  const titles = { team: "Team Standings", men: "Men's Individual", women: "Women's Individual", high: "High Game" };
+  let idx = 0, last;
+  $("#app").innerHTML = `<div class="ovp ${side}"><div class="ovh"><img src="img/dragon.jpg" alt=""><div><div class="k">Tenpin Bowling · HQ Games 2026</div><div class="t" id="ot"></div></div></div><div class="ovb"><div id="ol"></div><div class="ovf"><span id="of"></span><span><span class="jamark"></span><span id="ou"></span></span></div></div></div>`;
+  const draw = () => {
+    const c = compute(last), k = order[idx % order.length];
+    $("#ot").textContent = titles[k] || titles.team;
+    let rows = "";
+    if (k === "team") rows = c.teams.slice(0, N).map((t, i) => [rankOf(c.teams, i), t.t, `${t.done}/${t.slots} games`, t.total]);
+    else if (k === "high") rows = c.highs.slice(0, N).map((p, i) => [i + 1, p.n, p.t, p.high]);
+    else { const l = c[k].filter(p => p.played); rows = l.slice(0, N).map((p, i) => [rankOf(l, i), p.n, p.t, p.total]); }
+    $("#ol").innerHTML = c.anyScore ? rows.map((r, i) => `<div class="ovr r${r[0]}" style="animation-delay:${i * 60}ms"><div class="rk">${r[0]}</div><div class="nm">${esc(r[1])}<small>${esc(r[2])}</small></div><div class="sc num">${r[3]}</div></div>`).join("")
+      : `<div class="ovr"><div></div><div class="nm" style="color:#9fb0d6">Waiting for first scores…</div><div></div></div>`;
+    $("#of").textContent = k === "high" ? "Scratch" : (c.hdc ? `TPF · women's hdc +${c.hdc}` : "TPF (total pinfall)");
+    $("#ou").textContent = "Updated " + fmtTime(last.updated);
+  };
+  Store.on(s => { last = s; draw(); });
+  if (order.length > 1) setInterval(() => { idx++; draw(); }, secs * 1000);
+}
+
+/* =================== boot =================== */
+Store.init();
+({ scorer: viewScorer, overlay: viewOverlay }[VIEW] || viewBoard)();
+</script>
+</body>
+</html>

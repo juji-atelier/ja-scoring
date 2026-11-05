@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" sizes="48x48" href="../img/favicon-48.png">
+<link rel="icon" type="image/png" sizes="192x192" href="../img/icon-192.png">
+<link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+<title>Admin · JA Scoring</title>
+<meta name="theme-color" content="#F6F4F2">
+<script src="../js/theme.js"></script>
+<link rel="stylesheet" href="../css/app.css">
+<style>
+:root{--sport:var(--acc)}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.scard{background:var(--card);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:16px;padding:16px;box-shadow:var(--shadow)}
+.scard h4{margin:0;font-size:17px}
+.scard .cnt{display:flex;gap:14px;margin:6px 0 8px;font-size:13px;color:var(--muted)}
+.scard .cnt b{color:var(--text);font-size:16px}
+.mini{font-size:13px;border-top:1px solid var(--line);padding:6px 0;display:flex;gap:8px}
+.mini span:first-child{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.linkrow{display:grid;grid-template-columns:150px 1fr auto auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.linkrow code{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#qr{background:#fff;padding:14px;border-radius:12px;display:inline-block}
+.checks{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:6px}
+.checks label{display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-size:14px;color:var(--text);margin:0}
+.checks input{width:auto}
+@media (max-width:640px){.linkrow{grid-template-columns:1fr auto auto}.linkrow code{display:none}}
+.qrgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-top:12px}
+.qrc{border:1px solid var(--line);border-top:4px solid var(--c);border-radius:14px;padding:12px;text-align:center;background:var(--card)}
+.qrc b{display:block;font-size:15px;margin-bottom:8px}
+.qrc .qrbox{background:#fff;padding:10px;border-radius:10px;display:inline-block;line-height:0}
+.qrc .qrbox img,.qrc .qrbox canvas{width:150px!important;height:150px!important}
+.qrc .row{justify-content:center;margin-top:8px}
+@media print{
+  body *{visibility:hidden}
+  #qrPrint,#qrPrint *{visibility:visible}
+  #qrPrint{position:absolute;left:0;top:0;width:100%;border:0;box-shadow:none;background:#fff;color:#000}
+  #qrPrint .row button,#qrPrint .qrc .row,#qrPrint p.muted{display:none}
+  .qrgrid{grid-template-columns:repeat(3,1fr);gap:18px}
+  html,body{background:#fff!important}
+  .qrc{background:#fff;color:#000;break-inside:avoid;border-color:#ccc;border-top-color:var(--c);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .qrc .qrbox img,.qrc .qrbox canvas{width:190px!important;height:190px!important}
+}
+table.aw td{padding:6px 4px}
+table.aw td:first-child{font-weight:700;white-space:nowrap;padding-right:10px}
+table.aw td:first-child i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:7px;background:var(--c)}
+table.aw input{min-width:140px;padding:8px 10px}
+table.aw th{white-space:nowrap}
+</style>
+</head>
+<body>
+<header class="top">
+  <img class="logo-dragon" src="../img/dragon.jpg" alt="HQ Dragon">
+  <div><div class="title">Admin control</div><div class="sub" id="evLine">JA Scoring System</div></div>
+  <div class="sp"></div>
+  <img class="logo-org" src="../img/sesb.png" alt="Sabah Electricity">
+  <span class="dot" id="conn"></span>
+  <div data-theme-toggle></div>
+  <button class="small hide" id="btnLogout">Log out</button>
+</header>
+<main>
+  <section id="vLogin" class="hide">
+    <div class="card login">
+      <h3>Admin login</h3>
+      <form id="loginForm">
+        <label>Password</label><input id="inPw" type="password" autocomplete="current-password" required>
+        <div class="row" style="margin-top:14px"><button class="primary" style="flex:1">Log in</button></div>
+        <p id="loginErr" style="color:var(--bad)"></p>
+      </form>
+    </div>
+  </section>
+
+  <section id="vMain" class="hide">
+    <div class="tabs" id="tabs">
+      <button data-t="ov" class="on">Overview</button>
+      <button data-t="screen">Big screen</button>
+      <button data-t="links">Links &amp; QR</button>
+      <button data-t="tools">Tools</button>
+    </div>
+
+    <div id="t-ov"><div class="sgrid" id="overview"></div></div>
+
+    <div id="t-screen" class="hide">
+      <div class="card">
+        <h3>Event</h3>
+        <div class="grid2">
+          <div><label>Event name</label><input id="sEvent"></div>
+          <div><label>Venue</label><input id="sVenue"></div>
+        </div>
+        <label>Announcement (scrolls on the big screen, shown on the public page)</label>
+        <input id="sTicker" placeholder="e.g. Lunch break 12:30 – 2:00 PM. Prize giving at 5 PM.">
+      </div>
+      <div class="card">
+        <h3>What the big screen shows</h3>
+        <div class="checks" id="modeBox">
+          <label><input type="radio" name="mode" value="auto"> Auto – rotate through sports (live ones first)</label>
+          <label><input type="radio" name="mode" value="sport"> Pin one sport</label>
+          <label><input type="radio" name="mode" value="match"> Feature one match (full screen)</label>
+          <label><input type="radio" name="mode" value="awards"> Prize giving – show winners</label>
+        </div>
+        <div class="grid3">
+          <div><label>Pinned sport</label><select id="sSport"></select></div>
+          <div><label>Featured match</label><select id="sMatch"></select></div>
+          <div><label>Rotate every (seconds)</label><input id="sRotate" inputmode="numeric"></div>
+        </div>
+        <label>Sports included in auto rotation</label>
+        <div class="checks" id="sSports"></div>
+        <div class="row" style="margin-top:14px">
+          <button class="primary" id="btnSaveScreen">Apply to big screen</button>
+          <a id="previewLink" target="_blank"><button class="ghost" type="button">Open big screen ↗</button></a>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Prize giving</h3>
+        <p class="muted">These winners appear on the big screen when <b>Prize giving</b> is selected above. <b>Auto-fill</b> uses each sport's final (a round named "Final", and "3rd place" if played) or, without a final, the group table – and the bowling standings. Check the names before showing.</p>
+        <div id="awardsForm" style="overflow-x:auto"></div>
+        <div class="row" style="margin-top:14px">
+          <button id="btnAutoAwards">Auto-fill from results</button>
+          <button class="primary" id="btnSaveAwards">Save winners</button>
+          <button class="ghost" id="btnShowAwards">Save &amp; show on big screen</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="t-links" class="hide">
+      <div class="card">
+        <h3>Public live-score page (for the QR code)</h3>
+        <div class="row" style="align-items:flex-start;gap:20px">
+          <div id="qr"></div>
+          <div style="flex:1;min-width:220px">
+            <p><a id="pubLink" target="_blank" style="color:var(--acc);word-break:break-all"></a></p>
+            <div class="row"><button id="btnCopyPub">Copy link</button><button id="btnDlQR">Download QR (PNG)</button></div>
+            <p class="muted">Print the QR on banners and the big screen. Spectators can choose any sport on the page.</p>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Scorer links (send each AJK only their sport's link + password)</h3>
+        <div id="scorerLinks"></div>
+      </div>
+      <div class="card" id="qrPrint">
+        <div class="row"><h3 style="flex:1;margin:0">Scorer QR codes</h3><button class="small" id="btnPrintQR">Print all</button></div>
+        <p class="muted">Each committee scans their own sport's code to open the scorer page. Give the password separately – never print it on this sheet.</p>
+        <div class="qrgrid" id="scorerQR"></div>
+      </div>
+      <div class="card">
+        <h3>Tenpin bowling (separate page)</h3>
+        <p class="muted">Bowling has its own scorer, public page and OBS panel. Its public page is also linked from the main live-scores page.</p>
+        <div id="bowlLinks"></div>
+      </div>
+      <div class="card">
+        <h3>Big screen links for OBS (Browser Source, 1920 × 1080)</h3>
+        <div id="displayLinks"></div>
+      </div>
+    </div>
+
+    <div id="t-tools" class="hide">
+      <div class="card">
+        <h3>Download results</h3>
+        <p class="muted">One file with every match, score and group table for all sports, plus bowling standings. Opens in Excel.</p>
+        <button class="primary" id="btnExport">Download all results (Excel / CSV)</button>
+      </div>
+      <div class="card">
+        <h3>Refresh public data</h3>
+        <p class="muted">Rebuilds what the big screen and public page show from the scorers' data. Use it if something looks out of date.</p>
+        <button id="btnRepubAll">Refresh all sports</button>
+      </div>
+      <div class="card">
+        <h3>Activity log</h3>
+        <div class="row"><select id="logSport" style="max-width:240px"></select></div>
+        <div id="logList" style="margin-top:10px;overflow-x:auto"></div>
+      </div>
+      <div class="card">
+        <h3>Clear a sport (after testing)</h3>
+        <p class="muted">Deletes every match <b>and team</b> of one sport. Cannot be undone.</p>
+        <div class="row"><select id="clrSport" style="max-width:240px"></select>
+          <button class="danger" id="btnClear">Delete all data</button>
+          <button class="danger" id="btnClearMatches">Delete matches only</button></div>
+      </div>
+    </div>
+  </section>
+</main>
+<footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
+<div id="toast"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script type="module" src="admin.js"></script>
+</body>
+</html>

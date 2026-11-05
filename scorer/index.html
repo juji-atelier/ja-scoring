@@ -1,0 +1,123 @@
+<!doctype html>
+<html data-keep-awake lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" type="image/png" sizes="48x48" href="../img/favicon-48.png">
+<link rel="icon" type="image/png" sizes="192x192" href="../img/icon-192.png">
+<link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+<meta name="theme-color" content="#F6F4F2">
+<script src="../js/theme.js"></script>
+<title>Scorer · JA Scoring</title>
+<link rel="stylesheet" href="../css/app.css">
+</head>
+<body>
+<header class="top">
+  <img class="logo-dragon" src="../img/dragon.jpg" alt="HQ Dragon">
+  <div>
+    <div class="title" id="sportName">Scorer</div>
+    <div class="sub" id="sportDay"></div>
+  </div>
+  <div class="sp"></div>
+  <img class="logo-org" src="../img/sesb.png" alt="Sabah Electricity">
+  <span class="dot" id="conn" title="Connection"></span>
+  <div data-theme-toggle></div>
+  <button class="small ghost hide" id="who" style="color:#fff;border-color:rgba(255,255,255,.4)"></button>
+  <button class="small hide" id="btnLogout">Log out</button>
+</header>
+
+<main>
+  <!-- LOGIN -->
+  <section id="vLogin" class="hide">
+    <div class="card login">
+      <h3 id="loginTitle">Scorer login</h3>
+      <p class="muted" id="loginHint">Enter the password the organiser gave you for this sport.</p>
+      <form id="loginForm">
+        <label for="inName">Your name / court</label>
+        <input id="inName" placeholder="e.g. Ali – Court 1" autocomplete="name" required>
+        <label for="inPw">Password</label>
+        <input id="inPw" type="password" autocomplete="current-password" required>
+        <div class="row" style="margin-top:14px">
+          <button class="primary" type="submit" style="flex:1">Log in</button>
+        </div>
+        <p class="muted" id="loginErr" style="color:var(--bad)"></p>
+      </form>
+      <button class="small ghost" id="btnAdminMode" type="button">Admin login</button>
+    </div>
+  </section>
+
+  <!-- TABS -->
+  <nav class="tabs hide" id="tabs">
+    <button data-tab="list" class="on">Matches</button>
+    <button data-tab="setup">Setup</button>
+    <button data-tab="log">Activity log</button>
+  </nav>
+
+  <!-- MATCH LIST -->
+  <section id="vList" class="hide">
+    <div class="chips" id="courtChips"></div>
+    <div id="matchList"></div>
+  </section>
+
+  <!-- SETUP -->
+  <section id="vSetup" class="hide">
+    <div class="card">
+      <h3>Teams</h3>
+      <p class="muted">One team per line: <b>Name | Short name | Group</b>. Short name and group are optional. Group is used for the standings table.</p>
+      <textarea id="teamBulk" placeholder="Jabatan Kerja Raya | JKR | A&#10;Jabatan Pendidikan | JPN | A&#10;Jabatan Kesihatan | JKN | B"></textarea>
+      <div class="row" style="margin-top:8px"><button class="primary" id="btnAddTeams">Add teams</button></div>
+      <div id="teamList" style="margin-top:12px"></div>
+    </div>
+
+    <div class="card" id="matchFormCard">
+      <h3 id="mfTitle">Add match</h3>
+      <div class="grid3">
+        <div><label>Match no.</label><input id="fNo" inputmode="numeric"></div>
+        <div><label>Time</label><input id="fTime" placeholder="e.g. 9:00 AM"></div>
+        <div><label>Court / table</label><input id="fCourt" placeholder="e.g. 1"></div>
+        <div><label>Round</label><input id="fRound" placeholder="e.g. Group A, Semi Final"></div>
+        <div><label>Group (standings)</label><input id="fGroup" placeholder="e.g. A (blank = knockout)"></div>
+        <div><label>Event</label><input id="fEvent" placeholder="e.g. Men's Doubles"></div>
+      </div>
+      <div class="grid2">
+        <div><label>Team A</label><select id="fA"></select></div>
+        <div><label>Team B</label><select id="fB"></select></div>
+      </div>
+      <div id="fFmt" class="grid3"></div>
+      <div class="row" style="margin-top:14px">
+        <button class="primary" id="btnSaveMatch">Add match</button>
+        <button class="ghost hide" id="btnCancelEdit">Cancel edit</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Generate round-robin</h3>
+      <p class="muted">Creates every pairing for one group (everyone plays everyone once).</p>
+      <div class="grid3">
+        <div><label>Group</label><select id="rrGroup"></select></div>
+        <div><label>Court / table</label><input id="rrCourt" placeholder="e.g. 1"></div>
+        <div><label>Event</label><input id="rrEvent" placeholder="optional"></div>
+      </div>
+      <div class="row" style="margin-top:12px"><button id="btnRR">Generate matches</button></div>
+    </div>
+
+    <div class="card">
+      <div class="row"><h3 style="flex:1;margin:0">All matches</h3>
+        <button class="small" id="btnRepublish" title="Send everything to the big screen and public page again">Refresh public data</button></div>
+      <div id="setupMatches" style="margin-top:10px;overflow-x:auto"></div>
+    </div>
+  </section>
+
+  <!-- LOG -->
+  <section id="vLog" class="hide">
+    <div class="card"><h3>Last 150 actions</h3><div id="logList" style="overflow-x:auto"></div></div>
+  </section>
+
+  <!-- SCORING -->
+  <section id="vScore" class="hide"></section>
+</main>
+<footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
+<div id="toast"></div>
+<script type="module" src="scorer.js"></script>
+</body>
+</html>

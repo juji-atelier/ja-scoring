@@ -1,0 +1,42 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "bowling2026": {
+      ".read": true,
+      ".write": "auth != null && (auth.token.email == 'admin@ja-scoring.app' || auth.token.email == 'bowling@ja-scoring.app')"
+    },
+
+    "sports": {
+      ".read": true,
+      "$sport": {
+        ".write": "auth != null && (auth.token.email == 'admin@ja-scoring.app' || auth.token.email == $sport + '@ja-scoring.app')"
+      }
+    },
+
+    "pub": {
+      ".read": true,
+      "$sport": {
+        ".write": "auth != null && (auth.token.email == 'admin@ja-scoring.app' || auth.token.email == $sport + '@ja-scoring.app')"
+      }
+    },
+
+    "settings": {
+      ".read": true,
+      ".write": "auth != null && auth.token.email == 'admin@ja-scoring.app'"
+    },
+
+    "logs": {
+      ".write": "auth != null && auth.token.email == 'admin@ja-scoring.app'",
+      "$sport": {
+        ".read": "auth != null && (auth.token.email == 'admin@ja-scoring.app' || auth.token.email == $sport + '@ja-scoring.app')",
+        ".indexOn": ["at"],
+        "$id": {
+          ".write": "!data.exists() && auth != null && (auth.token.email == 'admin@ja-scoring.app' || auth.token.email == $sport + '@ja-scoring.app')",
+          ".validate": "newData.hasChildren(['act', 'at'])"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,114 @@
+<!doctype html>
+<html data-keep-awake lang="en" data-theme-lock="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" sizes="48x48" href="../img/favicon-48.png">
+<link rel="icon" type="image/png" sizes="192x192" href="../img/icon-192.png">
+<link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+<title>Big Screen · JA Scoring</title>
+<link rel="stylesheet" href="../css/theme.css">
+<script src="../js/theme.js"></script>
+<style>
+:root{--sport:#B3162D;--bg:#16181D;--card:#23262E;--line:#343844;--text:#F2F3F5;--muted:#9A9FAA;--gold:#D2AC70}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif}
+body.transparent,html:has(body.transparent){background:transparent}
+.wrap{position:absolute;inset:0;display:grid;grid-template-rows:auto 1fr auto}
+.cond{font-family:Rajdhani,Inter,sans-serif}
+
+/* top bar */
+.bar{display:flex;align-items:center;gap:1.4vw;padding:.9vw 2vw;background:linear-gradient(110deg,#8E1325,#4C0B16 60%,#1C1E24);border-bottom:.25vw solid var(--sport);color:#fff}
+.bar .lg{width:4.2vw;height:4.2vw;border-radius:50%;object-fit:cover;box-shadow:0 0 0 .2vw #ffffff33}
+.bar .org{height:2.2vw;width:auto}
+.bar .ev{font-size:2vw;font-weight:900;letter-spacing:.04em;text-transform:uppercase}
+.bar .venue{font-size:1vw;color:#ffffffb3}
+.bar .sp{flex:1}
+.bar .now{font-size:1.9vw;font-weight:800;font-variant-numeric:tabular-nums}
+.sportchip{font-size:1.7vw;font-weight:900;text-transform:uppercase;letter-spacing:.06em;padding:.35vw 1.2vw;border-radius:.5vw;background:var(--sport);color:#fff}
+.dots{display:flex;gap:.4vw}
+.dots i{width:.7vw;height:.7vw;border-radius:50%;background:#ffffff33}
+.dots i.on{background:#fff}
+
+/* main */
+main{padding:1.4vw 2vw;display:grid;grid-template-columns:1fr 26vw;gap:1.4vw;min-height:0}
+main.solo{grid-template-columns:1fr}
+.col h2{margin:0 0 .8vw;font-size:1.3vw;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:800;display:flex;align-items:center;gap:.6vw}
+.col h2 .live{background:#E0364F;color:#fff;border-radius:.3vw;padding:.1vw .6vw;font-size:1vw;letter-spacing:.1em;animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.55}}
+.grid{display:grid;gap:1vw;grid-template-columns:repeat(var(--cols,2),1fr);align-content:start}
+.card{background:var(--card);border:1px solid var(--line);border-left:.4vw solid var(--sport);border-radius:1vw;padding:1vw 1.3vw;min-width:0;box-shadow:0 .4vw 1.2vw #0000004d}
+.card .meta{display:flex;gap:1vw;font-size:1vw;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.card .meta .st{margin-left:auto;color:var(--gold);font-weight:800}
+.trow{display:grid;grid-template-columns:1.2vw 1fr auto auto;align-items:center;gap:.8vw;margin-top:.5vw}
+.trow .srv{width:.8vw;height:.8vw;border-radius:50%;background:transparent}
+.trow .srv.on{background:var(--gold);box-shadow:0 0 .8vw var(--gold)}
+.trow .nm{font-size:var(--nm,2.2vw);font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trow .sm{font-size:calc(var(--nm,2.2vw)*.7);color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums;min-width:2vw;text-align:center}
+.trow .bg{font-size:var(--big,3.6vw);font-weight:900;font-variant-numeric:tabular-nums;min-width:4.6vw;text-align:right;line-height:1}
+.trow.win .nm{color:var(--gold)}
+.trow.win .bg{color:#FF4D63}
+.tag{display:inline-block;background:var(--gold);color:#000;font-size:.8vw;font-weight:900;border-radius:.3vw;padding:.05vw .5vw;margin-left:.6vw;vertical-align:middle}
+.hist{margin-top:.5vw;font-size:1vw;color:var(--muted);font-variant-numeric:tabular-nums}
+.clk{font-variant-numeric:tabular-nums}
+
+/* side lists */
+.list .it{display:grid;grid-template-columns:auto 1fr auto;gap:.8vw;align-items:center;padding:.6vw .8vw;border-bottom:1px solid var(--line);font-size:1.15vw}
+.list .it .n{color:var(--muted);font-weight:700;font-size:.95vw;white-space:nowrap}
+.list .it .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.list .it .t b{color:var(--gold)}
+.list .it .s{font-weight:900;font-variant-numeric:tabular-nums}
+.list + h2{margin-top:1.4vw}
+.empty{color:var(--muted);font-size:1.3vw;padding:1vw 0}
+
+/* featured */
+.feat{display:flex;flex-direction:column;justify-content:center;height:100%;gap:1.5vw}
+.feat .meta{font-size:1.6vw;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:700;text-align:center}
+.feat .st{font-size:2.2vw;color:var(--gold);font-weight:900;text-align:center;text-transform:uppercase}
+.feat .trow{grid-template-columns:2vw 1fr auto auto;--nm:5vw;--big:11vw;background:var(--card);border-radius:1vw;padding:1vw 2vw;border-left:.6vw solid var(--sport)}
+.feat .trow .srv{width:1.4vw;height:1.4vw}
+.feat .trow .sm{min-width:6vw}
+.feat .hist{text-align:center;font-size:1.8vw}
+.feat .tag{font-size:1.4vw}
+
+/* ticker */
+.tick{display:flex;align-items:center;background:#111317;border-top:1px solid var(--line);height:3.4vw;overflow:hidden}
+.tick .ja{display:flex;align-items:center;gap:.6vw;padding:0 1.4vw;color:#ffffff80;font-size:.8vw;letter-spacing:.2vw;font-weight:600;white-space:nowrap}
+.tick .ja .jamark{width:2vw;height:1.2vw}
+.tick .lbl{background:#B3162D;color:#fff;font-weight:900;font-size:1.2vw;padding:0 1.2vw;height:100%;display:flex;align-items:center;letter-spacing:.1em;white-space:nowrap}
+.tick .mq{flex:1;overflow:hidden;white-space:nowrap}
+.tick .mq span{display:inline-block;padding-left:100%;font-size:1.3vw;font-weight:600;animation:mq var(--dur,40s) linear infinite}
+@keyframes mq{to{transform:translateX(-100%)}}
+.setup{position:absolute;inset:0;display:grid;place-items:center;font-size:2vw;color:var(--muted)}
+/* prize giving */
+.aw-wrap{height:100%;display:flex;flex-direction:column;gap:1.4vw}
+.aw-title{margin:0;font-size:2.6vw;letter-spacing:.12em;text-transform:uppercase;text-align:center;color:var(--gold)}
+.aw-grid{display:grid;grid-template-columns:repeat(var(--cols,3),1fr);gap:1.2vw;align-content:start}
+.aw-card{background:var(--card);border:1px solid var(--line);border-top:.35vw solid var(--c);border-radius:1vw;padding:1vw 1.3vw;animation:awin .6s both;box-shadow:0 .4vw 1.2vw #0000004d}
+.aw-cat{font-size:1.5vw;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.6vw}
+.aw-row{display:flex;align-items:center;gap:.9vw;padding:.35vw 0}
+.aw-m{width:2.2vw;height:2.2vw;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:1.1vw;color:#fff;flex:none}
+.aw-row.p1 .aw-m{background:#D2AC70;box-shadow:0 0 1vw #D2AC7066}.aw-row.p2 .aw-m{background:#A7AEB8}.aw-row.p3 .aw-m{background:#B07A4A}
+.aw-n{font-weight:800;font-size:1.6vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.aw-row.p1 .aw-n{font-size:2vw;color:#fff}
+.aw-empty{display:grid;place-items:center;height:100%;font-size:3vw;color:var(--muted);font-weight:700}
+@keyframes awin{from{opacity:0;transform:translateY(1.5vw)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <img class="lg" src="../img/dragon.jpg" alt="">
+    <div><div class="ev cond" id="evName">HQ Games 2026</div><div class="venue" id="evVenue"></div></div>
+    <div class="sp"></div>
+    <div class="dots" id="dots"></div>
+    <div class="sportchip cond" id="sportChip">—</div>
+    <div class="now cond" id="now">--:--</div>
+    <img class="org" src="../img/sesb.png" alt="">
+  </div>
+  <main id="main"></main>
+  <div class="tick"><div class="lbl cond">RESULTS</div><div class="mq"><span id="ticker"></span></div><div class="ja"><span class="jamark"></span>JUJI-ATELIER</div></div>
+</div>
+<script type="module" src="display.js"></script>
+</body>
+</html>

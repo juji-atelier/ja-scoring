@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" type="image/png" sizes="48x48" href="../img/favicon-48.png">
+<link rel="icon" type="image/png" sizes="192x192" href="../img/icon-192.png">
+<link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+<meta name="description" content="Live scores, results and standings · Kompleks Sukan Tun Adnan · 14–15 Nov">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="HQ Games 2026">
+<meta property="og:title" content="HQ Games 2026 · Live Scores">
+<meta property="og:description" content="Live scores, results and standings · Kompleks Sukan Tun Adnan · 14–15 Nov">
+<meta property="og:image" content="https://juji-atelier.github.io/ja-scoring/img/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#F6F4F2">
+<title>Live Scores</title>
+<link rel="stylesheet" href="../css/theme.css">
+<script src="../js/theme.js"></script>
+<style>
+:root{--sport:var(--acc);--text:var(--ink);--muted:var(--mute)}
+*{box-sizing:border-box}
+html,body{margin:0;font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.cond{font-family:Rajdhani,Inter,sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding:0 18px}
+/* header */
+.hd{position:sticky;top:0;z-index:6;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.hd .wrap{display:flex;align-items:center;gap:12px;height:66px}
+.hd .brand b{display:block;font-family:Rajdhani,Inter;font-size:22px;letter-spacing:1.4px;line-height:1;text-transform:uppercase}
+.hd .brand small{color:var(--mute);font-size:12px}
+.hd .sp{flex:1}
+/* hero */
+.hero{background:var(--hero);color:#fff;border-radius:22px;margin:18px 0 14px;padding:22px 26px;position:relative;overflow:hidden}
+.hero:after{content:"";position:absolute;right:-70px;top:-90px;width:320px;height:320px;border-radius:50%;background:radial-gradient(#ffffff26,transparent 65%)}
+.hero h1{margin:0;font-family:Rajdhani,Inter;font-size:36px;letter-spacing:1px;line-height:1;text-transform:uppercase;position:relative}
+.hero p{margin:6px 0 0;opacity:.88;font-size:14px;position:relative}
+.note{margin-top:12px;background:#0000002e;border-radius:10px;padding:8px 12px;font-size:14px;position:relative}
+/* sport chips */
+nav{display:flex;gap:8px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav a{flex:none;display:flex;align-items:center;gap:7px;text-decoration:none;color:var(--mute);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-weight:600;font-size:13px;line-height:1.1}
+nav a:before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c,var(--acc));flex:none}
+nav a small{display:none}
+nav a.on{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+nav a.on:before{background:#fff}
+main{padding-bottom:10px}
+.sub{display:flex;gap:4px;margin:12px 0 4px;background:var(--bg2);border:1px solid var(--line);padding:4px;border-radius:14px}
+.sub button{flex:1;font:inherit;font-weight:600;font-size:13px;color:var(--mute);background:none;border:0;border-radius:10px;padding:9px 6px;cursor:pointer}
+.sub button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px #0002}
+h2{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin:22px 2px 10px;display:flex;align-items:center;gap:10px;font-weight:700}
+h2 .lv{display:inline-flex;align-items:center;gap:6px;color:var(--live);font-size:11px;letter-spacing:1px}
+h2 .lv:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--live);animation:japulse 1.6s infinite}
+.m{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 18px;margin:10px 0;box-shadow:var(--shadow)}
+.m .meta{display:flex;gap:8px;font-size:12px;color:var(--mute);flex-wrap:wrap;align-items:center;margin-bottom:6px}
+.m .meta:before{content:"";width:8px;height:8px;border-radius:3px;background:var(--sport)}
+.m .meta .st{margin-left:auto;color:var(--mute);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:11px}
+.m.live .meta .st{color:var(--live)}
+.r{display:grid;grid-template-columns:10px 1fr auto auto;gap:10px;align-items:center;padding:4px 0}
+.r .dot{width:7px;height:7px;border-radius:50%}
+.r .dot.on{background:var(--gold);box-shadow:0 0 0 3px color-mix(in srgb,var(--gold) 30%,transparent)}
+.r .n{font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.r .s{font-size:13px;color:var(--mute);font-weight:600;min-width:22px;text-align:right;font-variant-numeric:tabular-nums}
+.r .b{font-family:Inter,sans-serif;font-size:26px;font-weight:800;min-width:42px;text-align:right;font-variant-numeric:tabular-nums;line-height:1.05}
+.r.win .n:after{content:" ✓";color:var(--gold);font-size:13px}
+.r.win .b{color:var(--acc)}
+.tag{background:var(--acc-soft);color:var(--acc);font-size:10px;font-weight:800;border-radius:5px;padding:2px 6px;margin-left:6px;vertical-align:middle}
+.h{font-size:12px;color:var(--mute);margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-variant-numeric:tabular-nums}
+.empty{color:var(--mute);padding:12px 2px;font-size:14px}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:14px;background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+th,td{padding:10px 8px;text-align:center;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}
+th{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em;background:var(--bg2)}
+td.t,th.t{text-align:left;padding-left:14px}
+tr:nth-child(2) td.t{font-weight:700}
+tr:nth-child(2) td.t:before{content:"1";display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;background:var(--gold);color:#fff;font-size:11px;font-weight:800;margin-right:8px}
+.upd{font-size:12px;color:var(--mute);text-align:right;margin-top:6px}
+@media(max-width:600px){.wrap{padding:0 14px}.hd .wrap{height:60px;gap:8px}.hd .brand b{font-size:18px}.hd .brand small{display:none}.logo-org{height:16px}.logo-dragon{width:36px;height:36px}.hero{padding:20px}.hero h1{font-size:30px}}
+</style>
+</head>
+<body>
+<header class="hd"><div class="wrap">
+  <img class="logo-dragon" src="../img/dragon.jpg" alt="HQ Dragon">
+  <div class="brand"><b id="ev">Live Scores</b><small id="venue"></small></div>
+  <div class="sp"></div>
+  <img class="logo-org" src="../img/sesb.png" alt="Sabah Electricity">
+  <div data-theme-toggle></div>
+</div></header>
+<div class="wrap">
+  <section class="hero"><h1>Live Scores</h1><p>Scores update automatically — no need to refresh.</p><div class="note" id="note" hidden></div></section>
+  <nav id="tabs"></nav>
+  <main>
+    <div class="sub" id="sub">
+      <button data-v="live" class="on">Live &amp; next</button>
+      <button data-v="results">Results</button>
+      <button data-v="table">Standings</button>
+    </div>
+    <div class="upd" id="upd"></div>
+    <div id="body"><div class="empty">Loading…</div></div>
+  </main>
+</div>
+<footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
+<script type="module" src="live.js"></script>
+</body>
+</html>
