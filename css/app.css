@@ -105,8 +105,8 @@ button.side:active{transform:scale(.985)}
 details.menu{position:relative}
 details.menu summary{list-style:none;cursor:pointer;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:10px 14px;font-weight:700}
 details.menu summary::-webkit-details-marker{display:none}
-details.menu .items{position:absolute;right:0;top:110%;z-index:30;background:var(--card);border:1px solid var(--line);
-  border-radius:14px;padding:6px;min-width:240px;display:flex;flex-direction:column;gap:4px;box-shadow:0 14px 40px #00000033}
+details.menu .items{position:absolute;left:0;right:auto;top:110%;z-index:30;background:var(--card);border:1px solid var(--line);
+  border-radius:14px;padding:6px;min-width:240px;max-width:calc(100vw - 32px);display:flex;flex-direction:column;gap:4px;box-shadow:0 14px 40px #00000033}
 details.menu .items button{text-align:left;background:transparent;border:0}
 details.menu .items button:hover{background:var(--bg2)}
 
