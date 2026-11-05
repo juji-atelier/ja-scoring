@@ -45,7 +45,9 @@ const SCORER_EMAIL = "bowling@ja-scoring.app"; // only used when USE_LOGIN = tru
 const DB_ROOT = "bowling2026";
 const GAMES = 5;
 const POLL_MS = 10000;   // public board refresh (ms)
-const DEFAULT_TITLE = "SESB (HQ) Closed Tenpin Bowling Championship 2026";
+const DEFAULT_TITLE = "Sabah Electricity (HQ) Closed Tenpin Bowling Championship 2026";
+// "SESB" is the old company name; any title saved with it is shown with the new name.
+const renameOrg = t => String(t || "").replace(/\bSESB\b/gi, "Sabah Electricity");
 const DEFAULT_ROSTER = [{"id":"b01","n":"Nas Norniza","t":"NGEKET","g":"P"},{"id":"b02","n":"Presley Kimsang","t":"NGEKET","g":"L"},{"id":"b03","n":"Sili Landah @ Roslee","t":"NGEKET","g":"L"},{"id":"b04","n":"Ismail Mijan","t":"NGEKET","g":"L"},{"id":"b05","n":"Masmujahidah binti Masrin","t":"DRAGGIES HQ","g":"P"},{"id":"b06","n":"Wan Nazirah binti Wan Shah Jaman","t":"DRAGGIES HQ","g":"P"},{"id":"b07","n":"Elfiraroza binti Basri","t":"DRAGGIES HQ","g":"P"},{"id":"b08","n":"Frederick Assin","t":"DRAGGIES HQ","g":"L"},{"id":"b09","n":"Nur Fatihah Azhan binti Borhan","t":"LEGACY","g":"P"},{"id":"b10","n":"Siti Nurfaizah binti Muhammad Azrie","t":"LEGACY","g":"P"},{"id":"b11","n":"Roziana binti Lambang","t":"LEGACY","g":"P"},{"id":"b12","n":"Muhd Saharudin Sainuddin","t":"LEGACY","g":"L"},{"id":"b13","n":"Muhammad Syahrizan bin Iskandar","t":"JR TEAM","g":"L"},{"id":"b14","n":"S. Yasser bin S. Abdul Wahid","t":"JR TEAM","g":"L"},{"id":"b15","n":"Tahar bin Talib","t":"JR TEAM","g":"L"},{"id":"b16","n":"Cherry Carol Robert Meisin","t":"JR TEAM","g":"P"},{"id":"b17","n":"Mohd Nazrin bin Ramdin","t":"LEPA LEPA","g":"L"},{"id":"b18","n":"Ben Lee","t":"LEPA LEPA","g":"L"},{"id":"b19","n":"Merryana binti Kinti","t":"LEPA LEPA","g":"P"},{"id":"b20","n":"Masri bin Lamsun","t":"LEPA LEPA","g":"L"},{"id":"b21","n":"Rafia binti Pelin @ Pilin","t":"PANGAYAU","g":"P"},{"id":"b22","n":"Syed Suffian bin Syed Hassan","t":"PANGAYAU","g":"L"},{"id":"b23","n":"Masri bin Mayasin","t":"PANGAYAU","g":"L"},{"id":"b24","n":"Mohammad Ikhwan bin Kuslan","t":"PANGAYAU","g":"L"},{"id":"b25","n":"Mohd Zulhilmi","t":"NBR","g":"L"},{"id":"b26","n":"Asidah Hussin","t":"NBR","g":"P"},{"id":"b27","n":"Nurazleen Mohamad","t":"NBR","g":"P"},{"id":"b28","n":"Amanda Azmira","t":"NBR","g":"P"},{"id":"b29","n":"Smith Robert","t":"KAYH ESHH ARGHHH","g":"L"},{"id":"b30","n":"Desiree Dessy Maidi","t":"KAYH ESHH ARGHHH","g":"P"},{"id":"b31","n":"Roslee bin Ismail","t":"KAYH ESHH ARGHHH","g":"L"},{"id":"b32","n":"Mohd Badrul Kamal bin Yassin","t":"KAYH ESHH ARGHHH","g":"L"},{"id":"b33","n":"Mohammad Norhazman bin Osman","t":"ELITE LADIES TEAM","g":"L"},{"id":"b34","n":"Surianih Awang Daud","t":"ELITE LADIES TEAM","g":"P"},{"id":"b35","n":"Sazleena binti Resnin","t":"ELITE LADIES TEAM","g":"P"},{"id":"b36","n":"Dayangku Noor Jehan Awang Othman","t":"ELITE LADIES TEAM","g":"P"},{"id":"b37","n":"Khairul Anwar bin Azalan","t":"KILAR","g":"L"},{"id":"b38","n":"Jasri bin Jamateh","t":"KILAR","g":"L"},{"id":"b39","n":"Tahir bin Md Japar","t":"KILAR","g":"L"},{"id":"b40","n":"Norasidah binti Musaat","t":"KILAR","g":"P"},{"id":"b41","n":"Zamri bin Assah","t":"SIMPLE BOWLER TEAM","g":"L"},{"id":"b42","n":"Mohd Faisal bin Jufri","t":"SIMPLE BOWLER TEAM","g":"L"},{"id":"b43","n":"Ridzuan bin Shukri","t":"SIMPLE BOWLER TEAM","g":"L"},{"id":"b44","n":"Debbie Kong","t":"SIMPLE BOWLER TEAM","g":"P"}];
 </script>
 <link rel="stylesheet" href="css/theme.css">
@@ -236,6 +238,7 @@ const Store = {
     v = v || {};
     this.state = { scores: v.scores || {}, settings: Object.assign({ hdcW: 0, title: DEFAULT_TITLE }, v.settings || {}), updated: v.updated || 0,
                    roster: v.roster || null, ann: v.ann || null };
+    this.state.settings.title = renameOrg(this.state.settings.title) || DEFAULT_TITLE;
     applyRoster(this.state.roster);
     this.emit();
   },
@@ -369,7 +372,8 @@ function viewBoard() {
       <img class="logo-dragon" src="img/dragon.jpg" alt="HQ Dragon">
       <div class="brand"><b>HQ Games 2026</b><small>Tenpin Bowling · Live</small></div>
       <div class="sp"></div>
-      <img class="logo-org" src="img/sesb.png" alt="Sabah Electricity">
+      <div data-clock></div>
+      <img class="logo-org" src="img/sabah-electricity.png" alt="Sabah Electricity">
       <div data-theme-toggle></div>
     </div></header>
     <div class="wrap">
@@ -447,7 +451,7 @@ function viewScorer() {
       <div class="brand"><b>HQ Games 2026</b><small>Bowling · Score entry</small></div>
       <div class="sp"></div>
       <div data-clock></div>
-      <img class="logo-org" src="img/sesb.png" alt="Sabah Electricity">
+      <img class="logo-org" src="img/sabah-electricity.png" alt="Sabah Electricity">
       <div data-theme-toggle></div>
     </div></header>
     <div class="wrap">
@@ -555,7 +559,7 @@ function viewScorer() {
     rows.push([]); rows.push(["TEAM STANDINGS"]); rows.push(["RANK", "TEAM", ...G.map(g => "G" + g), "TPF"]);
     c.teams.forEach((t, i) => rows.push([rankOf(c.teams, i), t.t, ...t.games.map(x => x ?? ""), t.total]));
     const blob = new Blob(["﻿" + rows.map(r => r.map(q).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" });
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "SESB_Bowling_2026_Results.csv"; a.click();
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "Sabah_Electricity_Bowling_2026_Results.csv"; a.click();
   };
   $("#demo").onclick = async () => {
     const sc = {}; ROSTER.forEach(p => { sc[p.id] = {}; G.forEach(g => { if (Math.random() < .85) sc[p.id]["g" + g] = Math.round(Math.max(60, Math.min(279, (p.g === "L" ? 150 : 128) + (Math.random() - .5) * 110))); }); });

@@ -191,7 +191,7 @@ function renderTicker() {
 
 function tick() {
   const d = new Date();
-  $("#now").textContent = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  $("#now").textContent = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   for (const el of document.querySelectorAll(".clk")) {
     const ms = clockMs({ run: el.dataset.run === "1", st: Number(el.dataset.st), el: Number(el.dataset.el) }, C.now());
     const left = Number(el.dataset.len) - ms;
