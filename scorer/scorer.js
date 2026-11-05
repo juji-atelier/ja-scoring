@@ -132,6 +132,8 @@ function startData() {
     matches = v.matches || {};
     render();
   }, err => toast("No access: " + err.message, 4000));
+  C.onValue(annRef(), snap => { ann = snap.val(); renderAnnBar(); }, () => {});
+  setInterval(renderAnnBar, 20000);   // drops an expired announcement from view
 }
 
 // ---------------------------------------------------------------- tabs
@@ -444,6 +446,7 @@ function headerHTML(m) {
   }
   if (st === "live" && !(m.rallies || m.events || m.turns)) items.push(`<button data-a="unstart">Back to "not started"</button>`);
   if (st === "done") items.push(`<button data-a="reopen">Reopen match</button>`);
+  items.push(`<button data-a="announce">📢 Make an announcement…</button>`);
   items.push(`<button data-a="swap">Swap sides on this screen</button>`);
   items.push(`<button data-a="release">Release match (let another device score)</button>`);
   return `<div class="shead">
@@ -609,6 +612,7 @@ function onScoreClick(e) {
     case "finish": return A.finish();
     case "reopen": return A.reopen();
     case "wo": return A.walkover(s);
+    case "announce": return openAnn();
     case "swap": store("ja_swap_" + curId, swapped() ? null : "1"); return renderScore();
     case "release": { const id = curId; curId = null; clearInterval(heartbeat); clearInterval(ticker); goTab("list"); return releaseLock(id); }
     case "undoRally": return A.undoRally();
@@ -867,6 +871,98 @@ function startLog() {
     rows.reverse();
     $("#logList").innerHTML = rows.length ? `<table><tr><th>Time</th><th>By</th><th>Match</th><th>Action</th></tr>` +
       rows.map(r => `<tr><td style="white-space:nowrap">${r.at ? new Date(r.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : ""}</td>
-        <td>${esc(r.by)}</td><td>#${esc(r.no)}</td><td>${esc(r.act)}</td></tr>`).join("") + `</table>` : `<p class="muted">Nothing yet.</p>`;
+        <td>${esc(r.by)}</td><td>${r.no !== "" && r.no != null ? "#" + esc(r.no) : "—"}</td><td>${esc(r.act)}</td></tr>`).join("") + `</table>` : `<p class="muted">Nothing yet.</p>`;
   }, err => { $("#logList").innerHTML = `<p class="muted">Cannot read log: ${esc(err.message)}</p>`; });
+}
+
+
+// ---------------------------------------------------------------- announcements
+// Scorers post a short message for their own sport. Stored at pub/<sport>/ann, so the
+// big screen and the public live page pick it up without any admin step.
+let ann = null, annMins = 30;
+const annRef = () => ref(db, `pub/${S}/ann`);
+const annActive = a => !!(a && a.t && (!a.exp || a.exp > C.now()));
+const hhmm = t => new Date(t).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+const ANN_QUICK = [
+  "Next match starts in 5 minutes",
+  "Short break – play resumes in 10 minutes",
+  "Calling teams to Court ",
+  "Matches are running late – thank you for waiting",
+  "Final match of the day is now on",
+  "Results and prize giving coming soon",
+];
+
+function renderAnnBar() {
+  const el = $("#annBar");
+  if (!el) return;
+  if (annActive(ann)) {
+    const until = ann.exp ? "until " + hhmm(ann.exp) : "until removed";
+    el.innerHTML = `<div class="annbar"><div class="ic">📢</div>
+      <div class="tx"><b>${esc(ann.t)}</b><small>On the big screen &amp; live page · ${until}${ann.by ? " · by " + esc(ann.by) : ""}</small></div>
+      <div class="act"><button class="small" data-ann="edit">Change</button><button class="small danger" data-ann="clear">Remove</button></div></div>`;
+  } else {
+    el.innerHTML = `<button class="annbtn" data-ann="new">📢 Make an announcement</button>`;
+  }
+}
+$("#annBar").addEventListener("click", e => {
+  const b = e.target.closest("[data-ann]");
+  if (!b) return;
+  if (b.dataset.ann === "clear") return clearAnn();
+  openAnn();
+});
+
+function openAnn() {
+  $("#annSport").textContent = SP.name;
+  const cur = annActive(ann) ? ann.t : "";
+  $("#annText").value = cur;
+  $("#annPost").textContent = cur ? "Update announcement" : "Post announcement";
+  $("#annQuick").innerHTML = ANN_QUICK.map(q => `<button type="button">${esc(q)}</button>`).join("");
+  setDur(annActive(ann) && !ann.exp ? 0 : annMins);
+  annCount();
+  $("#annModal").classList.remove("hide");
+  setTimeout(() => $("#annText").focus(), 50);
+}
+function closeAnn() { $("#annModal").classList.add("hide"); }
+function setDur(m) {
+  annMins = m;
+  $$("#annDur button").forEach(b => b.classList.toggle("on", Number(b.dataset.m) === m));
+}
+function annCount() {
+  const n = $("#annText").value.length;
+  $("#annCount").textContent = `${n} / 140`;
+  $("#annPost").disabled = !$("#annText").value.trim();
+}
+$("#annText").addEventListener("input", annCount);
+$("#annQuick").addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  const t = $("#annText");
+  t.value = b.textContent;
+  annCount();
+  t.focus();
+  t.setSelectionRange(t.value.length, t.value.length);   // "Calling teams to Court " → just type the number
+});
+$("#annDur").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setDur(Number(b.dataset.m)); });
+$("#annCancel").onclick = closeAnn;
+$("#annModal").addEventListener("click", e => { if (e.target.id === "annModal") closeAnn(); });
+
+$("#annPost").onclick = async () => {
+  const t = $("#annText").value.replace(/\s+/g, " ").trim().slice(0, 140);
+  if (!t) return;
+  const at = C.now();
+  try {
+    await C.set(annRef(), { t, by: NAME || "", at, exp: annMins ? at + annMins * 60000 : 0 });
+    log(null, null, "announce: " + t);
+    closeAnn();
+    toast("📢 Announcement posted");
+  } catch (err) { toast("Could not post: " + err.message, 4000); }
+};
+
+async function clearAnn() {
+  if (!confirm("Remove this announcement from the big screen and live page?")) return;
+  try {
+    await C.remove(annRef());
+    log(null, null, "announcement removed");
+    toast("Announcement removed");
+  } catch (err) { toast("Could not remove: " + err.message, 4000); }
 }

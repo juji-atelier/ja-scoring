@@ -68,6 +68,7 @@ Open https://console.firebase.google.com → **JA Scoring System**.
 - Tap a match → it is now **locked to that phone**. Another phone sees 🔒 and must confirm "Take control".
 - Press **← Matches** when done so the match is released (it also auto-releases after 3 minutes of no activity).
 - Every tap can be undone. Results need a **Confirm result** tap. Wrong confirm? More → *Reopen match*.
+- Need to call teams or announce a break? Tap **📢 Make an announcement** (top of the match list, or More → Make an announcement). It shows on the big screen and the live page for your sport, and disappears after the time you pick.
 - Badminton / Ping Pong / Sepak Takraw: tap the team's big box when they win the rally. Serve indicator follows the sport's rules.
 - Futsal / Bola Jaring: Start clock → +Goal / +Foul → End half/quarter → Confirm result. Clock syncs to every screen.
 - Dart: type each turn's 3-dart total (or tap a quick number) → Enter. Bust is automatic.

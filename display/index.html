@@ -14,7 +14,7 @@
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif}
 body.transparent,html:has(body.transparent){background:transparent}
-.wrap{position:absolute;inset:0;display:grid;grid-template-rows:auto 1fr auto}
+.wrap{position:absolute;inset:0;display:grid;grid-template-rows:auto 1fr auto auto}
 .cond{font-family:Rajdhani,Inter,sans-serif}
 
 /* top bar */
@@ -71,6 +71,13 @@ main.solo{grid-template-columns:1fr}
 .feat .hist{text-align:center;font-size:1.8vw}
 .feat .tag{font-size:1.4vw}
 
+/* scorer announcements */
+.ann{display:flex;align-items:stretch;background:#F2B544;color:#1C1E24;min-height:4.4vw;overflow:hidden}
+.ann[hidden]{display:none}
+.ann .al{display:flex;align-items:center;gap:.7vw;padding:0 1.6vw;background:var(--ac,#B3162D);color:#fff;font-weight:900;font-size:1.5vw;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+.ann .at{flex:1;display:flex;align-items:center;padding:.5vw 1.8vw;font-weight:800;font-size:2.1vw;line-height:1.15;animation:annin .45s both}
+.ann .an{display:flex;align-items:center;padding:0 1.4vw;font-weight:800;font-size:1.1vw;opacity:.6;white-space:nowrap}
+@keyframes annin{from{opacity:0;transform:translateY(.8vw)}to{opacity:1;transform:none}}
 /* ticker */
 .tick{display:flex;align-items:center;background:#111317;border-top:1px solid var(--line);height:3.4vw;overflow:hidden}
 .tick .ja{display:flex;align-items:center;gap:.6vw;padding:0 1.4vw;color:#ffffff80;font-size:.8vw;letter-spacing:.2vw;font-weight:600;white-space:nowrap}
@@ -107,8 +114,9 @@ main.solo{grid-template-columns:1fr}
     <img class="org" src="../img/sesb.png" alt="">
   </div>
   <main id="main"></main>
+  <div class="ann" id="ann" hidden></div>
   <div class="tick"><div class="lbl cond">RESULTS</div><div class="mq"><span id="ticker"></span></div><div class="ja"><span class="jamark"></span>JUJI-ATELIER</div></div>
 </div>
-<script type="module" src="display.js"></script>
+<script type="module" src="display.js?v=20261105c"></script>
 </body>
 </html>

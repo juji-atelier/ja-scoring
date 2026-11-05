@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#F6F4F2">
 <script src="../js/theme.js?v=20261105b"></script>
 <title>Scorer · JA Scoring</title>
-<link rel="stylesheet" href="../css/app.css?v=20261105b">
+<link rel="stylesheet" href="../css/app.css?v=20261105c">
 </head>
 <body>
 <header class="top">
@@ -56,6 +56,7 @@
 
   <!-- MATCH LIST -->
   <section id="vList" class="hide">
+    <div id="annBar"></div>
     <div class="chips" id="courtChips"></div>
     <div id="matchList"></div>
   </section>
@@ -117,8 +118,30 @@
   <!-- SCORING -->
   <section id="vScore" class="hide"></section>
 </main>
+
+<!-- ANNOUNCEMENT -->
+<div class="modal hide" id="annModal" role="dialog" aria-modal="true" aria-labelledby="annTitle">
+  <div class="sheet">
+    <h3 id="annTitle">📢 Announcement</h3>
+    <p class="muted" style="margin-top:0">Shows on the big screen and the live score page under <b id="annSport"></b>.</p>
+    <div class="chips" id="annQuick"></div>
+    <textarea id="annText" maxlength="140" rows="3" placeholder="e.g. Calling JKR and JPN to Court 2"></textarea>
+    <div class="anncount muted" id="annCount">0 / 140</div>
+    <label>Show for</label>
+    <div class="chips" id="annDur" style="margin-top:6px">
+      <button type="button" data-m="10">10 min</button>
+      <button type="button" data-m="30" class="on">30 min</button>
+      <button type="button" data-m="60">1 hour</button>
+      <button type="button" data-m="0">Until removed</button>
+    </div>
+    <div class="row" style="margin-top:6px">
+      <button type="button" class="ghost" id="annCancel">Cancel</button>
+      <button type="button" class="primary" id="annPost" style="flex:1">Post announcement</button>
+    </div>
+  </div>
+</div>
 <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
 <div id="toast"></div>
-<script type="module" src="scorer.js"></script>
+<script type="module" src="scorer.js?v=20261105c"></script>
 </body>
 </html>

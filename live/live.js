@@ -13,6 +13,7 @@ let sub = "live";
 let data = {};          // records for current sport
 let settings = {};
 let lastOk = 0, timer = null, clockSkew = 0;
+let ann = null;   // scorer announcement for the current sport
 
 function pickDefault() {
   const h = location.hash.slice(1);
@@ -31,7 +32,7 @@ function renderTabs() {
 }
 
 window.addEventListener("hashchange", () => {
-  if (SPORTS[location.hash.slice(1)]) { sport = location.hash.slice(1); data = {}; renderTabs(); render(); poll(); }
+  if (SPORTS[location.hash.slice(1)]) { sport = location.hash.slice(1); data = {}; ann = null; renderTabs(); render(); poll(); }
 });
 document.querySelectorAll("#sub button").forEach(b => b.onclick = () => {
   sub = b.dataset.v;
@@ -53,8 +54,8 @@ async function poll() {
   if (document.hidden) return;
   try {
     const want = sport;
-    const recs = await getJSON(`pub/${want}/m`);
-    if (want === sport) { data = recs || {}; lastOk = Date.now(); render(); }
+    const p = (await getJSON(`pub/${want}`)) || {};
+    if (want === sport) { data = p.m || {}; ann = p.ann || null; lastOk = Date.now(); render(); }
     if (Date.now() - settingsAt > 60000) {
       settings = (await getJSON("settings")) || {};
       settingsAt = Date.now();
@@ -119,6 +120,11 @@ function render() {
         tbl[g].map(t => `<tr><td class="t">${esc(t.team)}</td><td>${t.p}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.f - t.a > 0 ? "+" : ""}${t.f - t.a}</td><td><b>${t.pts}</b></td></tr>`).join("") + `</table>`;
     }
     if (gs.length) h += `<p class="empty">Win 3 · Draw 1 · Loss 0. Ties split by score difference.</p>`;
+  }
+  const nowS = Date.now() + clockSkew;
+  if (ann && ann.t && (!ann.exp || ann.exp > nowS)) {
+    const at = ann.at ? new Date(ann.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "";
+    h = `<div class="ann"><span class="ai">📢</span><div><b>${esc(ann.t)}</b><small>${esc(SPORTS[sport].name)} announcement${at ? " · " + at : ""}</small></div></div>` + h;
   }
   $("#body").innerHTML = h;
   tick();

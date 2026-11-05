@@ -137,7 +137,33 @@ function render() {
     main.innerHTML = `<div class="col">${left}</div><div class="col">${right}</div>`;
   }
   renderTicker();
+  renderAnn();
   tick();
+}
+
+// ---------------- scorer announcements (pub/<sport>/ann)
+let annKey = "", annIdx = 0, annAt = 0;
+function activeAnns() {
+  const t = C.now(), out = [];
+  for (const sp of Object.keys(SPORTS)) {
+    const a = pub[sp] && pub[sp].ann;
+    if (a && a.t && (!a.exp || a.exp > t)) out.push({ sp, ...a });
+  }
+  return out.sort((x, y) => (y.at || 0) - (x.at || 0));   // newest first
+}
+function renderAnn(force) {
+  const el = $("#ann");
+  const list = activeAnns();
+  if (!list.length) { el.hidden = true; annKey = ""; return; }
+  const key = list.map(a => a.sp + a.at + a.t).join("|");
+  if (key !== annKey) { annKey = key; annIdx = 0; annAt = Date.now(); force = true; }
+  else if (list.length > 1 && Date.now() - annAt > 9000) { annIdx = (annIdx + 1) % list.length; annAt = Date.now(); force = true; }
+  if (!force && !el.hidden) return;
+  const a = list[annIdx % list.length], SPx = SPORTS[a.sp];
+  el.style.setProperty("--ac", SPx.color);
+  el.innerHTML = `<div class="al cond">📢 ${esc(SPx.name)}</div><div class="at">${esc(a.t)}</div>` +
+    (list.length > 1 ? `<div class="an cond">${annIdx % list.length + 1} / ${list.length}</div>` : "");
+  el.hidden = false;
 }
 
 let lastTicker = "";
@@ -170,6 +196,7 @@ function tick() {
 }
 setInterval(() => {
   tick();
+  renderAnn();
   if (!FORCE_SPORT && !featured() && (disp().mode || "auto") === "auto") {
     const before = current;
     pickSport();

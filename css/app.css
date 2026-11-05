@@ -139,3 +139,21 @@ tr.tedit td{background:var(--acc-soft);border-radius:12px}
 .tegrid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px}
 .tegrid label{margin-top:0}
 @media (max-width:520px){.tegrid{grid-template-columns:1fr 1fr}.tegrid div:first-child{grid-column:1/-1}}
+
+/* scorer announcements */
+.annbtn{width:100%;margin-top:4px;padding:12px 14px;border-style:dashed;color:var(--mute);background:transparent;text-align:left;font-weight:700}
+.annbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px;padding:12px 14px;border-radius:var(--r);
+  background:color-mix(in srgb,var(--warn) 14%,var(--card));border:1px solid color-mix(in srgb,var(--warn) 45%,var(--line))}
+.annbar .ic{font-size:22px;flex:none}
+.annbar .tx{flex:1;min-width:160px}
+.annbar .tx b{display:block;font-size:15px;line-height:1.3;word-break:break-word}
+.annbar .tx small{display:block;color:var(--mute);font-size:12px;margin-top:3px}
+.annbar .act{display:flex;gap:6px;flex:none}
+.modal{position:fixed;inset:0;z-index:60;background:#0008;display:flex;align-items:flex-end;justify-content:center;padding:12px}
+.modal.hide{display:none}
+.modal .sheet{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;width:100%;max-width:520px;max-height:92vh;overflow:auto;box-shadow:0 20px 60px #0006}
+.modal .sheet h3{margin:0 0 6px;font-size:19px}
+.modal textarea{width:100%;min-height:84px;resize:vertical}
+.modal #annQuick button{font-size:12px;padding:6px 11px;text-align:left}
+.anncount{text-align:right;font-size:12px;margin:4px 0 2px}
+@media (min-width:641px){.modal{align-items:center}}
