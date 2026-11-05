@@ -14,6 +14,9 @@ let current = null, rotStart = 0, rotList = [];
 
 C.onValue(ref(C.db, "pub"), s => { pub = s.val() || {}; render(); });
 C.onValue(ref(C.db, "settings"), s => { settings = s.val() || {}; rotStart = 0; render(); });
+let bowlAnn = null;   // bowling has its own page; its announcement lives at bowling2026/ann
+C.onValue(ref(C.db, "bowling2026/ann"), s => { bowlAnn = s.val(); renderAnn(); }, () => {});
+const ANN_SRC = { bowling: { name: "Bowling", color: "#8b5cf6" } };
 
 const recs = sp => Object.entries((pub[sp] && pub[sp].m) || {}).map(([id, r]) => ({ id, ...r }));
 const byNo = (x, y) => (Number(x.no) || 9999) - (Number(y.no) || 9999);
@@ -149,6 +152,7 @@ function activeAnns() {
     const a = pub[sp] && pub[sp].ann;
     if (a && a.t && (!a.exp || a.exp > t)) out.push({ sp, ...a });
   }
+  if (bowlAnn && bowlAnn.t && (!bowlAnn.exp || bowlAnn.exp > t)) out.push({ sp: "bowling", ...bowlAnn });
   return out.sort((x, y) => (y.at || 0) - (x.at || 0));   // newest first
 }
 function renderAnn(force) {
@@ -159,7 +163,7 @@ function renderAnn(force) {
   if (key !== annKey) { annKey = key; annIdx = 0; annAt = Date.now(); force = true; }
   else if (list.length > 1 && Date.now() - annAt > 9000) { annIdx = (annIdx + 1) % list.length; annAt = Date.now(); force = true; }
   if (!force && !el.hidden) return;
-  const a = list[annIdx % list.length], SPx = SPORTS[a.sp];
+  const a = list[annIdx % list.length], SPx = SPORTS[a.sp] || ANN_SRC[a.sp];
   el.style.setProperty("--ac", SPx.color);
   el.innerHTML = `<div class="al cond">📢 ${esc(SPx.name)}</div><div class="at">${esc(a.t)}</div>` +
     (list.length > 1 ? `<div class="an cond">${annIdx % list.length + 1} / ${list.length}</div>` : "");

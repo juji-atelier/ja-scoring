@@ -46,7 +46,7 @@ const DB_ROOT = "bowling2026";
 const GAMES = 5;
 const POLL_MS = 10000;   // public board refresh (ms)
 const DEFAULT_TITLE = "SESB (HQ) Closed Tenpin Bowling Championship 2026";
-const ROSTER = [{"id":"b01","n":"Nas Norniza","t":"NGEKET","g":"P"},{"id":"b02","n":"Presley Kimsang","t":"NGEKET","g":"L"},{"id":"b03","n":"Sili Landah @ Roslee","t":"NGEKET","g":"L"},{"id":"b04","n":"Ismail Mijan","t":"NGEKET","g":"L"},{"id":"b05","n":"Masmujahidah binti Masrin","t":"DRAGGIES HQ","g":"P"},{"id":"b06","n":"Wan Nazirah binti Wan Shah Jaman","t":"DRAGGIES HQ","g":"P"},{"id":"b07","n":"Elfiraroza binti Basri","t":"DRAGGIES HQ","g":"P"},{"id":"b08","n":"Frederick Assin","t":"DRAGGIES HQ","g":"L"},{"id":"b09","n":"Nur Fatihah Azhan binti Borhan","t":"LEGACY","g":"P"},{"id":"b10","n":"Siti Nurfaizah binti Muhammad Azrie","t":"LEGACY","g":"P"},{"id":"b11","n":"Roziana binti Lambang","t":"LEGACY","g":"P"},{"id":"b12","n":"Muhd Saharudin Sainuddin","t":"LEGACY","g":"L"},{"id":"b13","n":"Muhammad Syahrizan bin Iskandar","t":"JR TEAM","g":"L"},{"id":"b14","n":"S. Yasser bin S. Abdul Wahid","t":"JR TEAM","g":"L"},{"id":"b15","n":"Tahar bin Talib","t":"JR TEAM","g":"L"},{"id":"b16","n":"Cherry Carol Robert Meisin","t":"JR TEAM","g":"P"},{"id":"b17","n":"Mohd Nazrin bin Ramdin","t":"LEPA LEPA","g":"L"},{"id":"b18","n":"Ben Lee","t":"LEPA LEPA","g":"L"},{"id":"b19","n":"Merryana binti Kinti","t":"LEPA LEPA","g":"P"},{"id":"b20","n":"Masri bin Lamsun","t":"LEPA LEPA","g":"L"},{"id":"b21","n":"Rafia binti Pelin @ Pilin","t":"PANGAYAU","g":"P"},{"id":"b22","n":"Syed Suffian bin Syed Hassan","t":"PANGAYAU","g":"L"},{"id":"b23","n":"Masri bin Mayasin","t":"PANGAYAU","g":"L"},{"id":"b24","n":"Mohammad Ikhwan bin Kuslan","t":"PANGAYAU","g":"L"},{"id":"b25","n":"Mohd Zulhilmi","t":"NBR","g":"L"},{"id":"b26","n":"Asidah Hussin","t":"NBR","g":"P"},{"id":"b27","n":"Nurazleen Mohamad","t":"NBR","g":"P"},{"id":"b28","n":"Amanda Azmira","t":"NBR","g":"P"},{"id":"b29","n":"Smith Robert","t":"KAYH ESHH ARGHHH","g":"L"},{"id":"b30","n":"Desiree Dessy Maidi","t":"KAYH ESHH ARGHHH","g":"P"},{"id":"b31","n":"Roslee bin Ismail","t":"KAYH ESHH ARGHHH","g":"L"},{"id":"b32","n":"Mohd Badrul Kamal bin Yassin","t":"KAYH ESHH ARGHHH","g":"L"},{"id":"b33","n":"Mohammad Norhazman bin Osman","t":"ELITE LADIES TEAM","g":"L"},{"id":"b34","n":"Surianih Awang Daud","t":"ELITE LADIES TEAM","g":"P"},{"id":"b35","n":"Sazleena binti Resnin","t":"ELITE LADIES TEAM","g":"P"},{"id":"b36","n":"Dayangku Noor Jehan Awang Othman","t":"ELITE LADIES TEAM","g":"P"},{"id":"b37","n":"Khairul Anwar bin Azalan","t":"KILAR","g":"L"},{"id":"b38","n":"Jasri bin Jamateh","t":"KILAR","g":"L"},{"id":"b39","n":"Tahir bin Md Japar","t":"KILAR","g":"L"},{"id":"b40","n":"Norasidah binti Musaat","t":"KILAR","g":"P"},{"id":"b41","n":"Zamri bin Assah","t":"SIMPLE BOWLER TEAM","g":"L"},{"id":"b42","n":"Mohd Faisal bin Jufri","t":"SIMPLE BOWLER TEAM","g":"L"},{"id":"b43","n":"Ridzuan bin Shukri","t":"SIMPLE BOWLER TEAM","g":"L"},{"id":"b44","n":"Debbie Kong","t":"SIMPLE BOWLER TEAM","g":"P"}];
+const DEFAULT_ROSTER = [{"id":"b01","n":"Nas Norniza","t":"NGEKET","g":"P"},{"id":"b02","n":"Presley Kimsang","t":"NGEKET","g":"L"},{"id":"b03","n":"Sili Landah @ Roslee","t":"NGEKET","g":"L"},{"id":"b04","n":"Ismail Mijan","t":"NGEKET","g":"L"},{"id":"b05","n":"Masmujahidah binti Masrin","t":"DRAGGIES HQ","g":"P"},{"id":"b06","n":"Wan Nazirah binti Wan Shah Jaman","t":"DRAGGIES HQ","g":"P"},{"id":"b07","n":"Elfiraroza binti Basri","t":"DRAGGIES HQ","g":"P"},{"id":"b08","n":"Frederick Assin","t":"DRAGGIES HQ","g":"L"},{"id":"b09","n":"Nur Fatihah Azhan binti Borhan","t":"LEGACY","g":"P"},{"id":"b10","n":"Siti Nurfaizah binti Muhammad Azrie","t":"LEGACY","g":"P"},{"id":"b11","n":"Roziana binti Lambang","t":"LEGACY","g":"P"},{"id":"b12","n":"Muhd Saharudin Sainuddin","t":"LEGACY","g":"L"},{"id":"b13","n":"Muhammad Syahrizan bin Iskandar","t":"JR TEAM","g":"L"},{"id":"b14","n":"S. Yasser bin S. Abdul Wahid","t":"JR TEAM","g":"L"},{"id":"b15","n":"Tahar bin Talib","t":"JR TEAM","g":"L"},{"id":"b16","n":"Cherry Carol Robert Meisin","t":"JR TEAM","g":"P"},{"id":"b17","n":"Mohd Nazrin bin Ramdin","t":"LEPA LEPA","g":"L"},{"id":"b18","n":"Ben Lee","t":"LEPA LEPA","g":"L"},{"id":"b19","n":"Merryana binti Kinti","t":"LEPA LEPA","g":"P"},{"id":"b20","n":"Masri bin Lamsun","t":"LEPA LEPA","g":"L"},{"id":"b21","n":"Rafia binti Pelin @ Pilin","t":"PANGAYAU","g":"P"},{"id":"b22","n":"Syed Suffian bin Syed Hassan","t":"PANGAYAU","g":"L"},{"id":"b23","n":"Masri bin Mayasin","t":"PANGAYAU","g":"L"},{"id":"b24","n":"Mohammad Ikhwan bin Kuslan","t":"PANGAYAU","g":"L"},{"id":"b25","n":"Mohd Zulhilmi","t":"NBR","g":"L"},{"id":"b26","n":"Asidah Hussin","t":"NBR","g":"P"},{"id":"b27","n":"Nurazleen Mohamad","t":"NBR","g":"P"},{"id":"b28","n":"Amanda Azmira","t":"NBR","g":"P"},{"id":"b29","n":"Smith Robert","t":"KAYH ESHH ARGHHH","g":"L"},{"id":"b30","n":"Desiree Dessy Maidi","t":"KAYH ESHH ARGHHH","g":"P"},{"id":"b31","n":"Roslee bin Ismail","t":"KAYH ESHH ARGHHH","g":"L"},{"id":"b32","n":"Mohd Badrul Kamal bin Yassin","t":"KAYH ESHH ARGHHH","g":"L"},{"id":"b33","n":"Mohammad Norhazman bin Osman","t":"ELITE LADIES TEAM","g":"L"},{"id":"b34","n":"Surianih Awang Daud","t":"ELITE LADIES TEAM","g":"P"},{"id":"b35","n":"Sazleena binti Resnin","t":"ELITE LADIES TEAM","g":"P"},{"id":"b36","n":"Dayangku Noor Jehan Awang Othman","t":"ELITE LADIES TEAM","g":"P"},{"id":"b37","n":"Khairul Anwar bin Azalan","t":"KILAR","g":"L"},{"id":"b38","n":"Jasri bin Jamateh","t":"KILAR","g":"L"},{"id":"b39","n":"Tahir bin Md Japar","t":"KILAR","g":"L"},{"id":"b40","n":"Norasidah binti Musaat","t":"KILAR","g":"P"},{"id":"b41","n":"Zamri bin Assah","t":"SIMPLE BOWLER TEAM","g":"L"},{"id":"b42","n":"Mohd Faisal bin Jufri","t":"SIMPLE BOWLER TEAM","g":"L"},{"id":"b43","n":"Ridzuan bin Shukri","t":"SIMPLE BOWLER TEAM","g":"L"},{"id":"b44","n":"Debbie Kong","t":"SIMPLE BOWLER TEAM","g":"P"}];
 </script>
 <link rel="stylesheet" href="css/theme.css">
 <script src="js/theme.js?v=20261105b"></script>
@@ -167,6 +167,31 @@ body.ov{background:transparent;overflow:hidden;width:1920px;height:1080px}
 .ovf{display:flex;justify-content:space-between;align-items:center;color:#9A9FAA;font-size:15px;padding:8px 10px 0}
 .ovf .jamark{width:26px;height:16px;display:inline-block;vertical-align:-3px;margin-right:6px}
 @keyframes inr{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+/* ---------- announcements & name editor ---------- */
+.annbtn{width:100%;margin-bottom:12px;padding:13px 16px;border:1px dashed var(--line);border-radius:16px;background:transparent;color:var(--mute);font:inherit;font-weight:700;text-align:left;cursor:pointer}
+.annbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:13px 15px;border-radius:16px;
+  background:color-mix(in srgb,var(--warn) 14%,var(--card));border:1px solid color-mix(in srgb,var(--warn) 45%,var(--line))}
+.annbar .ic{font-size:22px;flex:none}.annbar .tx{flex:1;min-width:160px}
+.annbar .tx b{display:block;font-size:15px;line-height:1.3;word-break:break-word}
+.annbar .tx small{display:block;color:var(--mute);font-size:12px;margin-top:3px}
+.annbar .act{display:flex;gap:6px;flex:none}
+.annq{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.annq button{background:var(--bg2);border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:7px 12px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;text-align:left}
+.annq button.on{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+#annCard textarea{width:100%;font:inherit;font-size:16px;background:var(--field);color:var(--ink);border:1px solid var(--line);border-radius:11px;padding:11px 12px;resize:vertical;min-height:80px}
+.annboard{display:flex;gap:12px;align-items:flex-start;margin:0 0 14px;padding:13px 15px;border-radius:16px;
+  background:color-mix(in srgb,var(--warn) 16%,var(--card));border:1px solid color-mix(in srgb,var(--warn) 50%,var(--line));border-left:5px solid #8b5cf6}
+.annboard .ai{font-size:22px;line-height:1}.annboard b{display:block;font-size:16px;line-height:1.3;word-break:break-word}
+.annboard small{display:block;color:var(--mute);font-size:12px;margin-top:3px}
+.edlist{display:flex;flex-direction:column;gap:8px;margin-bottom:6px}
+.edrow{display:grid;grid-template-columns:1fr 104px auto;gap:6px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:12px;background:var(--bg2)}
+.edrow .eN{grid-column:1/-1}
+.edrow .eG,.edrow .eT{font-size:14px;padding:9px 8px}
+.edrow .eT{grid-column:auto}
+.edrow .eDel{color:var(--bad);padding:8px 12px}
+.edrow .edinfo{grid-column:1/-1;color:var(--mute);font-size:11px;margin-top:-2px}
+@media (min-width:640px){.edrow{grid-template-columns:1fr 110px 180px auto}.edrow .eN{grid-column:auto}}
+@media (max-width:480px){.bh .in:has([data-clock]) .logo-org{display:none}}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -182,7 +207,18 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": 
 const params = new URLSearchParams(location.search);
 const VIEW = (params.get("v") || location.hash.replace("#", "") || "board").toLowerCase();
 const WIDE = matchMedia("(min-width:1100px)");
-const TEAMS = [...new Set(ROSTER.map(p => p.t))];
+// The roster can be edited on the scorer page; edits are saved at bowling2026/roster.
+// Until the first edit, the built-in list above is used.
+let ROSTER = DEFAULT_ROSTER;
+let TEAMS = [...new Set(ROSTER.map(p => p.t))];
+function rosterFrom(obj) {
+  if (!obj || typeof obj !== "object") return null;
+  const a = Object.entries(obj).map(([id, p]) => ({ id, n: String(p.n || "").trim(), t: String(p.t || "").trim(), g: p.g === "P" ? "P" : "L", o: +p.o || 0 }))
+    .filter(p => p.n && p.t).sort((x, y) => x.o - y.o || x.id.localeCompare(y.id));
+  return a.length ? a : null;
+}
+function applyRoster(obj) { ROSTER = rosterFrom(obj) || DEFAULT_ROSTER; TEAMS = [...new Set(ROSTER.map(p => p.t))]; }
+const annActive = a => !!(a && a.t && (!a.exp || a.exp > Date.now()));
 const G = Array.from({ length: GAMES }, (_, i) => i + 1);
 let toastT;
 function toast(msg, bad) { const t = $("#toast"); t.textContent = msg; t.className = "toast show" + (bad ? " bad" : ""); clearTimeout(toastT); toastT = setTimeout(() => t.className = "toast", 1600); }
@@ -198,7 +234,9 @@ const Store = {
   emit() { this.listeners.forEach(cb => cb(this.state)); },
   merge(v) {
     v = v || {};
-    this.state = { scores: v.scores || {}, settings: Object.assign({ hdcW: 0, title: DEFAULT_TITLE }, v.settings || {}), updated: v.updated || 0 };
+    this.state = { scores: v.scores || {}, settings: Object.assign({ hdcW: 0, title: DEFAULT_TITLE }, v.settings || {}), updated: v.updated || 0,
+                   roster: v.roster || null, ann: v.ann || null };
+    applyRoster(this.state.roster);
     this.emit();
   },
   init() {
@@ -255,6 +293,23 @@ const Store = {
   async replaceScores(scores) {
     if (this.mode === "firebase") await this.db.ref(DB_ROOT).update({ scores, updated: Date.now() });
     else { this.state.scores = scores; this.state.updated = Date.now(); this._localSave(); }
+  },
+  // list = full roster array [{id,n,t,g}]; drop = ids whose scores should be deleted
+  async saveRoster(list, drop = []) {
+    const obj = {}; list.forEach((p, i) => { obj[p.id] = { n: p.n, t: p.t, g: p.g, o: i + 1 }; });
+    const now = Date.now();
+    if (this.mode === "firebase") {
+      const upd = { [`${DB_ROOT}/roster`]: obj, [`${DB_ROOT}/updated`]: now };
+      drop.forEach(id => { upd[`${DB_ROOT}/scores/${id}`] = null; });
+      await this.db.ref().update(upd);
+    } else {
+      this.state.roster = obj; drop.forEach(id => delete this.state.scores[id]);
+      this.state.updated = now; applyRoster(obj); this._localSave();
+    }
+  },
+  async setAnn(a) {
+    if (this.mode === "firebase") await this.db.ref(`${DB_ROOT}/ann`).set(a);
+    else { this.state.ann = a; this._localSave(); }
   },
   async login(pw) {
     if (this.mode !== "firebase") return true;
@@ -320,6 +375,7 @@ function viewBoard() {
     <div class="wrap">
       <section class="hero"><h1 id="ttl"></h1>
         <div class="sub"><span class="dot" id="dot"></span><span id="st">Connecting…</span><span>·</span><span>Updated <b id="upd" class="num">—</b></span><span class="pill" id="mode"></span></div></section>
+      <div id="annB"></div>
       <div class="tabs" id="tabs">
         <button data-t="team">Teams</button><button data-t="men">Men</button>
         <button data-t="women">Women</button><button data-t="high">High Game</button>
@@ -329,6 +385,8 @@ function viewBoard() {
   let last;
   const draw = () => {
     const c = compute(last), s = last.settings;
+    const a = last.ann;
+    $("#annB").innerHTML = annActive(a) ? `<div class="annboard"><span class="ai">📢</span><div><b>${esc(a.t)}</b><small>Bowling announcement${a.at ? " · " + new Date(a.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : ""}</small></div></div>` : "";
     $("#ttl").textContent = s.title || DEFAULT_TITLE;
     $("#upd").textContent = fmtTime(last.updated);
     $("#dot").className = "dot " + (Store.online ? "on" : "off");
@@ -381,7 +439,7 @@ function viewBoard() {
 function viewScorer() {
   if (window.jaKeepAwake) jaKeepAwake();   // stop the phone sleeping during games
   const app = $("#app");
-  let team = null, last = Store.state;
+  let team = null, last = Store.state, editing = null, annOpen = false, annMins = 30;
   try { team = sessionStorage.getItem("bolTeam"); } catch (e) {}
   app.innerHTML = `
     <header class="bh"><div class="in">
@@ -401,7 +459,8 @@ function viewScorer() {
         <div class="note" id="lerr"></div>
       </div>
       <div id="main" class="hide">
-        <div class="card"><div style="font-size:12px;color:var(--mute);margin-bottom:8px">Choose a team</div><div class="teamchips" id="chips"></div></div>
+        <div id="annCard"></div>
+        <div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px"><span style="font-size:12px;color:var(--mute)">Choose a team</span><button class="btn ghost small" id="newTeam">+ New team</button></div><div class="teamchips" id="chips"></div></div>
         <div class="card" id="grid"><div class="empty">Choose a team above to enter scores.</div></div>
         <details class="card"><summary style="cursor:pointer;font-weight:700">Settings & export</summary>
           <div style="margin-top:12px">
@@ -421,7 +480,7 @@ function viewScorer() {
     if (!team) return;
     const mem = ROSTER.filter(p => p.t === team);
     $("#grid").innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><b style="font-size:16px">${esc(team)}</b><span style="color:var(--mute);font-size:12px">0–300 · clear a box to delete</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px"><div><b style="font-size:16px">${esc(team)}</b><div style="color:var(--mute);font-size:12px">0–300 · clear a box to delete</div></div><button class="btn ghost small" id="editTeam">✏️ Edit names</button></div>
       <table class="sgrid"><colgroup><col class="c-n">${G.map(()=>"<col>").join("")}<col class="c-t"></colgroup><thead><tr><th>Name</th>${G.map(g => `<th>G${g}</th>`).join("")}<th style="text-align:right">TPF</th></tr></thead>
       <tbody>${mem.map(p => `<tr data-id="${p.id}"><td class="nm">${esc(p.n)}<small>${p.g === "P" ? "Female" : "Male"}</small></td>
         ${G.map(g => `<td><input class="num" inputmode="numeric" pattern="[0-9]*" maxlength="3" data-id="${p.id}" data-g="${g}"></td>`).join("")}<td class="t num" data-tot="${p.id}"></td></tr>`).join("")}
@@ -429,9 +488,10 @@ function viewScorer() {
     fillGrid();
   };
   const fillGrid = () => {
-    if (!team || !$("#grid input")) return;
+    if (editing || !team || !$("#grid input[data-g]")) return;
     const c = compute(last), t = c.teams.find(x => x.t === team);
-    document.querySelectorAll("#grid input").forEach(inp => {
+    if (!t) return;
+    document.querySelectorAll("#grid input[data-g]").forEach(inp => {
       if (inp === document.activeElement) return;
       const v = (last.scores[inp.dataset.id] || {})["g" + inp.dataset.g];
       inp.value = typeof v === "number" ? v : "";
@@ -451,7 +511,9 @@ function viewScorer() {
     if (!authed()) return;
     const c = compute(last); c.teamsAlpha = TEAMS.map(n => c.teams.find(t => t.t === n));
     drawChips(c);
-    if (team && !$("#grid input")) drawGrid(); else fillGrid();
+    drawAnn();
+    if (team && !TEAMS.includes(team) && !editing) { team = null; $("#grid").innerHTML = `<div class="empty">Choose a team above to enter scores.</div>`; }
+    if (editing) {} else if (team && !$("#grid input[data-g]")) drawGrid(); else fillGrid();
     if (document.activeElement !== $("#sTitle")) $("#sTitle").value = last.settings.title || DEFAULT_TITLE;
     if (document.activeElement !== $("#sHdc")) $("#sHdc").value = last.settings.hdcW || 0;
   };
@@ -466,17 +528,17 @@ function viewScorer() {
     try { await Store.setScore(id, g, val); inp.classList.add("saved"); setTimeout(() => inp.classList.remove("saved"), 900); toast(val === null ? "Deleted" : "Saved ✓"); }
     catch (e) { inp.classList.add("err"); toast("Save failed: " + (e.code || e.message), true); }
   };
-  $("#chips").onclick = e => { const b = e.target.closest("button"); if (!b) return; team = b.dataset.t; try { sessionStorage.setItem("bolTeam", team); } catch (e) {} drawGrid(); draw(); $("#grid").scrollIntoView({ behavior: "smooth", block: "start" }); };
-  $("#grid").addEventListener("change", e => { if (e.target.matches("input")) commit(e.target); });
+  $("#chips").onclick = e => { const b = e.target.closest("button"); if (!b) return; editing = null; team = b.dataset.t; try { sessionStorage.setItem("bolTeam", team); } catch (e) {} drawGrid(); draw(); $("#grid").scrollIntoView({ behavior: "smooth", block: "start" }); };
+  $("#grid").addEventListener("change", e => { if (e.target.matches("input[data-g]")) commit(e.target); });
   $("#grid").addEventListener("keydown", e => {
-    if (e.key !== "Enter" || !e.target.matches("input")) return;
-    e.preventDefault(); const all = [...document.querySelectorAll("#grid input")]; const i = all.indexOf(e.target);
+    if (e.key !== "Enter" || !e.target.matches("input[data-g]")) return;
+    e.preventDefault(); const all = [...document.querySelectorAll("#grid input[data-g]")]; const i = all.indexOf(e.target);
     commit(e.target); // move down the same game column, then to next column
     const per = GAMES, row = Math.floor(i / per), col = i % per, rows = all.length / per;
     const next = row + 1 < rows ? all[(row + 1) * per + col] : all[col + 1];
     next && next.focus(); next && next.select();
   });
-  $("#grid").addEventListener("input", e => { if (e.target.matches("input")) e.target.value = e.target.value.replace(/\D/g, "").slice(0, 3); });
+  $("#grid").addEventListener("input", e => { if (e.target.matches("input[data-g]")) e.target.value = e.target.value.replace(/\D/g, "").slice(0, 3); });
   $("#go").onclick = async () => {
     $("#lerr").textContent = "";
     try { await Store.login($("#pw").value); } catch (e) { $("#lerr").textContent = (USE_LOGIN ? "Wrong password" : "Wrong PIN") + " or no connection. (" + (e.code || e.message) + ")"; }
@@ -504,6 +566,144 @@ function viewScorer() {
     try { await Store.replaceScores({}); toast("All scores deleted"); } catch (e) { toast("Failed: " + (e.code || e.message), true); }
   };
   $("#out").onclick = () => Store.logout();
+
+  /* ---------- edit team & player names ---------- */
+  const newId = () => "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  const startEdit = orig => {
+    const mem = orig ? ROSTER.filter(p => p.t === orig) : [];
+    editing = { orig, name: orig || "", rows: mem.map(p => ({ id: p.id, n: p.n, g: p.g, to: "", isNew: false, del: false })) };
+    if (!orig) editing.rows.push({ id: newId(), n: "", g: "L", to: "", isNew: true, del: false });
+    drawEdit();
+    $("#grid").scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  const readEdit = () => {
+    if (!editing) return;
+    editing.name = $("#eTeam").value;
+    document.querySelectorAll("#grid .edrow").forEach(r => {
+      const row = editing.rows.find(x => x.id === r.dataset.id); if (!row) return;
+      row.n = r.querySelector(".eN").value; row.g = r.querySelector(".eG").value; row.to = r.querySelector(".eT").value;
+    });
+  };
+  const drawEdit = () => {
+    const others = TEAMS.filter(t => t !== editing.orig);
+    const played = id => Object.keys(last.scores[id] || {}).length;
+    $("#grid").innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px"><b style="font-size:16px">${editing.orig ? "Edit team" : "New team"}</b><span style="color:var(--mute);font-size:12px">Scores are kept when names change</span></div>
+      <div class="field"><label>Team name</label><input id="eTeam" maxlength="40" value="${esc(editing.name)}" placeholder="e.g. NGEKET"></div>
+      <div class="field" style="margin-bottom:4px"><label>Players</label></div>
+      <div class="edlist">${editing.rows.filter(r => !r.del).map(r => `
+        <div class="edrow" data-id="${r.id}">
+          <input class="eN" maxlength="60" value="${esc(r.n)}" placeholder="Player name">
+          <select class="eG" aria-label="Gender"><option value="L" ${r.g === "L" ? "selected" : ""}>Male</option><option value="P" ${r.g === "P" ? "selected" : ""}>Female</option></select>
+          <select class="eT" aria-label="Move to team"><option value="">This team</option>${others.map(t => `<option value="${esc(t)}" ${r.to === t ? "selected" : ""}>Move → ${esc(t)}</option>`).join("")}</select>
+          <button class="btn ghost small eDel" title="Remove player" aria-label="Remove player">✕</button>
+          ${!r.isNew && played(r.id) ? `<small class="edinfo">${played(r.id)} game${played(r.id) > 1 ? "s" : ""} scored</small>` : ""}
+        </div>`).join("")}</div>
+      <button class="btn ghost small" id="eAdd" style="margin:4px 0 14px">+ Add player</button>
+      <div class="row2"><button class="btn" id="eSave" style="flex:1">Save changes</button><button class="btn ghost" id="eCancel">Cancel</button>
+        ${editing.orig ? `<button class="btn ghost" id="eDelTeam" style="color:var(--bad)">Delete team</button>` : ""}</div>
+      <div class="note" id="eErr" style="color:var(--bad)"></div>`;
+  };
+  const endEdit = () => { editing = null; $("#grid").innerHTML = ""; if (team) drawGrid(); else $("#grid").innerHTML = `<div class="empty">Choose a team above to enter scores.</div>`; draw(); };
+  const saveEdit = async () => {
+    readEdit();
+    const err = m => { $("#eErr").textContent = m; };
+    const name = editing.name.replace(/\s+/g, " ").trim();
+    if (!name) return err("Please type a team name.");
+    const clash = TEAMS.find(t => t !== editing.orig && t.toLowerCase() === name.toLowerCase());
+    if (clash) return err(`There's already a team called "${clash}".`);
+    const keep = editing.rows.filter(r => !r.del && r.n.trim());
+    const stay = keep.filter(r => !r.to);
+    if (!stay.length) return err("A team needs at least one player. Use Delete team to remove it.");
+    const blank = editing.rows.filter(r => !r.del && !r.n.trim() && !r.isNew);
+    if (blank.length) return err("A player name is empty. Type a name, or tap ✕ to remove that player.");
+    const gone = editing.rows.filter(r => !r.isNew && r.del);
+    const scored = gone.filter(r => Object.keys(last.scores[r.id] || {}).length);
+    if (scored.length && !confirm(`Remove ${scored.map(r => r.n).join(", ")}?\n\nTheir scores will be deleted too.`)) return;
+    const goneIds = new Set(gone.map(r => r.id));
+    const byId = Object.fromEntries(keep.map(r => [r.id, r]));
+    const list = [];
+    ROSTER.forEach(p => {
+      if (goneIds.has(p.id)) return;
+      const r = byId[p.id];
+      if (r) { list.push({ id: p.id, n: r.n.replace(/\s+/g, " ").trim(), g: r.g, t: r.to || name }); delete byId[p.id]; }
+      else list.push({ id: p.id, n: p.n, g: p.g, t: p.t });
+    });
+    Object.values(byId).forEach(r => list.push({ id: r.id, n: r.n.replace(/\s+/g, " ").trim(), g: r.g, t: r.to || name }));
+    try {
+      $("#eSave").disabled = true;
+      await Store.saveRoster(list, [...goneIds]);
+      team = name; try { sessionStorage.setItem("bolTeam", team); } catch (e) {}
+      toast("Names saved ✓");
+      endEdit();
+    } catch (e) { $("#eSave").disabled = false; err("Save failed: " + (e.code || e.message)); }
+  };
+  $("#grid").addEventListener("click", async e => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.id === "editTeam") return startEdit(team);
+    if (!editing) return;
+    if (b.id === "eAdd") { readEdit(); editing.rows.push({ id: newId(), n: "", g: "L", to: "", isNew: true, del: false }); drawEdit(); const ins = document.querySelectorAll("#grid .eN"); ins[ins.length - 1].focus(); return; }
+    if (b.classList.contains("eDel")) { readEdit(); const row = editing.rows.find(x => x.id === b.closest(".edrow").dataset.id); if (row) row.del = true; drawEdit(); return; }
+    if (b.id === "eCancel") return endEdit();
+    if (b.id === "eSave") return saveEdit();
+    if (b.id === "eDelTeam") {
+      const ids = ROSTER.filter(p => p.t === editing.orig).map(p => p.id);
+      const n = ids.reduce((a, id) => a + Object.keys(last.scores[id] || {}).length, 0);
+      if (!confirm(`Delete team "${editing.orig}" and its ${ids.length} player(s)?` + (n ? `\n\n${n} game score(s) will be deleted too.` : ""))) return;
+      try { await Store.saveRoster(ROSTER.filter(p => p.t !== editing.orig), ids); team = null; toast("Team deleted"); endEdit(); }
+      catch (e2) { toast("Failed: " + (e2.code || e2.message), true); }
+    }
+  });
+  $("#newTeam").onclick = () => { team = null; startEdit(null); };
+
+  /* ---------- announcements (bowling2026/ann) ---------- */
+  const ANN_QUICK = ["Next squad starts in 5 minutes", "Short break – bowling resumes in 10 minutes", "Calling team  to lanes ",
+                     "Please submit your score sheet at the counter", "Final game is now on", "Results and prize giving coming soon"];
+  const hm = t => new Date(t).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const drawAnn = () => {
+    const el = $("#annCard"); if (!el || (annOpen && el.querySelector("textarea"))) return;
+    const a = last.ann;
+    if (annActive(a)) {
+      el.innerHTML = `<div class="annbar"><div class="ic">📢</div><div class="tx"><b>${esc(a.t)}</b><small>On the big screen &amp; bowling board · ${a.exp ? "until " + hm(a.exp) : "until removed"}</small></div>
+        <div class="act"><button class="btn ghost small" data-ann="edit">Change</button><button class="btn ghost small" data-ann="clear" style="color:var(--bad)">Remove</button></div></div>`;
+    } else if (!annOpen) {
+      el.innerHTML = `<button class="annbtn" data-ann="edit">📢 Make an announcement</button>`;
+    }
+  };
+  const openAnnForm = () => {
+    annOpen = true;
+    const a = last.ann, cur = annActive(a) ? a.t : "";
+    annMins = annActive(a) && !a.exp ? 0 : 30;
+    $("#annCard").innerHTML = `<div class="card"><b>📢 Announcement</b><div style="color:var(--mute);font-size:12px;margin:2px 0 10px">Shows on the big screen and the bowling live board.</div>
+      <div class="annq">${ANN_QUICK.map(q => `<button type="button">${esc(q)}</button>`).join("")}</div>
+      <textarea id="annT" maxlength="140" rows="3" placeholder="e.g. Calling team NGEKET to lanes 5–6">${esc(cur)}</textarea>
+      <div style="text-align:right;color:var(--mute);font-size:12px;margin:3px 0 8px" id="annC">${cur.length} / 140</div>
+      <div class="field" style="margin-bottom:6px"><label>Show for</label></div>
+      <div class="annq" id="annD">${[[10, "10 min"], [30, "30 min"], [60, "1 hour"], [0, "Until removed"]].map(([m, l]) => `<button type="button" data-m="${m}" class="${m === annMins ? "on" : ""}">${l}</button>`).join("")}</div>
+      <div class="row2" style="margin-top:10px"><button class="btn" id="annPost" style="flex:1">${cur ? "Update" : "Post"} announcement</button><button class="btn ghost" id="annX">Cancel</button></div></div>`;
+    $("#annT").focus();
+  };
+  $("#annCard").addEventListener("input", e => { if (e.target.id === "annT") $("#annC").textContent = e.target.value.length + " / 140"; });
+  $("#annCard").addEventListener("click", async e => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.ann === "edit") return openAnnForm();
+    if (b.dataset.ann === "clear") {
+      if (!confirm("Remove this announcement from the big screen and board?")) return;
+      try { await Store.setAnn(null); toast("Announcement removed"); } catch (e2) { toast("Failed: " + (e2.code || e2.message), true); }
+      return;
+    }
+    if (b.id === "annX") { annOpen = false; $("#annCard").innerHTML = ""; return drawAnn(); }
+    if (b.dataset.m !== undefined) { annMins = +b.dataset.m; document.querySelectorAll("#annD button").forEach(x => x.classList.toggle("on", x === b)); return; }
+    if (b.closest(".annq") && !b.dataset.m) { const t = $("#annT"); t.value = b.textContent; $("#annC").textContent = t.value.length + " / 140"; t.focus(); const i = t.value.indexOf("  "); const p = i >= 0 ? i + 1 : t.value.length; t.setSelectionRange(p, p); return; }
+    if (b.id === "annPost") {
+      const t = $("#annT").value.replace(/\s+/g, " ").trim().slice(0, 140);
+      if (!t) return toast("Type a message first", true);
+      const at = Date.now();
+      try { await Store.setAnn({ t, at, exp: annMins ? at + annMins * 60000 : 0 }); annOpen = false; $("#annCard").innerHTML = ""; drawAnn(); toast("📢 Announcement posted"); }
+      catch (e2) { toast("Failed: " + (e2.code || e2.message), true); }
+    }
+  });
+  setInterval(() => { if (!annOpen) drawAnn(); }, 20000);
   Store.on(s => { last = s; draw(); });
 }
 
