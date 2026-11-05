@@ -58,5 +58,32 @@
   };
   if (document.documentElement.hasAttribute("data-keep-awake")) window.jaKeepAwake();
 
+  // Header clock: any element with data-clock shows the time (and the date on wider screens).
+  // Works for headers drawn later by JS too, since it looks them up on every tick.
+  (function () {
+    var css = "[data-clock]{display:flex;flex-direction:column;align-items:flex-end;line-height:1;flex:none;white-space:nowrap}" +
+      "[data-clock] .ck-t{font-family:Rajdhani,Inter,sans-serif;font-weight:700;font-size:21px;letter-spacing:.02em;font-variant-numeric:tabular-nums}" +
+      "[data-clock] .ck-t small{font-size:.6em;margin-left:2px;opacity:.7;letter-spacing:.04em}" +
+      "[data-clock] .ck-d{font-size:11px;opacity:.6;margin-top:3px;font-weight:600}" +
+      "@media (max-width:640px){[data-clock] .ck-t{font-size:17px}[data-clock] .ck-d{display:none}}" +
+      "@media (max-width:420px){[data-clock] .ck-t small{display:none}header.top{gap:7px!important}}";
+    var st = document.createElement("style"); st.textContent = css;
+    (document.head || document.documentElement).appendChild(st);
+    var D = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+        M = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    function tick() {
+      var els = document.querySelectorAll("[data-clock]");
+      if (!els.length) return;
+      var d = new Date(), h = d.getHours(), m = d.getMinutes(), ap = h < 12 ? "AM" : "PM";
+      h = h % 12 || 12;
+      var html = '<span class="ck-t">' + h + ":" + (m < 10 ? "0" : "") + m + "<small>" + ap + "</small></span>" +
+                 '<span class="ck-d">' + D[d.getDay()] + " " + d.getDate() + " " + M[d.getMonth()] + "</span>";
+      for (var i = 0; i < els.length; i++) if (els[i].innerHTML !== html) els[i].innerHTML = html;
+    }
+    window.jaClockTick = tick;
+    setInterval(tick, 1000);
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", tick); else tick();
+  })();
+
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount); else mount();
 })();

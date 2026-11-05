@@ -39,6 +39,7 @@ header.top .title{font-family:Rajdhani,Inter,sans-serif;font-weight:700;font-siz
 header.top .title:before{content:"";width:10px;height:10px;border-radius:3px;background:var(--sport);flex:none}
 header.top .sub{font-size:12px;color:var(--mute)}
 header.top .sp{flex:1}
+header.top button{white-space:nowrap;flex:none}
 header.top button.ghost{color:var(--ink)!important;border-color:var(--line)!important}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--bad);flex:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--bad) 20%,transparent)}
 .dot.on{background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 20%,transparent)}
