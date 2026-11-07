@@ -537,6 +537,16 @@ function viewBoard() {
   // 4. clearer "updated" line, refreshed every few seconds
   const drawUpd = () => { if (last) $("#upd").innerHTML = `Last update <b class="num">${fmtTime(last.updated)}</b> · checked ${ago(Store.checked)}`; };
   setInterval(() => { drawUpd(); if (last) drawEvent(compute(last)); }, 5000);
+  // live countdown: "1:05:09" / "26:41", ticking every second
+  const p2 = n => String(n).padStart(2, "0");
+  const cdText = ms => { const t = Math.max(0, Math.ceil(ms / 1000)), h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60;
+    return h >= 24 ? `${Math.floor(h / 24)}d ${h % 24}h ${p2(m)}m` : h ? `${h}:${p2(m)}:${p2(s)}` : `${p2(m)}:${p2(s)}`; };
+  setInterval(() => {
+    const el = document.querySelector("[data-cd]"); if (!el) return;
+    const ms = +el.dataset.cd - Date.now();
+    if (ms <= 0) { if (last) drawEvent(compute(last)); return; }
+    el.textContent = cdText(ms);
+  }, 1000);
   // 2. event info card (date / start / venue from Tournament rules)
   const drawEvent = c => {
     const s = last.settings, bits = [];
@@ -551,7 +561,7 @@ function viewBoard() {
     let cd = "";
     if (!c.anyScore && when && s.start) {
       const ms = when - Date.now();
-      if (ms > 0 && ms < 3 * 864e5) { const h = Math.floor(ms / 36e5), m = Math.ceil((ms % 36e5) / 6e4); cd = `<div class="cd">Starts in <b>${h ? h + "h " : ""}${m}m</b></div>`; }
+      if (ms > 0 && ms < 3 * 864e5) cd = `<div class="cd">Starts in <b class="num" data-cd="${when.getTime()}">${cdText(ms)}</b></div>`;
       else if (ms <= 0) cd = `<div class="cd"><b>Starting soon</b> – first scores will appear here</div>`;
     }
     if (!c.anyScore) {   // before the first score: big "starting soon" panel
