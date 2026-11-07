@@ -145,11 +145,28 @@ body.pc .hero h1{font-size:34px}
 mark{background:color-mix(in srgb,var(--warn) 40%,transparent);color:inherit;border-radius:3px;padding:0 1px}
 .row.found{border-color:color-mix(in srgb,var(--warn) 55%,var(--line))}
 .mem.me{background:color-mix(in srgb,var(--warn) 14%,transparent);border-radius:8px;padding:4px 6px;margin:-4px -6px}
-.prelist{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
-.pteam{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px;box-shadow:var(--shadow)}
-.pteam .ph{margin-bottom:6px}.pteam .ph b{font-size:15px}
-.pteam .ln{display:block;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--acc);margin-bottom:2px}
-.pteam .pm{font-size:13px;padding:3px 0;border-top:1px dashed var(--line)}
+.prelist{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.pteam{--tc:var(--acc);position:relative;overflow:hidden;border:1px solid color-mix(in srgb,var(--tc) 22%,var(--line));border-radius:18px;padding:16px 16px 10px;box-shadow:var(--shadow);
+  background:linear-gradient(180deg,color-mix(in srgb,var(--tc) 9%,var(--card)),var(--card) 70%)}
+.pteam:before{content:"";position:absolute;inset:0 0 auto 0;height:5px;background:var(--tc)}
+.pteam .ph{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px}
+.pteam .ph b{display:block;font-family:Rajdhani,Inter;font-size:21px;font-weight:700;letter-spacing:.4px;line-height:1.05;text-transform:uppercase;color:var(--ink)}
+.pteam .ph small{display:block;color:color-mix(in srgb,var(--tc) 70%,var(--mute));font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-top:4px}
+.lnb{flex:none;display:flex;flex-direction:column;align-items:center;background:var(--tc);color:#fff;border-radius:11px;padding:4px 9px;font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.lnb b{font-family:Rajdhani,Inter;font-size:19px!important;letter-spacing:0!important;line-height:1;color:#fff!important}
+.pteam .pm{display:flex;align-items:center;gap:8px;font-size:13px;padding:5px 0;border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent);color:var(--ink)}
+.gd{flex:none;width:8px;height:8px;border-radius:50%}.gd.L{background:#3E77C9}.gd.P{background:var(--acc)}
+.guest{display:inline-block;margin-left:6px;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:2px 6px;border-radius:99px;background:color-mix(in srgb,var(--gold) 22%,transparent);color:color-mix(in srgb,var(--gold) 80%,var(--ink));vertical-align:1px}
+.startp{display:flex;gap:16px;align-items:stretch;flex-wrap:wrap;margin:0 0 14px;padding:18px;border-radius:20px;background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow)}
+.sp-l{flex:1 1 260px;display:flex;flex-direction:column;justify-content:center;gap:8px}
+.cd.big{font-family:Rajdhani,Inter;font-size:30px;line-height:1;color:var(--acc);margin:0;text-transform:uppercase;letter-spacing:.5px}
+.cd.big b{font-weight:700}
+.tiles{flex:2 1 420px;display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
+.tile{border-radius:14px;padding:12px 14px;background:linear-gradient(135deg,color-mix(in srgb,var(--acc) 12%,var(--card)),var(--card));border:1px solid color-mix(in srgb,var(--acc) 22%,var(--line))}
+.tile b{display:block;font-family:Rajdhani,Inter;font-size:38px;font-weight:700;line-height:1;color:var(--acc)}
+.tile b small{font-size:.5em;margin:0 2px;color:var(--mute)}
+@media (max-width:600px){.startp{padding:14px;gap:12px}.cd.big{font-size:24px}.tiles{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;flex-basis:100%}.tile{padding:10px}.tile b{font-size:28px;white-space:nowrap}.tile b small{font-size:.45em}}
+.tile span{display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin-top:4px}
 body.pc .findbar{max-width:520px}
 
 /* ---------- scorer ---------- */
@@ -510,6 +527,10 @@ function viewBoard() {
   const lane = t => (last.lanes && last.lanes[tkey(t)]) || "";
   const laneN = l => { const m = String(l || "").match(/\d+/); return m ? +m[0] : Infinity; };
   const tagG = p => `<span class="tg ${p.g}">${p.g === "P" ? "F" : "M"}</span>`;
+  const TEAM_COLORS = ["#B3162D", "#2F5FA6", "#B8925A", "#1E9E5A", "#8b5cf6", "#0891b2", "#ea580c", "#c026d3"];
+  // "(PESERTA JEMPUTAN)" in a name → small Guest badge
+  const GUEST = /\s*\(\s*peserta\s+jemputan\s*\)\s*/i;
+  const pname = n => GUEST.test(n) ? `${mark(n.replace(GUEST, " ").trim())}<span class="guest">Guest</span>` : mark(n);
   const hit = (...xs) => !q || xs.some(x => String(x || "").toLowerCase().includes(q));
   const mark = txt => { const t = esc(txt); if (!q) return t; const i = String(txt).toLowerCase().indexOf(q); return i < 0 ? t : esc(txt.slice(0, i)) + "<mark>" + esc(txt.slice(i, i + q.length)) + "</mark>" + esc(txt.slice(i + q.length)); };
   const ago = ts => { if (!ts) return "—"; const s = Math.round((Date.now() - ts) / 1000); return s < 15 ? "just now" : s < 60 ? s + " s ago" : Math.round(s / 60) + " min ago"; };
@@ -533,7 +554,18 @@ function viewBoard() {
       if (ms > 0 && ms < 3 * 864e5) { const h = Math.floor(ms / 36e5), m = Math.ceil((ms % 36e5) / 6e4); cd = `<div class="cd">Starts in <b>${h ? h + "h " : ""}${m}m</b></div>`; }
       else if (ms <= 0) cd = `<div class="cd"><b>Starting soon</b> – first scores will appear here</div>`;
     }
-    $("#evInfo").innerHTML = (!c.anyScore || bits.length > 1) ? `<div class="evcard">${cd}<div class="evb">${bits.map(b => `<span>${b}</span>`).join("")}</div></div>` : "";
+    if (!c.anyScore) {   // before the first score: big "starting soon" panel
+      const fem = ROSTER.filter(p => p.g === "P").length;
+      const tiles = [[TEAMS.length, "Teams"], [ROSTER.length, "Bowlers"], [c.R.games, c.R.games > 1 ? "Games each" : "Game each"], [`${ROSTER.length - fem}<small>M</small> ${fem}<small>F</small>`, "Men · Women"]];
+      const lanesN = new Set(TEAMS.map(lane).filter(Boolean)).size;
+      if (lanesN) tiles.push([lanesN, lanesN > 1 ? "Lanes" : "Lane"]);
+      $("#evInfo").innerHTML = `<div class="startp">
+        <div class="sp-l">${cd ? cd.replace('class="cd"', 'class="cd big"') : `<div class="cd big"><b>Line-up</b></div>`}
+          <div class="evb">${bits.slice(0, -1).map(b => `<span>${b}</span>`).join("") || `<span>Teams and bowlers for today</span>`}</div></div>
+        <div class="tiles">${tiles.map(([n, l]) => `<div class="tile"><b class="num">${n}</b><span>${l}</span></div>`).join("")}</div></div>`;
+      return;
+    }
+    $("#evInfo").innerHTML = bits.length > 1 ? `<div class="evcard"><div class="evb">${bits.map(b => `<span>${b}</span>`).join("")}</div></div>` : "";
   };
   const draw = () => {
     const c = compute(last), s = last.settings, a = last.ann;
@@ -577,8 +609,10 @@ function viewBoard() {
       $("#tabs").classList.add("hide");
       const teams = TEAMS.slice().sort((x, y) => laneN(lane(x)) - laneN(lane(y)) || x.localeCompare(y))
         .map(t => ({ t, mem: ROSTER.filter(p => p.t === t) })).filter(x => hit(x.t, ...x.mem.map(m => m.n)));
-      L.innerHTML = `<div class="prelist">${teams.map(x => `<div class="pteam"><div class="ph">${lane(x.t) ? `<span class="ln">Lane ${esc(lane(x.t))}</span>` : ""}<b>${mark(x.t)}</b></div>
-        ${x.mem.map(m => `<div class="pm">${mark(m.n)}${tagG(m)}</div>`).join("")}</div>`).join("") || `<div class="empty">No match for “${esc(q)}”.</div>`}</div>`;
+      const order = TEAMS.slice();   // colour stays with the team even when sorted by lane
+      L.innerHTML = `<div class="prelist">${teams.map(x => { const f = x.mem.filter(m => m.g === "P").length, ci = order.indexOf(x.t) % TEAM_COLORS.length;
+        return `<div class="pteam" style="--tc:${TEAM_COLORS[ci]}"><div class="ph"><div><b>${mark(x.t)}</b><small>${x.mem.length} bowlers · ${x.mem.length - f}M ${f}F</small></div>${lane(x.t) ? `<span class="lnb">Lane<b>${esc(lane(x.t))}</b></span>` : ""}</div>
+        ${x.mem.map(m => `<div class="pm"><i class="gd ${m.g}" title="${m.g === "P" ? "Female" : "Male"}"></i>${pname(m.n)}</div>`).join("")}</div>`; }).join("") || `<div class="empty">No match for “${esc(q)}”.</div>`}</div>`;
       $("#findN").textContent = q ? `${teams.length} team${teams.length === 1 ? "" : "s"}` : "";
       $("#note").textContent = "No scores yet – this page updates automatically." + rulesTxt;
       return;
@@ -595,13 +629,13 @@ function viewBoard() {
           <div class="rk num">${r}</div>
           <div><div class="nm">${mark(t.t)}${last.locks[tkey(t.t)] ? `<span class="badge ok">✓ FINAL</span>` : ""}</div><div class="meta">${lane(t.t) ? `<span>Lane ${esc(lane(t.t))}</span>` : ""}<span>${t.done}/${t.slots} games done</span>${t.high ? `<span>Best game ${t.high}</span>` : ""}</div>${gamesHTML(t.games)}</div>
           <div class="tot num"><b>${t.total}</b><small>TPF</small></div>
-          ${open.has(t.t) || mHit ? `<div class="members">${t.mem.map(m => `<div class="mem${q && hit(m.n) ? " me" : ""}"><div>${mark(m.n)}${tagG(m)}${gamesHTML(m.games)}</div><div class="num"><b>${m.teamPins}</b></div></div>`).join("")}</div>` : ""}
+          ${open.has(t.t) || mHit ? `<div class="members">${t.mem.map(m => `<div class="mem${q && hit(m.n) ? " me" : ""}"><div>${pname(m.n)}${tagG(m)}${gamesHTML(m.games)}</div><div class="num"><b>${m.teamPins}</b></div></div>`).join("")}</div>` : ""}
         </div>`; });
       else if (k === "high" || k === "series") {
         const key = k === "high" ? "highT" : "ser", list = k === "high" ? c.highs : c.series, lim = q ? list.length : (wide ? 10 : 20);
         rows = list.slice(0, lim).map((p, i) => { const r = c.rankOf(list, i, key); return hit(p.n, p.t) && `
         <div class="row r${r}${q ? " found" : ""}"><div class="rk num">${r}</div>
-          <div><div class="nm">${mark(p.n)} ${tagG(p)}</div><div class="meta"><span>${mark(p.t)}</span></div></div>
+          <div><div class="nm">${pname(p.n)} ${tagG(p)}</div><div class="meta"><span>${mark(p.t)}</span></div></div>
           <div class="tot num"><b>${p[key]}</b><small>${k === "series" ? c.R.seriesN + " games · " : ""}${hiSmall}</small></div></div>`; });
         if (!list.length) return `<div class="empty">${k === "series" ? `Needs ${c.R.seriesN} games in a row.` : "No scores yet."}</div>`;
       } else {
@@ -609,7 +643,7 @@ function viewBoard() {
         if (!list.length) return `<div class="empty">No scores yet.</div>`;
         rows = list.map((p, i) => { const r = c.rankOf(list, i); return hit(p.n, p.t) && `
         <div class="row r${r}${q ? " found" : ""}"><div class="rk num">${r}</div>
-          <div><div class="nm">${mark(p.n)}${k === "overall" ? " " + tagG(p) : ""}</div><div class="meta"><span>${mark(p.t)}</span><span>Avg ${p.avg.toFixed(1)}</span>${p.hdc ? `<span>+${p.hdc} hdc</span>` : ""}</div>${gamesHTML(p.games)}</div>
+          <div><div class="nm">${pname(p.n)}${k === "overall" ? " " + tagG(p) : ""}</div><div class="meta"><span>${mark(p.t)}</span><span>Avg ${p.avg.toFixed(1)}</span>${p.hdc ? `<span>+${p.hdc} hdc</span>` : ""}</div>${gamesHTML(p.games)}</div>
           <div class="tot num"><b>${p.total}</b><small>${p.played}/${GAMES} games</small></div></div>`; });
       }
       rows = rows.filter(Boolean); found += rows.length;
