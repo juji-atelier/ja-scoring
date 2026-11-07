@@ -54,9 +54,33 @@ function show(v) {
 }
 const cap = s => s[0].toUpperCase() + s.slice(1);
 
+// ---------------------------------------------------------------- waiting to send
+// Firebase keeps writes on the phone while offline and sends them later.
+// `track` counts writes that haven't been confirmed yet so the scorer can see it.
+let pending = 0, pendingSince = 0, online = true;
+function track(p) {
+  pending++; if (!pendingSince) pendingSince = Date.now();
+  renderPending();
+  const done = () => { pending = Math.max(0, pending - 1); if (!pending) pendingSince = 0; renderPending(); };
+  Promise.resolve(p).then(done, done);
+  return p;
+}
+function renderPending() {
+  const el = $("#pendBar");
+  if (!el) return;
+  const slow = pending && Date.now() - pendingSince > 2500;
+  const showIt = pending && (!online || slow);
+  el.classList.toggle("hide", !showIt);
+  if (showIt) el.innerHTML = `⏳ ${pending} action${pending > 1 ? "s" : ""} waiting to send` +
+    (online ? "…" : " – no internet") +
+    `<small>${online ? "Slow connection. Keep scoring – nothing is lost." : "Keep scoring on this phone – everything is saved here and sends by itself when the connection is back. Don't close this page."}</small>`;
+}
+setInterval(renderPending, 1000);
+addEventListener("beforeunload", e => { if (pending) { e.preventDefault(); e.returnValue = ""; } });
+
 function publish(id, m) {
-  if (!m) return C.remove(ref(db, `pub/${S}/m/${id}`)).catch(() => {});
-  return C.set(ref(db, `pub/${S}/m/${id}`), publicRecord(S, m, teams)).catch(e => console.warn(e));
+  if (!m) return track(C.remove(ref(db, `pub/${S}/m/${id}`))).catch(() => {});
+  return track(C.set(ref(db, `pub/${S}/m/${id}`), publicRecord(S, m, teams))).catch(e => console.warn(e));
 }
 async function republishAll() {
   const all = {};
@@ -64,9 +88,9 @@ async function republishAll() {
   await C.set(ref(db, `pub/${S}/m`), all);
 }
 function log(id, m, act) {
-  C.push(ref(db, `logs/${S}`), {
+  track(C.push(ref(db, `logs/${S}`), {
     m: id, no: (m && m.no) ?? "", act, by: NAME || "?", dev: DEV, at: C.serverTimestamp()
-  }).catch(() => {});
+  })).catch(() => {});
 }
 
 // ---------------------------------------------------------------- auth
@@ -102,7 +126,7 @@ $("#who").onclick = () => {
 C.onAuthStateChanged(auth, user => {
   if (!user) {
     isAdmin = false;
-    $("#who").classList.add("hide"); $("#btnLogout").classList.add("hide");
+    $("#who").classList.add("hide"); $("#btnLogout").classList.add("hide"); $("#fbWrap").classList.add("hide");
     show("vLogin");
     return;
   }
@@ -114,12 +138,13 @@ C.onAuthStateChanged(auth, user => {
   isAdmin = user.email === ADMIN_EMAIL;
   if (!NAME) NAME = isAdmin ? "Admin" : SP.name + " scorer";
   $("#who").textContent = NAME + (isAdmin ? " (admin)" : "");
-  $("#who").classList.remove("hide"); $("#btnLogout").classList.remove("hide");
+  $("#who").classList.remove("hide"); $("#btnLogout").classList.remove("hide"); $("#fbWrap").classList.remove("hide");
   startData();
   goTab(curId ? "score" : tab);
 });
 
 C.onValue(ref(db, ".info/connected"), s => {
+  online = !!s.val(); renderPending();
   $("#conn").classList.toggle("on", !!s.val());
   $("#conn").title = s.val() ? "Online" : "Offline – changes will sync when back online";
 });
@@ -256,6 +281,13 @@ async function openMatch(id, force = false) {
   window.scrollTo(0, 0);
 }
 
+// next scheduled match on the same court (lowest match number); any court if this one has none
+function nextOnCourt(m) {
+  const sched = arrMatches().filter(x => x.id !== curId && (x.status || "scheduled") === "scheduled");
+  const same = sched.filter(x => String(x.court || "") === String(m.court || ""));
+  return (m.court ? same : sched)[0] || null;
+}
+
 async function backToList() {
   const id = curId;
   curId = null; entry = "";
@@ -272,7 +304,7 @@ async function act(mutate, label) {
   if (!id) return false;
   let reason = "";
   try {
-    const r = await C.runTransaction(matchRef(id), m => {
+    const r = await track(C.runTransaction(matchRef(id), m => {
       reason = "";
       if (!m) return m;
       if (!m.lock || m.lock.dev !== DEV) { reason = "lock"; return; }
@@ -280,7 +312,7 @@ async function act(mutate, label) {
       m.lock.at = C.now();
       m.updatedAt = C.now();
       return m;
-    });
+    }));
     if (!r.committed) {
       if (reason === "lock") toast("Another device has control of this match.", 3500);
       return false;
@@ -485,6 +517,10 @@ function renderScore() {
     const v = view(S, m, C.now());
     const w = m.winner ? `${esc(sideName(m, m.winner))} wins` : "Draw";
     html += `<div class="banner ok">FINAL${m.wo ? " (walkover)" : ""}: ${w}${m.wo ? "" : ` · ${v.sc[0]} – ${v.sc[1]}`}${v.hist ? `<div class="muted" style="font-weight:400">${esc(v.hist)}</div>` : ""}</div>`;
+    const nx = nextOnCourt(m);
+    html += nx
+      ? `<button class="primary nextbtn" data-a="next" data-id="${nx.id}"><span>Next${m.court ? " on Court " + esc(m.court) : ""}: #${esc(nx.no)}${nx.time ? " · " + esc(nx.time) : ""}<small style="color:inherit;opacity:.85">${esc(tn(nx.teamA))} vs ${esc(tn(nx.teamB))}${lockedByOther(nx) ? " · 🔒 " + esc(nx.lock.name) : ""}</small></span><span class="ar">→</span></button>`
+      : `<button class="nextbtn" data-a="back"><span>No more matches${m.court ? " on Court " + esc(m.court) : ""}<small>Back to the match list</small></span><span class="ar">←</span></button>`;
   }
 
   if (st === "scheduled") {
@@ -608,6 +644,11 @@ function onScoreClick(e) {
   switch (a) {
     case "back": return backToList();
     case "take": return openMatch(curId, true);
+    case "next": {
+      const id = curId, to = b.dataset.id;
+      curId = null; clearInterval(heartbeat); clearInterval(ticker);
+      return releaseLock(id).then(() => openMatch(to));
+    }
     case "start": return A.start(s);
     case "unstart": return A.unstart();
     case "finish": return A.finish();
@@ -967,3 +1008,120 @@ async function clearAnn() {
     toast("Announcement removed");
   } catch (err) { toast("Could not remove: " + err.message, 4000); }
 }
+
+// ---------------------------------------------------------------- feedback (→ Admin → Feedback)
+let fbType = "Suggestion";
+$("#fbOpen").onclick = () => {
+  $("#fbText").value = "";
+  $("#fbInfo").textContent = `Sent with your name (${NAME || "—"}), ${SP.name}, the time and your device.`;
+  $("#fbModal").classList.remove("hide");
+  setTimeout(() => $("#fbText").focus(), 50);
+};
+$("#fbCancel").onclick = () => $("#fbModal").classList.add("hide");
+$("#fbModal").onclick = e => { if (e.target.id === "fbModal") $("#fbModal").classList.add("hide"); };
+$$("#fbType button").forEach(b => b.onclick = () => { fbType = b.dataset.ty; $$("#fbType button").forEach(x => x.classList.toggle("on", x === b)); });
+$("#fbSend").onclick = async () => {
+  const msg = $("#fbText").value.trim();
+  if (!msg) return toast("Type a message first");
+  const u = navigator.userAgent;
+  const dev = /iPhone/.test(u) ? "iPhone" : /iPad/.test(u) ? "iPad" : /Android/.test(u) ? "Android" : /Windows/.test(u) ? "Windows PC" : /Mac/.test(u) ? "Mac" : "Other";
+  const m = curId && matches[curId];
+  $("#fbSend").disabled = true;
+  try {
+    await track(C.push(ref(db, "feedback"), {
+      type: fbType, msg: msg.slice(0, 500), sport: S, page: SP.name + " scorer", by: NAME || "?",
+      acct: (auth.currentUser && auth.currentUser.email) || "", dev,
+      team: m ? `#${m.no} ${tn(m.teamA)} vs ${tn(m.teamB)}` : "", at: C.serverTimestamp()
+    }));
+    $("#fbModal").classList.add("hide");
+    toast("Thanks! Feedback sent ✓");
+  } catch (e) { toast("Couldn't send: " + (e.code || e.message), 4000); }
+  $("#fbSend").disabled = false;
+};
+
+// ---------------------------------------------------------------- paste schedule (Setup)
+let pasteRows = [];
+const normName = x => String(x || "").trim().toLowerCase().replace(/\s+/g, " ");
+function findTeam(name) {
+  const n = normName(name);
+  if (!n) return null;
+  const hit = Object.entries(teams).find(([, t]) => normName(t.name) === n) || Object.entries(teams).find(([, t]) => t.short && normName(t.short) === n);
+  return hit ? hit[0] : null;
+}
+function parsePaste(txt) {
+  const lines = txt.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const split = l => (l.includes("\t") ? l.split("\t") : l.includes("|") ? l.split("|") : l.split(",")).map(x => x.trim());
+  const rows = lines.map(split);
+  if (rows.length && /^(no|#|match|bil)/i.test(rows[0][0] || "") && !/\d/.test(rows[0][0])) rows.shift();   // header row
+  const usedNos = new Set(Object.values(matches).map(m => String(m.no)));
+  const seen = new Set();
+  return rows.map(c => {
+    const [no = "", time = "", court = "", a = "", b = "", round = "", group = "", event = ""] = c;
+    const r = { no, time, court, a, b, round, group: group.toUpperCase(), event, ta: findTeam(a), tb: findTeam(b), problems: [], skip: false };
+    if (!a || !b) r.problems.push("needs Team A and Team B");
+    else if (normName(a) === normName(b)) r.problems.push("same team twice");
+    if (no && (usedNos.has(String(no)) || seen.has(String(no)))) { r.skip = true; r.problems.push(`match #${no} already exists – skipped`); }
+    if (no) seen.add(String(no));
+    return r;
+  });
+}
+function renderPaste() {
+  const create = $("#pasteNewTeams").checked;
+  const missing = [...new Set(pasteRows.flatMap(r => [[r.a, r.ta], [r.b, r.tb]]).filter(([n, id]) => n && !id).map(([n]) => n.trim()))];
+  const bad = r => r.problems.length && !r.skip || (!create && ((r.a && !r.ta) || (r.b && !r.tb)));
+  const ok = pasteRows.filter(r => !r.skip && !bad(r));
+  const cell = (n, id) => `${esc(n)}${n && !id ? ` <span class="muted">(${create ? "new" : "unknown"})</span>` : ""}`;
+  $("#pastePreview").innerHTML = pasteRows.length ? `
+    <p style="margin:0 0 8px;font-weight:600">${ok.length} match${ok.length === 1 ? "" : "es"} ready to add${pasteRows.length - ok.length ? ` · ${pasteRows.length - ok.length} with a problem (shown in red, won't be added)` : ""}.</p>
+    ${missing.length && !create ? `<div class="banner warn" style="margin:0 0 8px">Unknown team${missing.length > 1 ? "s" : ""}: ${missing.map(esc).join(", ")}. Fix the spelling, add ${missing.length > 1 ? "them" : "it"} under Teams above, or tick “Create teams that don't exist yet”.</div>` : ""}
+    <table class="paste"><tr><th>#</th><th>Time</th><th>Court</th><th>Team A</th><th>Team B</th><th>Round</th><th>Group</th><th>Event</th><th></th></tr>
+    ${pasteRows.map(r => `<tr class="${r.skip ? "skip" : bad(r) ? "bad" : ""}"><td>${esc(r.no) || "auto"}</td><td>${esc(r.time)}</td><td>${esc(r.court)}</td><td>${cell(r.a, r.ta)}</td><td>${cell(r.b, r.tb)}</td>
+      <td>${esc(r.round)}</td><td>${esc(r.group)}</td><td>${esc(r.event)}</td><td>${r.problems.map(esc).join("; ") || (bad(r) ? "unknown team" : "✓")}</td></tr>`).join("")}</table>` : "";
+  $("#btnPasteAdd").classList.toggle("hide", !ok.length);
+  $("#btnPasteAdd").textContent = `Add ${ok.length} match${ok.length === 1 ? "" : "es"}`;
+  $("#btnPasteClear").classList.toggle("hide", !pasteRows.length);
+  return ok;
+}
+$("#btnPastePreview").onclick = () => {
+  if (!$("#pasteText").value.trim()) return toast("Paste the schedule first");
+  pasteRows = parsePaste($("#pasteText").value);
+  renderPaste();
+};
+$("#pasteNewTeams").onchange = () => { if (pasteRows.length) renderPaste(); };
+$("#btnPasteClear").onclick = () => { pasteRows = []; $("#pasteText").value = ""; renderPaste(); };
+$("#btnPasteAdd").onclick = async () => {
+  pasteRows = parsePaste($("#pasteText").value);          // re-check against the latest data
+  const ok = renderPaste();
+  if (!ok.length) return;
+  if (!confirm(`Add ${ok.length} match${ok.length === 1 ? "" : "es"} to ${SP.name}?`)) return;
+  const tUpd = {}, made = {};
+  const teamId = name => {
+    const ex = findTeam(name); if (ex) return ex;
+    const k = normName(name); if (made[k]) return made[k];
+    const id = C.push(ref(db, `sports/${S}/teams`)).key;
+    tUpd[id] = { name: name.trim().replace(/\s+/g, " "), short: "", group: "" };
+    teams[id] = tUpd[id]; made[k] = id;
+    return id;
+  };
+  let no = Math.max(nextNo(), ...ok.map(r => (Number(r.no) || 0) + 1));   // numbers for rows without one
+  const upd = {}, pubs = {};
+  for (const r of ok) {
+    const a = teamId(r.a), b = teamId(r.b);
+    // group: from the Group column; otherwise "Group X" in Round; otherwise both teams' shared group (group stage only)
+    let g = r.group || ((r.round.match(/^group\s+(\w+)/i) || [])[1] || "").toUpperCase();
+    if (!g && !/final|semi|quarter|3rd|third|place/i.test(r.round) && teams[a].group && teams[a].group === teams[b].group) g = teams[a].group;
+    const id = C.push(ref(db, `sports/${S}/matches`)).key;
+    const m = { no: r.no || String(no++), time: r.time, court: r.court, round: r.round || (g ? "Group " + g : ""), group: g, event: r.event,
+      teamA: a, teamB: b, fmt: FORMATS[S], status: "scheduled", createdAt: C.now(), updatedAt: C.now() };
+    upd[id] = m;
+    pubs[id] = publicRecord(S, m, teams);
+  }
+  try {
+    if (Object.keys(tUpd).length) await track(C.update(ref(db, `sports/${S}/teams`), tUpd));
+    await track(C.update(ref(db, `sports/${S}/matches`), upd));
+    await track(C.update(ref(db, `pub/${S}/m`), pubs));
+    log(null, null, `pasted schedule: ${ok.length} matches` + (Object.keys(tUpd).length ? `, ${Object.keys(tUpd).length} new teams` : ""));
+    toast(`${ok.length} matches added ✓`);
+    pasteRows = []; $("#pasteText").value = ""; renderPaste();
+  } catch (e) { toast("Error: " + (e.code || e.message), 4000); }
+};

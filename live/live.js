@@ -14,6 +14,12 @@ let data = {};          // records for current sport
 let settings = {};
 let lastOk = 0, timer = null, clockSkew = 0;
 let ann = null;   // scorer announcement for the current sport
+// find / follow a team (follow is remembered on this phone, per sport)
+let q = "";
+const lsGet = k => { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } };
+const lsSet = (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) {} };
+const followed = () => lsGet("ja_follow_" + sport);
+const onlyMine = () => lsGet("ja_only_" + sport) === "1";
 
 function pickDefault() {
   const h = location.hash.slice(1);
@@ -32,7 +38,7 @@ function renderTabs() {
 }
 
 window.addEventListener("hashchange", () => {
-  if (SPORTS[location.hash.slice(1)]) { sport = location.hash.slice(1); data = {}; ann = null; renderTabs(); render(); poll(); }
+  if (SPORTS[location.hash.slice(1)]) { sport = location.hash.slice(1); data = {}; ann = null; q = ""; $("#find").value = ""; renderTabs(); render(); poll(); }
 });
 document.querySelectorAll("#sub button").forEach(b => b.onclick = () => {
   sub = b.dataset.v;
@@ -80,6 +86,33 @@ function renderHeader() {
 const list = () => Object.entries(data).map(([id, r]) => ({ id, ...r }));
 const byNo = (x, y) => (Number(x.no) || 9999) - (Number(y.no) || 9999);
 
+const low = x => String(x || "").toLowerCase();
+const isMe = name => !!followed() && low(name) === low(followed());
+function mark(txt) {
+  const t = esc(txt); if (!q) return t;
+  const i = low(txt).indexOf(q); if (i < 0) return t;
+  return esc(txt.slice(0, i)) + "<mark>" + esc(txt.slice(i, i + q.length)) + "</mark>" + esc(txt.slice(i + q.length));
+}
+const teamNames = () => [...new Set(list().flatMap(r => [r.a, r.b]).filter(n => n && n !== "TBC"))].sort((x, y) => x.localeCompare(y));
+// short names (e.g. "JKR") from the published matches, so either can be searched
+const shortOf = () => { const o = {}; list().forEach(r => { if (r.as) o[r.a] = r.as; if (r.bs) o[r.b] = r.bs; }); return o; };
+const teamHit = (name, sh) => !!q && (low(name).includes(q) || low(sh[name]).includes(q));
+
+// 🏆 champion: a confirmed match whose round is "Final" (not semi / quarter); 3rd place from a "3rd place" match
+function champions() {
+  const all = list().filter(r => r.st === "done" && r.w);
+  const isFinal = r => /\bfinal\b/i.test(r.rd || "") && !/semi|quarter|suku|separuh/i.test(r.rd || "");
+  const isThird = r => /3rd|third|bronze|tempat ke-?3/i.test(r.rd || "");
+  const evs = [...new Set(all.filter(isFinal).map(r => r.ev || ""))];
+  return evs.map(ev => {
+    const f = all.find(r => isFinal(r) && !isThird(r) && (r.ev || "") === ev);
+    if (!f) return null;
+    const t = all.find(r => isThird(r) && (r.ev || "") === ev);
+    const lose = r => (r.w === "a" ? r.b : r.a);
+    return { ev, champ: f.w === "a" ? f.a : f.b, runner: lose(f), third: t ? (t.w === "a" ? t.a : t.b) : "" };
+  }).filter(Boolean);
+}
+
 function row(r, s) {
   const i = s === "a" ? 0 : 1, v = r.v || {};
   const done = r.st === "done", sched = r.st === "scheduled";
@@ -87,7 +120,7 @@ function row(r, s) {
   const small = !sched && !done && v.small ? v.small[i] : "";
   const tag = r.st === "live" ? (s === "a" ? v.tagA : v.tagB) : "";
   return `<div class="r ${done && r.w === s ? "win" : ""}"><span class="dot ${r.st === "live" && v.srv === s ? "on" : ""}"></span>
-    <span class="n">${esc(r[s])}${tag ? `<span class="tag">${esc(tag)}</span>` : ""}</span>
+    <span class="n ${isMe(r[s]) ? "me" : ""}">${mark(r[s])}${tag ? `<span class="tag">${esc(tag)}</span>` : ""}</span>
     <span class="s">${small ?? ""}</span><span class="b cond">${big ?? ""}</span></div>`;
 }
 function card(r) {
@@ -98,13 +131,35 @@ function card(r) {
     ${row(r, "a")}${row(r, "b")}${v.hist ? `<div class="h">${esc(v.hist)}</div>` : ""}</div>`;
 }
 
+function renderFind() {
+  const names = teamNames();
+  const sh = shortOf();
+  const hits = q ? names.filter(n => teamHit(n, sh)) : [];
+  $("#findHits").innerHTML = hits.slice(0, 10).map(n => `<button data-follow="${esc(n)}" class="${isMe(n) ? "on" : ""}">${isMe(n) ? "★ Following" : "☆ Follow"} ${esc(n)}${sh[n] ? ` (${esc(sh[n])})` : ""}</button>`).join("");
+  $("#findN").textContent = q ? (hits.length ? `${hits.length} team${hits.length > 1 ? "s" : ""}` : "no team found") : "";
+  const f = followed();
+  $("#followBar").innerHTML = f ? `<div class="fbar">⭐ <b>Following ${esc(f)}</b>
+    <button data-only class="${onlyMine() ? "on" : ""}">${onlyMine() ? "✓ " : ""}Only their matches</button><button data-unfollow>Unfollow</button></div>` : "";
+}
+document.addEventListener("click", e => {
+  const f = e.target.closest("[data-follow]"), o = e.target.closest("[data-only]"), u = e.target.closest("[data-unfollow]");
+  if (f) { const n = f.dataset.follow; lsSet("ja_follow_" + sport, isMe(n) ? "" : n); if (!isMe(n)) lsSet("ja_only_" + sport, ""); else lsSet("ja_only_" + sport, "1"); q = ""; $("#find").value = ""; render(); }
+  if (o) { lsSet("ja_only_" + sport, onlyMine() ? "" : "1"); render(); }
+  if (u) { lsSet("ja_follow_" + sport, ""); lsSet("ja_only_" + sport, ""); render(); }
+});
+$("#find").addEventListener("input", e => { q = low(e.target.value.trim()); render(); });
+
 function render() {
-  const all = list();
+  renderFind();
+  // which matches to show: search first, then "only my team"
+  const keep = r => q ? (low(r.a).includes(q) || low(r.b).includes(q) || low(r.as).includes(q) || low(r.bs).includes(q)) : onlyMine() && followed() ? (isMe(r.a) || isMe(r.b)) : true;
+  const all = list().filter(keep);
   const live = all.filter(r => r.st === "live").sort((x, y) => String(x.ct).localeCompare(String(y.ct), undefined, { numeric: true }));
   const next = all.filter(r => r.st === "scheduled").sort(byNo);
   const done = all.filter(r => r.st === "done").sort((x, y) => (y.t || 0) - (x.t || 0));
   let h = "";
-  if (!all.length) h = `<div class="empty">No matches published yet for ${esc(SPORTS[sport].name)}.</div>`;
+  if (!all.length) h = q || (onlyMine() && followed()) ? `<div class="empty">No matches for ${q ? "“" + esc(q) + "”" : esc(followed())}.</div>`
+    : `<div class="empty">No matches published yet for ${esc(SPORTS[sport].name)}.</div>`;
   else if (sub === "live") {
     h += `<h2>${live.length ? '<span class="lv">LIVE</span>' : ""} Now playing</h2>` + (live.length ? live.map(card).join("") : `<div class="empty">No match in progress.</div>`);
     h += `<h2>Up next</h2>` + (next.length ? next.slice(0, 12).map(card).join("") : `<div class="empty">No more scheduled matches.</div>`);
@@ -117,10 +172,13 @@ function render() {
     if (!gs.length) h += `<div class="empty">No group stage for this sport.</div>`;
     for (const g of gs) {
       h += `<h2>Group ${esc(g)}</h2><table><tr><th class="t">Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>+/−</th><th>Pts</th></tr>` +
-        tbl[g].map(t => `<tr><td class="t">${esc(t.team)}</td><td>${t.p}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.f - t.a > 0 ? "+" : ""}${t.f - t.a}</td><td><b>${t.pts}</b></td></tr>`).join("") + `</table>`;
+        tbl[g].map(t => `<tr class="${isMe(t.team) ? "me" : ""}"><td class="t">${isMe(t.team) ? "★ " : ""}${mark(t.team)}</td><td>${t.p}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.f - t.a > 0 ? "+" : ""}${t.f - t.a}</td><td><b>${t.pts}</b></td></tr>`).join("") + `</table>`;
     }
     if (gs.length) h += `<p class="empty">Win 3 · Draw 1 · Loss 0. Ties split by score difference.</p>`;
   }
+  const champs = champions();
+  if (champs.length) h = champs.map(c => `<div class="champ"><div class="k">🏆 ${esc(SPORTS[sport].name)}${c.ev ? " · " + esc(c.ev) : ""} · Champion</div>
+    <div class="w">${esc(c.champ)}</div><div class="o"><span>🥈 Runner-up: ${esc(c.runner)}</span>${c.third ? `<span>🥉 3rd: ${esc(c.third)}</span>` : ""}</div></div>`).join("") + h;
   const nowS = Date.now() + clockSkew;
   if (ann && ann.t && (!ann.exp || ann.exp > nowS)) {
     const at = ann.at ? new Date(ann.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "";
@@ -141,7 +199,9 @@ function tick() {
   }
   if (lastOk) {
     const s = Math.round((Date.now() - lastOk) / 1000);
-    $("#upd").textContent = s < 3 ? "Updated just now" : `Updated ${s}s ago`;
+    const lastT = Math.max(0, ...list().map(r => Number(r.t) || 0));
+    const at = lastT ? new Date(lastT).toLocaleTimeString("en-MY", { hour: "numeric", minute: "2-digit" }) : "";
+    $("#upd").textContent = (at ? `Last score ${at} · ` : "") + "checked " + (s < 5 ? "just now" : s < 60 ? `${s}s ago` : `${Math.round(s / 60)} min ago`);
   }
 }
 setInterval(tick, 1000);

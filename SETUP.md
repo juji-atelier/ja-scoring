@@ -81,6 +81,14 @@ Open https://console.firebase.google.com → **JA Scoring System**.
 - **⚙️ Tournament rules** tab (bowling scorer page): games per bowler, women's handicap and where it counts, tie-break,
   which tables show (Team, Men, Women, Overall, High Game, High Series). The board, big screen, CSV and Admin all follow it.
   The ranking logic is in `js/bowling-rules.js` (one copy, shared by every page).
+- **All sports – Setup → Paste the schedule:** copy rows from Excel (No, Time, Court, Team A, Team B, [Round, Group, Event]) → Preview → Add.
+  Team names or short names are matched; tick "Create teams that don't exist yet" for new ones. Match numbers that already exist are skipped.
+- **After Confirm result** a "Next on Court X →" button opens the next scheduled match on the same court.
+- **⏳ waiting to send** banner on scorer phones = taps saved on the phone, not yet sent (no internet). Keep the page open.
+- **Public page:** search a team (full or short name), ⭐ follow it (remembered per phone), and a 🏆 champion banner appears when a match whose
+  Round is "Final" is confirmed (3rd place from a Round named "3rd place").
+- **Admin → Overview** warns about live matches with no score for 15+ min, matches running long, matches not started 20+ min after their time
+  (on the sport's day), and unread feedback. The Bowling card shows progress, verified teams and leaders.
 - **💬 Send feedback** (bottom of the bowling scorer page) lands in Admin → **Feedback**.
 - **Try changes safely:** add `&test=1` to the bowling link (e.g. `bowling.html?v=scorer&test=1`). Nothing is sent to Firebase.
 

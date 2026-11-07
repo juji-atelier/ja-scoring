@@ -47,6 +47,8 @@
     </div>
   </section>
 
+  <!-- WAITING TO SEND (filled by scorer.js) -->
+  <div id="pendBar" class="pendbar hide"></div>
   <!-- TABS -->
   <nav class="tabs hide" id="tabs">
     <button data-tab="list" class="on">Matches</button>
@@ -92,6 +94,16 @@
       </div>
     </div>
 
+    <div class="card" id="pasteCard">
+      <h3>Paste the schedule</h3>
+      <p class="muted">Copy rows from Excel / Google Sheets (or type one match per line) and paste here. Columns in this order:<br>
+        <b>No · Time · Court · Team A · Team B</b> · Round · Group · Event &nbsp;<span style="white-space:nowrap">(last three optional)</span>.
+        Columns can be separated by tabs (Excel), <b>|</b> or commas. A header row is skipped automatically.</p>
+      <textarea id="pasteText" rows="6" placeholder="1&#9;9:00 AM&#9;1&#9;JKR&#9;JPN&#9;Group A&#10;2&#9;9:00 AM&#9;2&#9;JKN&#9;JPS&#9;Group B&#10;3 | 9:30 AM | 1 | JKR | JKN | Semi Final"></textarea>
+      <label class="ckline"><input type="checkbox" id="pasteNewTeams"> Create teams that don't exist yet</label>
+      <div class="row" style="margin-top:8px"><button id="btnPastePreview">Preview</button><button class="primary hide" id="btnPasteAdd">Add matches</button><button class="ghost hide" id="btnPasteClear">Clear</button></div>
+      <div id="pastePreview" style="margin-top:10px;overflow-x:auto"></div>
+    </div>
     <div class="card">
       <h3>Generate round-robin</h3>
       <p class="muted">Creates every pairing for one group (everyone plays everyone once).</p>
@@ -119,6 +131,25 @@
   <section id="vScore" class="hide"></section>
 </main>
 
+<!-- FEEDBACK -->
+<div class="fbwrap hide" id="fbWrap"><button class="fbbtn" id="fbOpen" type="button">💬 Send feedback</button></div>
+<div class="modal hide" id="fbModal" role="dialog" aria-modal="true" aria-labelledby="fbTitle">
+  <div class="sheet">
+    <h3 id="fbTitle">💬 Feedback</h3>
+    <p class="muted" style="margin-top:0">Something not working, or an idea to make scoring easier? It goes straight to the organiser.</p>
+    <div class="chips" id="fbType">
+      <button type="button" data-ty="Bug">🐞 Bug</button>
+      <button type="button" data-ty="Suggestion" class="on">💡 Suggestion</button>
+      <button type="button" data-ty="Other">Other</button>
+    </div>
+    <textarea id="fbText" maxlength="500" rows="4" placeholder="What happened, or what would help?"></textarea>
+    <p class="muted" id="fbInfo" style="font-size:12px;margin:6px 0 10px"></p>
+    <div class="row">
+      <button type="button" class="ghost" id="fbCancel">Cancel</button>
+      <button type="button" class="primary" id="fbSend" style="flex:1">Send</button>
+    </div>
+  </div>
+</div>
 <!-- ANNOUNCEMENT -->
 <div class="modal hide" id="annModal" role="dialog" aria-modal="true" aria-labelledby="annTitle">
   <div class="sheet">
@@ -142,6 +173,6 @@
 </div>
 <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
 <div id="toast"></div>
-<script type="module" src="scorer.js?v=20261105c"></script>
+<script type="module" src="scorer.js?v=20261107a"></script>
 </body>
 </html>

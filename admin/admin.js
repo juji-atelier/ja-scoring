@@ -1,5 +1,5 @@
 import { SPORTS, ADMIN_EMAIL, EVENT_DEFAULTS } from "../config.js";
-import { publicRecord, standings } from "../js/engines.js";
+import { publicRecord, standings, FORMATS, ENGINE_OF } from "../js/engines.js";
 import { bowlingStandings, BOWL_ROOT } from "../js/bowling-data.js";
 import * as C from "../js/common.js";
 const { $, $$, esc, toast, ref } = C;
@@ -9,7 +9,7 @@ const db = C.db, auth = C.auth;
 const BASE = new URL("../", location.href).href;
 const PUBLIC_URL = BASE + "live/";
 
-let pub = {}, settings = {}, started = false, logUnsub = null;
+let pub = {}, settings = {}, started = false, logUnsub = null, raw = {}, bowl = null;
 
 // ---------------- auth
 $("#loginForm").onsubmit = async e => {
@@ -39,6 +39,10 @@ function start() {
   if (started) return;
   started = true;
   C.onValue(ref(db, "pub"), s => { pub = s.val() || {}; renderOverview(); fillMatchSelect(); });
+  // raw scorer data (start/update times) for the health check, and bowling for its card
+  C.onValue(ref(db, "sports"), s => { raw = s.val() || {}; renderOverview(); }, () => {});
+  C.onValue(ref(db, BOWL_ROOT), s => { bowl = s.val() || {}; renderOverview(); }, () => {});
+  setInterval(renderOverview, 30000);
   C.onValue(ref(db, "settings"), s => { settings = s.val() || {}; fillScreenForm(); });
   renderLinks();
   const opts = Object.entries(SPORTS).map(([id, s]) => `<option value="${id}">${esc(s.name)}</option>`).join("");
@@ -50,23 +54,93 @@ function start() {
 
 // ---------------- overview
 const recs = sp => Object.entries((pub[sp] && pub[sp].m) || {}).map(([id, r]) => ({ id, ...r }));
+// ---- health check helpers
+const ago = ms => { const m = Math.round(ms / 60000); return m < 60 ? m + " min" : Math.floor(m / 60) + "h " + (m % 60) + "m"; };
+const EXPECT = { rally: 60, goals: null, darts: 60 };   // minutes a match normally takes (goals: from the format)
+function expectedMin(sp, m) {
+  const f = { ...(FORMATS[sp] || {}), ...(m.fmt || {}) };
+  return ENGINE_OF[sp] === "goals" ? (Number(f.periods) || 2) * (Number(f.minutes) || 20) + 30 : EXPECT[ENGINE_OF[sp]] || 60;
+}
+// "9:00 AM", "9.00am", "14:30" → today's Date, only on the sport's own day (e.g. "Sat 14 Nov")
+function schedTime(sp, t) {
+  const day = (String(SPORTS[sp].day).match(/\b(\d{1,2})\b/) || [])[1];
+  const now = new Date();
+  if (!day || Number(day) !== now.getDate()) return null;
+  const x = String(t || "").trim().match(/^(\d{1,2})[:.](\d{2})\s*([ap]\.?m\.?)?/i);
+  if (!x) return null;
+  let h = +x[1]; const mi = +x[2], ap = (x[3] || "").toLowerCase();
+  if (ap.startsWith("p") && h < 12) h += 12; if (ap.startsWith("a") && h === 12) h = 0;
+  const d = new Date(now); d.setHours(h, mi, 0, 0); return d;
+}
+function healthOf(sp) {
+  const now = C.now(), warn = [];
+  const ms = Object.entries((raw[sp] && raw[sp].matches) || {}).map(([id, m]) => ({ id, ...m }));
+  const t = id => (((raw[sp] || {}).teams || {})[id] || {}).name || "TBC";
+  const label = m => `#${esc(m.no)} ${esc(t(m.teamA))} vs ${esc(t(m.teamB))}${m.court ? " · C" + esc(m.court) : ""}`;
+  for (const m of ms) {
+    const st = m.status || "scheduled";
+    if (st === "live") {
+      const idle = now - (m.updatedAt || m.startedAt || now), long = now - (m.startedAt || now);
+      if (idle > 15 * 60000) warn.push(`⏸ ${label(m)}: live but no score for ${ago(idle)} – result not confirmed?`);
+      else if (long > expectedMin(sp, m) * 60000) warn.push(`⏱ ${label(m)}: live for ${ago(long)}`);
+    }
+    if (st === "scheduled") {
+      const d = schedTime(sp, m.time);
+      if (d && now - d.getTime() > 20 * 60000) warn.push(`⌛ ${label(m)}: due ${esc(m.time)}, not started (${ago(now - d.getTime())} late)`);
+    }
+  }
+  return { total: ms.length, done: ms.filter(m => m.status === "done").length, warn };
+}
+const fbOpen = sp => Object.values(fbData || {}).filter(f => !f.done && (f.sport || "") === sp).length;
+
+function bowlingCard() {
+  if (!bowl) return "";
+  const bw = bowlingStandings(bowl), R = bw.R;
+  const slots = bw.teams.reduce((a, t) => a + t.slots, 0), entered = bw.teams.reduce((a, t) => a + t.done, 0);
+  const locks = bowl.locks || {}, key = n => String(n).replace(/[.#$\[\]\/]/g, "_");
+  const verified = bw.teams.filter(t => locks[key(t.t)]).length;
+  const waiting = bw.teams.filter(t => t.done >= t.slots && !locks[key(t.t)]);
+  const warn = [];
+  if (waiting.length) warn.push(`✓ ${waiting.length} team${waiting.length > 1 ? "s have" : " has"} all scores but not Verified: ${waiting.map(t => esc(t.t)).join(", ")}`);
+  const quiet = Date.now() - (bowl.updated || 0);
+  if (entered && entered < slots && quiet > 20 * 60000) warn.push(`⏸ No new score for ${ago(quiet)} – still bowling?`);
+  const fb = fbOpen("bowling");
+  if (fb) warn.push(`💬 ${fb} unread feedback`);
+  const top = (lbl, x, v) => x ? `<div class="mini"><span>${lbl}: <b>${esc(x.n || x.t)}</b>${x.t && x.n ? ` <span class="muted">${esc(x.t)}</span>` : ""}</span><b>${v}</b></div>` : "";
+  const BW = BASE + "bowling.html";
+  return `<div class="scard" style="--c:#8b5cf6">
+    <div class="row"><h4 style="flex:1">Tenpin Bowling</h4><span class="muted" style="font-size:12px">${bowl.updated ? "last update " + new Date(bowl.updated).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "no scores yet"}</span></div>
+    <div class="cnt"><span><b>${entered}</b>/${slots} scores</span><span><b>${verified}</b>/${bw.teams.length} verified</span><span>${R.games} games</span></div>
+    <div class="pbar"><i style="width:${slots ? Math.round(entered / slots * 100) : 0}%"></i></div>
+    ${bw.anyScore ? top("Top team", bw.teams[0], bw.teams[0].total) + top("Top man", bw.men[0], bw.men[0] ? bw.men[0].total : "") + top("Top woman", bw.women[0], bw.women[0] ? bw.women[0].total : "") : ""}
+    ${warn.map(w => `<div class="hwarn">${w}</div>`).join("")}
+    <div class="row" style="margin-top:8px"><a href="${BW}?v=scorer" target="_blank"><button class="small">Open scorer ↗</button></a>
+      <a href="${BW}" target="_blank"><button class="small ghost">Public board ↗</button></a>
+      <a href="${BW}?v=overlay" target="_blank"><button class="small ghost">OBS overlay ↗</button></a></div></div>`;
+}
+
 function renderOverview() {
+  if (!started) return;
   $("#overview").innerHTML = Object.entries(SPORTS).map(([id, s]) => {
     const all = recs(id);
     const live = all.filter(r => r.st === "live");
     const cnt = st => all.filter(r => r.st === st).length;
+    const h = healthOf(id), fb = fbOpen(id);
+    const warn = [...h.warn.slice(0, 5), ...(h.warn.length > 5 ? [`+ ${h.warn.length - 5} more`] : []), ...(fb ? [`💬 ${fb} unread feedback`] : [])];
     return `<div class="scard" style="--c:${s.color}">
       <div class="row"><h4 style="flex:1">${esc(s.name)}</h4><span class="muted" style="font-size:12px">${esc(s.day)}</span></div>
-      <div class="cnt"><span><b>${live.length}</b> live</span><span><b>${cnt("scheduled")}</b> upcoming</span><span><b>${cnt("done")}</b> finished</span></div>
+      <div class="cnt"><span><b>${live.length}</b> live</span><span><b>${cnt("scheduled")}</b> upcoming</span><span><b>${cnt("done")}</b> finished</span>${h.total ? `<span>${h.done}/${h.total} done</span>` : ""}</div>
+      ${h.total ? `<div class="pbar"><i style="width:${Math.round(h.done / h.total * 100)}%"></i></div>` : ""}
       ${live.map(r => {
         const v = r.v || {};
         return `<div class="mini"><span>${r.ct ? "C" + esc(r.ct) + " · " : ""}${esc(r.a)} vs ${esc(r.b)}</span>
           <b>${(v.big || [])[0] ?? ""}–${(v.big || [])[1] ?? ""}</b>
           <button class="small ghost" data-feat="${id}/${r.id}" title="Show this match full screen">📺</button></div>`;
       }).join("")}
+      ${warn.map(w => `<div class="hwarn">${w}</div>`).join("")}
       <div class="row" style="margin-top:8px"><a href="${BASE}scorer/?sport=${id}" target="_blank"><button class="small">Open scorer ↗</button></a>
       <button class="small ghost" data-pin="${id}">Pin on big screen</button></div></div>`;
-  }).join("");
+  }).join("") + bowlingCard();
   $$("[data-feat]").forEach(b => b.onclick = () => saveDisplay({ mode: "match", match: b.dataset.feat }, "Featured on big screen"));
   $$("[data-pin]").forEach(b => b.onclick = () => saveDisplay({ mode: "sport", sport: b.dataset.pin }, `${SPORTS[b.dataset.pin].name} pinned`));
 }
@@ -344,6 +418,7 @@ function renderFeedback() {
   const all = Object.entries(fbData).map(([id, f]) => ({ id, ...f })).sort((a, b) => (b.at || 0) - (a.at || 0));
   const open = all.filter(f => !f.done).length;
   $("#fbCount").textContent = open ? open : "";
+  renderOverview();
   const list = $("#fbShowDone").checked ? all : all.filter(f => !f.done);
   const ic = { Bug: "🐞", Suggestion: "💡" };
   $("#fbList").innerHTML = list.length ? list.map(f => `<div class="fbi ${f.done ? "done" : ""}">
