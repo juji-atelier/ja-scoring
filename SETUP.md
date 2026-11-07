@@ -74,6 +74,14 @@ Open https://console.firebase.google.com → **JA Scoring System**.
 - Futsal / Bola Jaring: Start clock → +Goal / +Foul → End half/quarter → Confirm result. Clock syncs to every screen.
 - Dart: type each turn's 3-dart total (or tap a quick number) → Enter. Bust is automatic.
 - Everything is recorded in the **Activity log** (who, what, when).
+- **Bowling extras:** scorers type their name when signing in (it goes into the Activity log → *Tenpin Bowling*).
+  When a team has all 20 scores, check the sheet with the captain and tap **✓ Verified – lock team**. Only the admin can unlock
+  (sign in on the bowling scorer page with *Sign in as admin instead*). Cleared a box by mistake? Tap **Undo** within 5 seconds.
+  An amber dot on a box means the score hasn't reached Firebase yet (no internet); it is kept on the phone and re-sent.
+- **💬 Send feedback** (bottom of the bowling scorer page) lands in Admin → **Feedback**.
+- **Try changes safely:** add `&test=1` to the bowling link (e.g. `bowling.html?v=scorer&test=1`). Nothing is sent to Firebase.
+
+> After updating `database.rules.json`, paste it into Firebase → Realtime Database → **Rules** and click **Publish** again.
 
 ## Free plan limits (why the public page refreshes every 12 s)
 

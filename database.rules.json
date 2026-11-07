@@ -27,6 +27,16 @@
       ".write": "auth != null && auth.token.email == 'admin@ja-scoring.app'"
     },
 
+    "feedback": {
+      ".read": "auth != null && auth.token.email == 'admin@ja-scoring.app'",
+      ".write": "auth != null && auth.token.email == 'admin@ja-scoring.app'",
+      ".indexOn": ["at"],
+      "$id": {
+        ".write": "!data.exists() && auth != null",
+        ".validate": "newData.hasChildren(['msg', 'at']) && newData.child('msg').isString() && newData.child('msg').val().length <= 500"
+      }
+    },
+
     "logs": {
       ".write": "auth != null && auth.token.email == 'admin@ja-scoring.app'",
       "$sport": {

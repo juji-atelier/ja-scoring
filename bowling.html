@@ -42,7 +42,12 @@ const FIREBASE_CONFIG = {
 const SCORER_PIN = "2026";   // give this to the bowling committee
 const USE_LOGIN = true;      // true = use Firebase email/password login instead of PIN (for later, with proper rules)
 const SCORER_EMAIL = "bowling@ja-scoring.app"; // only used when USE_LOGIN = true
+const ADMIN_EMAIL = "admin@ja-scoring.app";       // admin can also sign in here (to unlock verified teams)
 const DB_ROOT = "bowling2026";
+const LOG_PATH = "logs/bowling";                  // activity log (Admin → Tools → Activity log → Bowling)
+// Add ?test=1 to any link to try things safely: nothing is sent to Firebase,
+// scores are saved in this browser only. (&admin=1 = act as admin in test mode)
+const TEST_MODE = new URLSearchParams(location.search).get("test") === "1";
 const GAMES = 5;
 const POLL_MS = 10000;   // public board refresh (ms)
 const DEFAULT_TITLE = "Sabah Electricity (HQ) Closed Tenpin Bowling Championship 2026";
@@ -146,6 +151,43 @@ input:focus,select:focus{outline:2px solid color-mix(in srgb,var(--acc) 60%,tran
 .toast.show{opacity:1}
 .toast.bad{background:var(--bad);color:#fff}
 .row2{display:flex;gap:8px;flex-wrap:wrap}
+/* score boxes: clearer in dark mode, save status dot, high game */
+.sgrid input{background:var(--bg2);border-color:color-mix(in srgb,var(--mute) 38%,var(--line))}
+.sgrid input:disabled{opacity:.75;cursor:not-allowed;border-style:dashed}
+.sgrid td.sc{position:relative}
+.sgrid td.sc::after{content:"";position:absolute;top:4px;right:6px;width:7px;height:7px;border-radius:50%;background:transparent;transition:background .4s}
+.sgrid td.sc.pend::after{background:var(--warn);box-shadow:0 0 0 2px color-mix(in srgb,var(--warn) 30%,transparent)}
+.sgrid td.sc.ok::after{background:var(--ok)}
+.sgrid td.sc.hi input{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold);color:var(--gold)}
+.sgrid td.t small{display:block;color:var(--mute);font-size:10px;font-weight:600}
+.teamchips button small{color:color-mix(in srgb,var(--mute) 75%,var(--ink))}
+.teamchips button.done{border-color:color-mix(in srgb,var(--ok) 55%,var(--line));background:color-mix(in srgb,var(--ok) 12%,var(--bg2))}
+.teamchips button.done small{color:var(--ok)}
+.teamchips button .lk{float:right;font-size:12px}
+.gh{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+.gh .sub{color:var(--mute);font-size:12px;margin-top:2px}
+.lane{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mute);font-weight:600}
+.lane input{width:74px;padding:7px 8px;font-size:14px;text-align:center}
+.lockbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding:11px 13px;border-radius:12px;font-size:13px;
+  background:color-mix(in srgb,var(--ok) 12%,var(--card));border:1px solid color-mix(in srgb,var(--ok) 45%,var(--line))}
+.lockbar .tx{flex:1;min-width:150px}
+.lockhint{margin-top:10px;color:var(--mute);font-size:12px}
+.badge{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.5px;padding:2px 7px;border-radius:99px;vertical-align:2px;margin-left:6px}
+.badge.ok{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+.pendbar{margin-bottom:12px;padding:10px 14px;border-radius:12px;font-size:13px;font-weight:600;
+  background:color-mix(in srgb,var(--warn) 14%,var(--card));border:1px solid color-mix(in srgb,var(--warn) 45%,var(--line))}
+.undo{position:fixed;left:50%;bottom:18px;transform:translate(-50%,20px);display:flex;align-items:center;gap:12px;background:var(--ink);color:var(--bg);
+  font-weight:700;padding:8px 8px 8px 16px;border-radius:99px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;box-shadow:0 8px 24px #0004;z-index:20;max-width:92vw}
+.undo.show{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+.undo button{background:var(--acc);color:var(--acc-ink);border:0;border-radius:99px;padding:7px 14px;font-weight:800}
+details.danger{border-color:color-mix(in srgb,var(--bad) 45%,var(--line))}
+details.danger summary{color:var(--bad)}
+.linkbtn{background:none;border:0;color:var(--mute);text-decoration:underline;font-size:13px;padding:10px 0 0;width:100%}
+/* feedback */
+.fbbtn{display:block;margin:6px auto 0;background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:99px;padding:10px 18px;font-weight:700;font-size:14px}
+.modal{position:fixed;inset:0;background:#0008;display:grid;place-items:center;z-index:30;padding:16px}
+.modal .card{width:min(460px,100%);margin:0}
+#fbT{width:100%;font:inherit;font-size:16px;background:var(--field);color:var(--ink);border:1px solid var(--line);border-radius:11px;padding:11px 12px;resize:vertical;min-height:110px}
 @media (max-width:600px){.bh .in{height:60px;gap:8px;padding:0 14px}.bh .brand b{font-size:18px}.bh .brand small{display:none}.logo-org{height:16px}.logo-dragon{width:36px;height:36px}.wrap{padding:0 14px 10px}.hero{padding:20px}.hero h1{font-size:24px}}
 @media (max-width:420px){.sgrid input{font-size:15px;padding:9px 0;border-radius:8px}.sgrid td.nm{font-size:12px}.sgrid td.t{font-size:14px}.sgrid td{padding:0 1px}}
 
@@ -225,19 +267,29 @@ const G = Array.from({ length: GAMES }, (_, i) => i + 1);
 let toastT;
 function toast(msg, bad) { const t = $("#toast"); t.textContent = msg; t.className = "toast show" + (bad ? " bad" : ""); clearTimeout(toastT); toastT = setTimeout(() => t.className = "toast", 1600); }
 const fmtTime = ts => ts ? new Date(ts).toLocaleTimeString("en-MY", { hour: "2-digit", minute: "2-digit" }) : "—";
+// Team names are used as database keys for locks & lanes; Firebase keys can't contain . # $ [ ] /
+const tkey = t => String(t).replace(/[.#$\[\]\/]/g, "_");
+const DEV = (() => { const u = navigator.userAgent;
+  return /iPhone/.test(u) ? "iPhone" : /iPad/.test(u) ? "iPad" : /Android/.test(u) ? ((u.match(/Android[^;]*;\s*([^;)]+?)(?:\sBuild|\))/) || [])[1] || "Android")
+       : /Windows/.test(u) ? "Windows PC" : /Mac/.test(u) ? "Mac" : "Other"; })();
+let SCORER_NAME = ""; try { SCORER_NAME = localStorage.getItem("bowlName") || ""; } catch (e) {}
 
 /* =================== data store =================== */
 // state = { scores: { b01: { g1: 180, ... } }, settings: { hdcW, title }, updated }
 const Store = {
-  mode: FIREBASE_CONFIG ? "firebase" : "local",
-  state: { scores: {}, settings: { hdcW: 0, title: DEFAULT_TITLE }, updated: 0 },
+  mode: FIREBASE_CONFIG && !TEST_MODE ? "firebase" : "local",
+  state: { scores: {}, settings: { hdcW: 0, title: DEFAULT_TITLE }, updated: 0, locks: {}, lanes: {} },
   listeners: [], online: null, user: null,
+  // scores typed but not yet confirmed by Firebase: { "b01/g2": { v: 180, at } }
+  // kept in this phone's storage so they are re-sent even if the page is closed while offline
+  pending: (() => { try { return JSON.parse(localStorage.getItem("bowlPending") || "{}"); } catch (e) { return {}; } })(),
+  _pendSave() { try { localStorage.setItem("bowlPending", JSON.stringify(this.pending)); } catch (e) {} },
   on(cb) { this.listeners.push(cb); cb(this.state); },
   emit() { this.listeners.forEach(cb => cb(this.state)); },
   merge(v) {
     v = v || {};
     this.state = { scores: v.scores || {}, settings: Object.assign({ hdcW: 0, title: DEFAULT_TITLE }, v.settings || {}), updated: v.updated || 0,
-                   roster: v.roster || null, ann: v.ann || null };
+                   roster: v.roster || null, ann: v.ann || null, locks: v.locks || {}, lanes: v.lanes || {} };
     this.state.settings.title = renameOrg(this.state.settings.title) || DEFAULT_TITLE;
     applyRoster(this.state.roster);
     this.emit();
@@ -270,58 +322,83 @@ const Store = {
       this.db = this.app.database();
       this.db.ref(DB_ROOT).on("value", s => this.merge(s.val()));
       this.db.ref(".info/connected").on("value", s => { this.online = !!s.val(); this.emit(); });
-      if (USE_LOGIN) this.app.auth().onAuthStateChanged(u => { this.user = u; this.emit(); });
+      if (USE_LOGIN) this.app.auth().onAuthStateChanged(u => { this.user = u; this.emit(); if (u) this.resendPending(); });
       else { let ok = false; try { ok = sessionStorage.getItem("bowlPin") === SCORER_PIN; } catch (e) {} this.user = ok ? { email: "PIN" } : null; }
     } else {
       const load = () => { try { this.merge(JSON.parse(localStorage.getItem(DB_ROOT) || "{}")); } catch (e) { this.merge({}); } };
       addEventListener("storage", e => { if (e.key === DB_ROOT) load(); });
-      this.online = true; this.user = { local: true }; load();
+      this.online = true; this.user = { local: true, email: params.get("admin") === "1" ? ADMIN_EMAIL : "test" }; load();
     }
   },
   _localSave() { try { localStorage.setItem(DB_ROOT, JSON.stringify(this.state)); } catch (e) {} this.emit(); },
-  async setScore(id, g, val) {
-    const now = Date.now();
+  // Write several values at once. Keys are paths under DB_ROOT, e.g. "scores/b01/g2"; null deletes.
+  async patch(map) {
     if (this.mode === "firebase") {
-      await this.db.ref().update({ [`${DB_ROOT}/scores/${id}/g${g}`]: val, [`${DB_ROOT}/updated`]: now });
-    } else {
-      const s = this.state.scores[id] = this.state.scores[id] || {};
-      if (val === null) delete s["g" + g]; else s["g" + g] = val;
-      this.state.updated = now; this._localSave();
+      const upd = {}; for (const [k, v] of Object.entries(map)) upd[`${DB_ROOT}/${k}`] = v;
+      return this.db.ref().update(upd);
     }
+    for (const [k, v] of Object.entries(map)) {
+      const parts = k.split("/"), last = parts.pop(); let o = this.state;
+      for (const p of parts) o = o[p] = (o[p] && typeof o[p] === "object") ? o[p] : {};
+      if (v === null) delete o[last]; else o[last] = v;
+    }
+    applyRoster(this.state.roster); this._localSave();
+  },
+  async setScore(id, g, val) {
+    const now = Date.now(), key = `${id}/g${g}`;
+    this.pending[key] = { v: val, at: now }; this._pendSave(); this.emit();
+    try {
+      await this.patch({ [`scores/${key}`]: val, updated: now });
+      if (this.pending[key] && this.pending[key].at === now) { delete this.pending[key]; this._pendSave(); }
+      this.emit();
+    } catch (e) { delete this.pending[key]; this._pendSave(); this.emit(); throw e; }
+  },
+  // After a reload (e.g. phone was offline and the page was closed), send what didn't reach Firebase.
+  resendPending() {
+    const list = Object.entries(this.pending); if (!list.length || this.mode !== "firebase") return;
+    list.forEach(([key, p]) => {
+      const [id, gg] = key.split("/");
+      this.setScore(id, +gg.slice(1), p.v).catch(() => {});
+    });
+    log(`re-sent ${list.length} score(s) saved on this phone while offline`);
+  },
+  async setLock(team, on) {
+    return this.patch({ [`locks/${tkey(team)}`]: on ? { at: Date.now(), by: SCORER_NAME || (this.user && this.user.email) || "?" } : null });
+  },
+  async setLane(team, lane) { return this.patch({ [`lanes/${tkey(team)}`]: lane || null, updated: Date.now() }); },
+  async sendFeedback(fb) {
+    if (this.mode === "firebase") return this.db.ref("feedback").push({ ...fb, at: firebase.database.ServerValue.TIMESTAMP });
+    let a = []; try { a = JSON.parse(localStorage.getItem("bowlFeedback") || "[]"); } catch (e) {}
+    a.push({ ...fb, at: Date.now() }); try { localStorage.setItem("bowlFeedback", JSON.stringify(a)); } catch (e) {}
   },
   async setSetting(k, v) {
     if (this.mode === "firebase") await this.db.ref(`${DB_ROOT}/settings/${k}`).set(v);
     else { this.state.settings[k] = v; this._localSave(); }
   },
-  async replaceScores(scores) {
-    if (this.mode === "firebase") await this.db.ref(DB_ROOT).update({ scores, updated: Date.now() });
-    else { this.state.scores = scores; this.state.updated = Date.now(); this._localSave(); }
+  async replaceScores(scores) {   // also clears all "Verified" locks (nothing left to verify)
+    if (this.mode === "firebase") await this.db.ref(DB_ROOT).update({ scores, locks: null, updated: Date.now() });
+    else { this.state.scores = scores; this.state.locks = {}; this.state.updated = Date.now(); this._localSave(); }
   },
   // list = full roster array [{id,n,t,g}]; drop = ids whose scores should be deleted
-  async saveRoster(list, drop = []) {
+  // extra = more paths to write at the same time (e.g. moving a team's lock/lane when it is renamed)
+  async saveRoster(list, drop = [], extra = {}) {
     const obj = {}; list.forEach((p, i) => { obj[p.id] = { n: p.n, t: p.t, g: p.g, o: i + 1 }; });
-    const now = Date.now();
-    if (this.mode === "firebase") {
-      const upd = { [`${DB_ROOT}/roster`]: obj, [`${DB_ROOT}/updated`]: now };
-      drop.forEach(id => { upd[`${DB_ROOT}/scores/${id}`] = null; });
-      await this.db.ref().update(upd);
-    } else {
-      this.state.roster = obj; drop.forEach(id => delete this.state.scores[id]);
-      this.state.updated = now; applyRoster(obj); this._localSave();
-    }
+    const upd = { roster: obj, updated: Date.now(), ...extra };
+    drop.forEach(id => { upd[`scores/${id}`] = null; });
+    await this.patch(upd);
   },
   async setAnn(a) {
     if (this.mode === "firebase") await this.db.ref(`${DB_ROOT}/ann`).set(a);
     else { this.state.ann = a; this._localSave(); }
   },
-  async login(pw) {
+  async login(pw, asAdmin) {
     if (this.mode !== "firebase") return true;
     if (!USE_LOGIN) {
       if (pw.trim() !== SCORER_PIN) throw { code: "wrong PIN" };
       try { sessionStorage.setItem("bowlPin", SCORER_PIN); } catch (e) {}
       this.user = { email: "PIN" }; this.emit(); return true;
     }
-    await this.app.auth().signInWithEmailAndPassword(SCORER_EMAIL, pw);
+    await this.app.auth().signInWithEmailAndPassword(asAdmin ? ADMIN_EMAIL : SCORER_EMAIL, pw);
     return true;
   },
   logout() {
@@ -330,6 +407,14 @@ const Store = {
     else { try { sessionStorage.removeItem("bowlPin"); } catch (e) {} this.user = null; this.emit(); }
   }
 };
+
+const isAdmin = () => !!(Store.user && Store.user.email === ADMIN_EMAIL);
+// Activity log → logs/bowling (same place the other sports log to; Admin → Tools → Activity log)
+function log(act) {
+  if (Store.mode !== "firebase" || !Store.db) { console.info("[log]", act); return; }
+  Store.db.ref(LOG_PATH).push({ act: String(act).slice(0, 300), no: "", m: "",
+    by: (SCORER_NAME || (Store.user && Store.user.email || "?").split("@")[0]) + (isAdmin() ? " (admin)" : ""), dev: DEV, at: firebase.database.ServerValue.TIMESTAMP }).catch(() => {});
+}
 
 /* =================== calculations =================== */
 function compute(state) {
@@ -408,7 +493,7 @@ function viewBoard() {
       if (k === "team") return c.teams.map((t, i) => { const r = rankOf(c.teams, i); return `
         <div class="row click r${r}" data-team="${esc(t.t)}">
           <div class="rk num">${r}</div>
-          <div><div class="nm">${esc(t.t)}</div><div class="meta"><span>${t.done}/${t.slots} games done</span>${t.high ? `<span>Best game ${t.high}</span>` : ""}</div>${gamesHTML(t.games)}</div>
+          <div><div class="nm">${esc(t.t)}${last.locks[tkey(t.t)] ? `<span class="badge ok">✓ FINAL</span>` : ""}</div><div class="meta">${last.lanes[tkey(t.t)] ? `<span>Lane ${esc(last.lanes[tkey(t.t)])}</span>` : ""}<span>${t.done}/${t.slots} games done</span>${t.high ? `<span>Best game ${t.high}</span>` : ""}</div>${gamesHTML(t.games)}</div>
           <div class="tot num"><b>${t.total}</b><small>TPF</small></div>
           ${open.has(t.t) ? `<div class="members">${t.mem.map(m => `<div class="mem"><div>${esc(m.n)}<span class="tg ${m.g}">${m.g === "P" ? "F" : "M"}</span>${gamesHTML(m.games)}</div><div class="num"><b>${m.total}</b></div></div>`).join("")}</div>` : ""}
         </div>`; }).join("");
@@ -458,11 +543,14 @@ function viewScorer() {
       <section class="hero"><h1>Bowling score entry</h1>
         <div class="sub"><span class="dot" id="dot"></span><span id="st"></span><span class="pill" id="mode"></span><span style="flex:1"></span><a href="?v=board" target="_blank">Open public board ↗</a></div></section>
       <div id="login" class="card hide">
-        <div class="field"><label>${USE_LOGIN ? "Bowling committee password" : "Bowling committee PIN"}</label><input id="pw" type="password" autocomplete="off"></div>
+        <div class="field"><label>Your name (shown in the activity log)</label><input id="nm" maxlength="30" autocomplete="name" placeholder="e.g. Aziz – Lane 1-6"></div>
+        <div class="field"><label id="pwL">${USE_LOGIN ? "Bowling committee password" : "Bowling committee PIN"}</label><input id="pw" type="password" autocomplete="off"></div>
         <button class="btn" id="go" style="width:100%">Sign in</button>
+        ${USE_LOGIN ? `<button class="linkbtn" id="asAdmin">Sign in as admin instead</button>` : ""}
         <div class="note" id="lerr"></div>
       </div>
       <div id="main" class="hide">
+        <div id="pendBar"></div>
         <div id="annCard"></div>
         <div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px"><span style="font-size:12px;color:var(--mute)">Choose a team</span><button class="btn ghost small" id="newTeam">+ New team</button></div><div class="teamchips" id="chips"></div></div>
         <div class="card" id="grid"><div class="empty">Choose a team above to enter scores.</div></div>
@@ -471,44 +559,85 @@ function viewScorer() {
             <div class="field"><label>Tournament title</label><input id="sTitle"></div>
             <div class="field"><label>Women's handicap (pins per game, 0 = none)</label><input id="sHdc" type="number" inputmode="numeric" min="0" max="50"></div>
             <div class="row2"><button class="btn small" id="save">Save settings</button><button class="btn ghost small" id="csv">Download results (CSV/Excel)</button>
-            <button class="btn ghost small" id="demo">Fill sample scores</button><button class="btn ghost small" id="wipe" style="color:var(--bad)">Delete all scores</button><button class="btn ghost small" id="out">Sign out</button></div>
+            <button class="btn ghost small" id="demo">Fill sample scores</button><button class="btn ghost small" id="out">Sign out</button></div>
           </div></details>
+        <details class="card danger"><summary style="cursor:pointer;font-weight:700">⚠️ Danger zone</summary>
+          <div style="margin-top:10px">
+            <div style="font-size:13px;margin-bottom:10px">Deletes <b>every bowling score for all teams</b> and removes all ✓ Verified locks. This can't be undone.</div>
+            <div class="field"><label>Type DELETE ALL to confirm</label><input id="wipeTxt" autocomplete="off" autocapitalize="characters" placeholder="DELETE ALL"></div>
+            <button class="btn small" id="wipe" style="background:var(--bad);color:#fff" disabled>Delete all scores</button>
+          </div></details>
+        <button class="fbbtn" id="fbOpen">💬 Send feedback</button>
       </div>
     </div>
+    <div class="undo" id="undo"><span id="undoT"></span><button id="undoB">Undo</button></div>
+    <div id="fbModal"></div>
     <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>`;
+  let asAdmin = false;
+  $("#nm").value = SCORER_NAME;
   const authed = () => !!Store.user;
+  const lockOf = t => last.locks && last.locks[tkey(t)];
+  const laneOf = t => (last.lanes && last.lanes[tkey(t)]) || "";
+  const teamLabel = id => { const p = ROSTER.find(x => x.id === id); return p ? `${p.t} · ${p.n}` : id; };
   const drawChips = c => {
-    $("#chips").innerHTML = c.teamsAlpha.map(t => `<button data-t="${esc(t.t)}" class="${t.t === team ? "on" : ""} ${t.done === t.slots ? "done" : ""}">${esc(t.t)}<small class="num">${t.done}/${t.slots} · ${t.total}</small></button>`).join("");
+    // unfinished teams first (in roster order), finished ones move to the end
+    const list = [...c.teamsAlpha.filter(t => t.done < t.slots), ...c.teamsAlpha.filter(t => t.done >= t.slots)];
+    $("#chips").innerHTML = list.map(t => `<button data-t="${esc(t.t)}" class="${t.t === team ? "on" : ""} ${t.done >= t.slots ? "done" : ""}">${lockOf(t.t) ? `<span class="lk" title="Verified">🔒</span>` : ""}${esc(t.t)}<small class="num">${t.done}/${t.slots} games · ${t.total} pins${laneOf(t.t) ? " · Lane " + esc(laneOf(t.t)) : ""}</small></button>`).join("");
   };
   const drawGrid = () => {
     if (!team) return;
     const mem = ROSTER.filter(p => p.t === team);
     $("#grid").innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px"><div><b style="font-size:16px">${esc(team)}</b><div style="color:var(--mute);font-size:12px">0–300 · clear a box to delete</div></div><button class="btn ghost small" id="editTeam">✏️ Edit names</button></div>
+      <div class="gh"><div><b style="font-size:16px">${esc(team)}</b><span id="lockBadge"></span><div class="sub">0–300 · Enter moves down the game · clear a box to delete</div></div>
+        <div class="row2" style="align-items:center"><label class="lane">Lane <input id="lane" maxlength="9" placeholder="e.g. 5-6" autocomplete="off"></label><button class="btn ghost small" id="editTeam">✏️ Edit names</button></div></div>
       <table class="sgrid"><colgroup><col class="c-n">${G.map(()=>"<col>").join("")}<col class="c-t"></colgroup><thead><tr><th>Name</th>${G.map(g => `<th>G${g}</th>`).join("")}<th style="text-align:right">TPF</th></tr></thead>
-      <tbody>${mem.map(p => `<tr data-id="${p.id}"><td class="nm">${esc(p.n)}<small>${p.g === "P" ? "Female" : "Male"}</small></td>
-        ${G.map(g => `<td><input class="num" inputmode="numeric" pattern="[0-9]*" maxlength="3" data-id="${p.id}" data-g="${g}"></td>`).join("")}<td class="t num" data-tot="${p.id}"></td></tr>`).join("")}
-      <tr class="sum"><td style="text-align:left">Team</td>${G.map(g => `<td class="num" data-gt="${g}"></td>`).join("")}<td class="num" style="text-align:right" id="teamTot"></td></tr></tbody></table>`;
+      <tbody>${mem.map(p => `<tr data-id="${p.id}"><td class="nm">${esc(p.n)}<small data-sub="${p.id}">${p.g === "P" ? "Female" : "Male"}</small></td>
+        ${G.map(g => `<td class="sc" data-c="${p.id}/g${g}"><input class="num" inputmode="numeric" pattern="[0-9]*" maxlength="3" enterkeyhint="next" autocomplete="off" data-id="${p.id}" data-g="${g}"></td>`).join("")}<td class="t num" data-tot="${p.id}"></td></tr>`).join("")}
+      <tr class="sum"><td style="text-align:left">Team</td>${G.map(g => `<td class="num" data-gt="${g}"></td>`).join("")}<td class="num" style="text-align:right" id="teamTot"></td></tr></tbody></table>
+      <div class="lockhint" id="hdcNote"></div>
+      <div id="lockArea"></div>`;
     fillGrid();
   };
   const fillGrid = () => {
     if (editing || !team || !$("#grid input[data-g]")) return;
     const c = compute(last), t = c.teams.find(x => x.t === team);
     if (!t) return;
+    const lk = lockOf(team);
+    const best = Math.max(0, ...t.mem.map(m => m.high));   // team's highest single game (scratch)
     document.querySelectorAll("#grid input[data-g]").forEach(inp => {
-      if (inp === document.activeElement) return;
+      const key = `${inp.dataset.id}/g${inp.dataset.g}`, td = inp.parentElement;
       const v = (last.scores[inp.dataset.id] || {})["g" + inp.dataset.g];
+      td.classList.toggle("pend", !!Store.pending[key]);
+      td.classList.toggle("hi", best > 0 && v === best);
+      inp.disabled = !!lk;
+      if (inp === document.activeElement) return;
       inp.value = typeof v === "number" ? v : "";
       inp.classList.remove("err");
     });
-    t.mem.forEach(m => { const el = $(`[data-tot="${m.id}"]`); if (el) el.textContent = m.played ? m.total : ""; });
+    t.mem.forEach(m => {
+      const el = $(`[data-tot="${m.id}"]`); if (el) el.innerHTML = m.played ? `${m.total}<small>avg ${m.avg.toFixed(1)}</small>` : "";
+      const sub = $(`[data-sub="${m.id}"]`); if (sub) sub.textContent = m.g === "P" ? (c.hdc ? `Female · +${c.hdc} hdc/game` : "Female") : "Male";
+    });
     G.forEach((g, i) => { $(`[data-gt="${g}"]`).textContent = t.games[i] ?? ""; });
     $("#teamTot").textContent = t.total || "";
+    $("#hdcNote").textContent = (best ? `★ Gold box = team's high game (${best}). ` : "") + (c.hdc ? `TPF and team totals include women's handicap (+${c.hdc} pins per game).` : "");
+    const lane = $("#lane"); if (lane && lane !== document.activeElement) lane.value = laneOf(team);
+    $("#lockBadge").innerHTML = lk ? `<span class="badge ok">🔒 VERIFIED</span>` : "";
+    $("#lockArea").innerHTML = lk
+      ? `<div class="lockbar"><div class="tx">🔒 <b>Verified</b> by ${esc(lk.by || "?")} at ${fmtTime(lk.at)}. Scores are locked.${isAdmin() ? "" : "<br><small style='color:var(--mute)'>Found a mistake? Ask the admin to unlock.</small>"}</div>
+         ${isAdmin() ? `<button class="btn ghost small" id="unlockT">Unlock</button>` : ""}</div>`
+      : t.done >= t.slots
+        ? `<div class="lockbar" style="background:var(--card)"><div class="tx">All ${t.slots} scores are in. Check the sheet with the team captain, then:</div><button class="btn small" id="lockT">✓ Verified – lock team</button></div>`
+        : `<div class="lockhint">The <b>✓ Verified</b> button appears when all ${t.slots} scores are in (${t.done}/${t.slots} now).</div>`;
+  };
+  const drawPending = () => {
+    const n = Object.keys(Store.pending).length;
+    $("#pendBar").innerHTML = n ? `<div class="pendbar">⏳ ${n} score${n > 1 ? "s" : ""} waiting to send${Store.online ? "…" : " – no internet. Keep this page open; they will send when the connection is back."}</div>` : "";
   };
   const draw = () => {
     $("#dot").className = "dot " + (Store.online ? "on" : "off");
     $("#st").textContent = Store.online ? "Connected" : "No connection — scores will send when internet returns";
-    $("#mode").textContent = Store.mode === "local" ? "TEST MODE (saved in this browser only)" : (Store.user && Store.user.email !== "PIN" ? "Signed in: " + Store.user.email : "");
+    $("#mode").textContent = Store.mode === "local" ? "TEST MODE (saved in this browser only)" + (isAdmin() ? " · admin" : "") : (Store.user && Store.user.email !== "PIN" ? "Signed in: " + Store.user.email + (SCORER_NAME ? " · " + SCORER_NAME : "") : "");
     $("#login").classList.toggle("hide", authed());
     $("#main").classList.toggle("hide", !authed());
     $("#demo").classList.toggle("hide", Store.mode !== "local");
@@ -516,20 +645,38 @@ function viewScorer() {
     const c = compute(last); c.teamsAlpha = TEAMS.map(n => c.teams.find(t => t.t === n));
     drawChips(c);
     drawAnn();
+    drawPending();
     if (team && !TEAMS.includes(team) && !editing) { team = null; $("#grid").innerHTML = `<div class="empty">Choose a team above to enter scores.</div>`; }
     if (editing) {} else if (team && !$("#grid input[data-g]")) drawGrid(); else fillGrid();
     if (document.activeElement !== $("#sTitle")) $("#sTitle").value = last.settings.title || DEFAULT_TITLE;
     if (document.activeElement !== $("#sHdc")) $("#sHdc").value = last.settings.hdcW || 0;
   };
+  // "Deleted · Undo" bar for 5 seconds after a box is cleared
+  let undoFn = null, undoT;
+  const showUndo = (msg, fn) => {
+    undoFn = fn; $("#undoT").textContent = msg; $("#undo").classList.add("show");
+    clearTimeout(undoT); undoT = setTimeout(() => { $("#undo").classList.remove("show"); undoFn = null; }, 5000);
+  };
+  $("#undoB").onclick = async () => {
+    const fn = undoFn; undoFn = null; $("#undo").classList.remove("show"); if (!fn) return;
+    try { await fn(); toast("Restored ✓"); } catch (e) { toast("Undo failed: " + (e.code || e.message), true); }
+  };
+  const flashOk = (id, g) => { const td = $(`[data-c="${id}/g${g}"]`); if (!td) return; td.classList.add("ok"); setTimeout(() => td.classList.remove("ok"), 1500); };
   const commit = async inp => {
     const raw = inp.value.trim(); const id = inp.dataset.id, g = +inp.dataset.g;
     const cur = (last.scores[id] || {})["g" + g];
     if (raw === "" && typeof cur !== "number") return;
+    if (lockOf(team)) { toast("This team is verified & locked", true); fillGrid(); return; }
     let val = null;
     if (raw !== "") { val = Number(raw); if (!Number.isInteger(val) || val < 0 || val > 300) { inp.classList.add("err"); toast("Score must be 0 to 300", true); return; } }
     if (val === cur) return;
     inp.classList.remove("err");
-    try { await Store.setScore(id, g, val); inp.classList.add("saved"); setTimeout(() => inp.classList.remove("saved"), 900); toast(val === null ? "Deleted" : "Saved ✓"); }
+    const who = teamLabel(id);
+    const p = Store.setScore(id, g, val);
+    if (val === null) showUndo(`Deleted G${g} (${cur}) · ${who.split(" · ")[1] || ""}`, async () => { await Store.setScore(id, g, cur); log(`${who} G${g}: undo delete → ${cur}`); });
+    else if (Store.online) toast("Saved ✓"); else toast("Saved on phone – will send when online");
+    log(`${who} G${g}: ${typeof cur === "number" ? cur : "—"} → ${val === null ? "deleted" : val}`);
+    try { await p; flashOk(id, g); }
     catch (e) { inp.classList.add("err"); toast("Save failed: " + (e.code || e.message), true); }
   };
   $("#chips").onclick = e => { const b = e.target.closest("button"); if (!b) return; editing = null; team = b.dataset.t; try { sessionStorage.setItem("bolTeam", team); } catch (e) {} drawGrid(); draw(); $("#grid").scrollIntoView({ behavior: "smooth", block: "start" }); };
@@ -542,15 +689,38 @@ function viewScorer() {
     const next = row + 1 < rows ? all[(row + 1) * per + col] : all[col + 1];
     next && next.focus(); next && next.select();
   });
-  $("#grid").addEventListener("input", e => { if (e.target.matches("input[data-g]")) e.target.value = e.target.value.replace(/\D/g, "").slice(0, 3); });
+  $("#grid").addEventListener("input", e => {
+    if (!e.target.matches("input[data-g]")) return;
+    const el = e.target; el.value = el.value.replace(/\D/g, "").slice(0, 3);
+    el.classList.toggle("err", el.value !== "" && +el.value > 300);   // instant red if over 300
+  });
+  // lane number for the selected team
+  $("#grid").addEventListener("change", async e => {
+    if (e.target.id !== "lane" || !team) return;
+    const v = e.target.value.replace(/\s+/g, " ").trim().slice(0, 9);
+    if (v === laneOf(team)) return;
+    try { await Store.setLane(team, v); log(`${team}: lane ${v || "cleared"}`); toast(v ? "Lane saved ✓" : "Lane cleared"); }
+    catch (err) { toast("Failed: " + (err.code || err.message), true); }
+  });
+  const setName = () => { SCORER_NAME = $("#nm").value.replace(/\s+/g, " ").trim().slice(0, 30); try { localStorage.setItem("bowlName", SCORER_NAME); } catch (e) {} };
+  if ($("#asAdmin")) $("#asAdmin").onclick = () => {
+    asAdmin = !asAdmin;
+    $("#pwL").textContent = asAdmin ? "Admin password" : "Bowling committee password";
+    $("#asAdmin").textContent = asAdmin ? "Sign in as bowling committee instead" : "Sign in as admin instead";
+    $("#pw").focus();
+  };
   $("#go").onclick = async () => {
     $("#lerr").textContent = "";
-    try { await Store.login($("#pw").value); } catch (e) { $("#lerr").textContent = (USE_LOGIN ? "Wrong password" : "Wrong PIN") + " or no connection. (" + (e.code || e.message) + ")"; }
+    setName();
+    if (!SCORER_NAME) { $("#lerr").textContent = "Please type your name first."; $("#nm").focus(); return; }
+    try { await Store.login($("#pw").value, asAdmin); $("#pw").value = ""; log("signed in" + (asAdmin ? " as admin" : "")); }
+    catch (e) { $("#lerr").textContent = (USE_LOGIN ? "Wrong password" : "Wrong PIN") + " or no connection. (" + (e.code || e.message) + ")"; }
   };
   $("#pw").onkeydown = e => { if (e.key === "Enter") $("#go").click(); };
   $("#save").onclick = async () => {
     const h = Math.max(0, Math.min(50, parseInt($("#sHdc").value || "0", 10) || 0));
-    try { await Store.setSetting("hdcW", h); await Store.setSetting("title", $("#sTitle").value.trim() || DEFAULT_TITLE); toast("Settings saved ✓"); } catch (e) { toast("Failed: " + (e.code || e.message), true); }
+    const before = +last.settings.hdcW || 0;
+    try { await Store.setSetting("hdcW", h); await Store.setSetting("title", $("#sTitle").value.trim() || DEFAULT_TITLE); if (h !== before) log(`women's handicap ${before} → ${h}`); toast("Settings saved ✓"); } catch (e) { toast("Failed: " + (e.code || e.message), true); }
   };
   $("#csv").onclick = () => {
     const c = compute(last); const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
@@ -565,11 +735,50 @@ function viewScorer() {
     const sc = {}; ROSTER.forEach(p => { sc[p.id] = {}; G.forEach(g => { if (Math.random() < .85) sc[p.id]["g" + g] = Math.round(Math.max(60, Math.min(279, (p.g === "L" ? 150 : 128) + (Math.random() - .5) * 110))); }); });
     await Store.replaceScores(sc); toast("Sample scores added");
   };
+  $("#wipeTxt").oninput = () => { $("#wipe").disabled = $("#wipeTxt").value.trim().toUpperCase() !== "DELETE ALL"; };
   $("#wipe").onclick = async () => {
-    const w = prompt('Type DELETE to remove ALL bowling scores.'); if (w !== "DELETE") return;
-    try { await Store.replaceScores({}); toast("All scores deleted"); } catch (e) { toast("Failed: " + (e.code || e.message), true); }
+    if ($("#wipeTxt").value.trim().toUpperCase() !== "DELETE ALL") return;
+    try { await Store.replaceScores({}); log("⚠️ DELETED ALL SCORES"); $("#wipeTxt").value = ""; $("#wipe").disabled = true; toast("All scores deleted"); }
+    catch (e) { toast("Failed: " + (e.code || e.message), true); }
   };
-  $("#out").onclick = () => Store.logout();
+  $("#out").onclick = () => { log("signed out"); Store.logout(); };
+
+  /* ---------- verified lock ---------- */
+  $("#grid").addEventListener("click", async e => {
+    const b = e.target.closest("#lockT, #unlockT"); if (!b || !team) return;
+    const on = b.id === "lockT";
+    if (on && !confirm(`Lock ${team}?\n\nCheck every score with the team captain first. After locking, only the admin can unlock.`)) return;
+    if (!on && !isAdmin()) return;
+    try { await Store.setLock(team, on); log(`${team}: ${on ? "✓ verified & locked" : "unlocked"}`); toast(on ? "🔒 Team verified" : "Team unlocked"); }
+    catch (err) { toast("Failed: " + (err.code || err.message), true); }
+  });
+
+  /* ---------- feedback ---------- */
+  let fbType = "Suggestion";
+  const closeFb = () => { $("#fbModal").innerHTML = ""; };
+  $("#fbOpen").onclick = () => {
+    $("#fbModal").innerHTML = `<div class="modal" id="fbBg"><div class="card"><b>💬 Feedback</b>
+      <div style="color:var(--mute);font-size:12px;margin:2px 0 10px">Something not working, or an idea to make scoring easier? It goes straight to the organiser.</div>
+      <div class="annq" id="fbTy">${["Bug", "Suggestion", "Other"].map(t => `<button type="button" data-ty="${t}" class="${t === fbType ? "on" : ""}">${t === "Bug" ? "🐞 " : t === "Suggestion" ? "💡 " : ""}${t}</button>`).join("")}</div>
+      <textarea id="fbT" maxlength="500" placeholder="What happened, or what would help?"></textarea>
+      <div style="color:var(--mute);font-size:11px;margin:4px 0 10px">Sent with your name (${esc(SCORER_NAME || "—")}), the time and device (${esc(DEV)}).</div>
+      <div class="row2"><button class="btn" id="fbSend" style="flex:1">Send</button><button class="btn ghost" id="fbX">Cancel</button></div></div></div>`;
+    $("#fbT").focus();
+  };
+  $("#fbModal").addEventListener("click", async e => {
+    if (e.target.id === "fbBg" || e.target.id === "fbX") return closeFb();
+    const ty = e.target.closest("[data-ty]");
+    if (ty) { fbType = ty.dataset.ty; document.querySelectorAll("#fbTy button").forEach(x => x.classList.toggle("on", x === ty)); return; }
+    if (e.target.id === "fbSend") {
+      const msg = $("#fbT").value.trim(); if (!msg) return toast("Type a message first", true);
+      e.target.disabled = true;
+      try {
+        await Store.sendFeedback({ type: fbType, msg: msg.slice(0, 500), sport: "bowling", page: "Bowling scorer",
+          by: SCORER_NAME || "?", acct: (Store.user && Store.user.email) || "", dev: DEV, team: team || "" });
+        closeFb(); toast("Thanks! Feedback sent ✓");
+      } catch (err) { e.target.disabled = false; toast("Failed: " + (err.code || err.message), true); }
+    }
+  });
 
   /* ---------- edit team & player names ---------- */
   const newId = () => "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
@@ -636,7 +845,15 @@ function viewScorer() {
     Object.values(byId).forEach(r => list.push({ id: r.id, n: r.n.replace(/\s+/g, " ").trim(), g: r.g, t: r.to || name }));
     try {
       $("#eSave").disabled = true;
-      await Store.saveRoster(list, [...goneIds]);
+      // a renamed team keeps its lane and Verified lock
+      const extra = {};
+      if (editing.orig && editing.orig !== name && tkey(editing.orig) !== tkey(name)) {
+        extra[`locks/${tkey(editing.orig)}`] = null; extra[`lanes/${tkey(editing.orig)}`] = null;
+        if (lockOf(editing.orig)) extra[`locks/${tkey(name)}`] = lockOf(editing.orig);
+        if (laneOf(editing.orig)) extra[`lanes/${tkey(name)}`] = laneOf(editing.orig);
+      }
+      await Store.saveRoster(list, [...goneIds], extra);
+      log(editing.orig ? `${editing.orig}: names edited${editing.orig !== name ? " (renamed → " + name + ")" : ""}${goneIds.size ? `, removed ${gone.map(r => r.n).join(", ")}` : ""}` : `new team ${name}`);
       team = name; try { sessionStorage.setItem("bolTeam", team); } catch (e) {}
       toast("Names saved ✓");
       endEdit();
@@ -644,7 +861,7 @@ function viewScorer() {
   };
   $("#grid").addEventListener("click", async e => {
     const b = e.target.closest("button"); if (!b) return;
-    if (b.id === "editTeam") return startEdit(team);
+    if (b.id === "editTeam") { if (lockOf(team) && !isAdmin()) return toast("Team is verified & locked – ask the admin to unlock", true); return startEdit(team); }
     if (!editing) return;
     if (b.id === "eAdd") { readEdit(); editing.rows.push({ id: newId(), n: "", g: "L", to: "", isNew: true, del: false }); drawEdit(); const ins = document.querySelectorAll("#grid .eN"); ins[ins.length - 1].focus(); return; }
     if (b.classList.contains("eDel")) { readEdit(); const row = editing.rows.find(x => x.id === b.closest(".edrow").dataset.id); if (row) row.del = true; drawEdit(); return; }
@@ -654,7 +871,7 @@ function viewScorer() {
       const ids = ROSTER.filter(p => p.t === editing.orig).map(p => p.id);
       const n = ids.reduce((a, id) => a + Object.keys(last.scores[id] || {}).length, 0);
       if (!confirm(`Delete team "${editing.orig}" and its ${ids.length} player(s)?` + (n ? `\n\n${n} game score(s) will be deleted too.` : ""))) return;
-      try { await Store.saveRoster(ROSTER.filter(p => p.t !== editing.orig), ids); team = null; toast("Team deleted"); endEdit(); }
+      try { await Store.saveRoster(ROSTER.filter(p => p.t !== editing.orig), ids, { [`locks/${tkey(editing.orig)}`]: null, [`lanes/${tkey(editing.orig)}`]: null }); log(`team ${editing.orig} deleted`); team = null; toast("Team deleted"); endEdit(); }
       catch (e2) { toast("Failed: " + (e2.code || e2.message), true); }
     }
   });
@@ -693,7 +910,7 @@ function viewScorer() {
     if (b.dataset.ann === "edit") return openAnnForm();
     if (b.dataset.ann === "clear") {
       if (!confirm("Remove this announcement from the big screen and board?")) return;
-      try { await Store.setAnn(null); toast("Announcement removed"); } catch (e2) { toast("Failed: " + (e2.code || e2.message), true); }
+      try { await Store.setAnn(null); log("announcement removed"); toast("Announcement removed"); } catch (e2) { toast("Failed: " + (e2.code || e2.message), true); }
       return;
     }
     if (b.id === "annX") { annOpen = false; $("#annCard").innerHTML = ""; return drawAnn(); }
@@ -703,7 +920,7 @@ function viewScorer() {
       const t = $("#annT").value.replace(/\s+/g, " ").trim().slice(0, 140);
       if (!t) return toast("Type a message first", true);
       const at = Date.now();
-      try { await Store.setAnn({ t, at, exp: annMins ? at + annMins * 60000 : 0 }); annOpen = false; $("#annCard").innerHTML = ""; drawAnn(); toast("📢 Announcement posted"); }
+      try { await Store.setAnn({ t, at, exp: annMins ? at + annMins * 60000 : 0 }); log("announce: " + t); annOpen = false; $("#annCard").innerHTML = ""; drawAnn(); toast("📢 Announcement posted"); }
       catch (e2) { toast("Failed: " + (e2.code || e2.message), true); }
     }
   });

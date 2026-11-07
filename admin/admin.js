@@ -32,7 +32,7 @@ C.onValue(ref(db, ".info/connected"), s => $("#conn").classList.toggle("on", !!s
 // ---------------- tabs
 $$("#tabs button").forEach(b => b.onclick = () => {
   $$("#tabs button").forEach(x => x.classList.toggle("on", x === b));
-  for (const t of ["ov", "screen", "links", "tools"]) $("#t-" + t).classList.toggle("hide", t !== b.dataset.t);
+  for (const t of ["ov", "screen", "links", "tools", "fb"]) $("#t-" + t).classList.toggle("hide", t !== b.dataset.t);
 });
 
 function start() {
@@ -42,7 +42,8 @@ function start() {
   C.onValue(ref(db, "settings"), s => { settings = s.val() || {}; fillScreenForm(); });
   renderLinks();
   const opts = Object.entries(SPORTS).map(([id, s]) => `<option value="${id}">${esc(s.name)}</option>`).join("");
-  $("#sSport").innerHTML = opts; $("#logSport").innerHTML = opts; $("#clrSport").innerHTML = opts;
+  $("#sSport").innerHTML = opts; $("#logSport").innerHTML = opts + `<option value="bowling">Tenpin Bowling</option>`; $("#clrSport").innerHTML = opts;
+  startFeedback();
   $("#logSport").onchange = startLog;
   startLog();
 }
@@ -323,4 +324,31 @@ $("#btnExport").onclick = async () => {
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
   a.download = `${(settings.event || "HQ Games 2026").replace(/[^\w]+/g, "_")}_Results.csv`; a.click();
   toast("Results downloaded");
+};
+
+// ---------------- feedback (from the 💬 button on scorer pages → /feedback)
+let fbData = {};
+function startFeedback() {
+  C.onValue(C.query(ref(db, "feedback"), C.limitToLast(300)), snap => { fbData = snap.val() || {}; renderFeedback(); },
+    err => { $("#fbList").innerHTML = `<p class="muted">Can't read feedback yet – publish the new database rules (see SETUP.md). (${esc(err.code || err.message)})</p>`; });
+}
+function renderFeedback() {
+  const all = Object.entries(fbData).map(([id, f]) => ({ id, ...f })).sort((a, b) => (b.at || 0) - (a.at || 0));
+  const open = all.filter(f => !f.done).length;
+  $("#fbCount").textContent = open ? open : "";
+  const list = $("#fbShowDone").checked ? all : all.filter(f => !f.done);
+  const ic = { Bug: "🐞", Suggestion: "💡" };
+  $("#fbList").innerHTML = list.length ? list.map(f => `<div class="fbi ${f.done ? "done" : ""}">
+      <div class="msg"><span class="ty">${ic[f.type] || "💬"} ${esc(f.type || "Other")}</span>${esc(f.msg)}</div>
+      <div class="meta">${esc(f.by || "?")} · ${esc(f.page || f.sport || "")}${f.team ? " · " + esc(f.team) : ""} · ${esc(f.dev || "")} · ${f.at ? new Date(f.at).toLocaleString([], { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}</div>
+      <div class="act"><button class="small" data-fbdone="${f.id}">${f.done ? "Reopen" : "✓ Done"}</button><button class="small" data-fbdel="${f.id}" title="Delete">✕</button></div>
+    </div>`).join("") : `<p class="muted">${all.length ? "All done 🎉" : "No feedback yet."}</p>`;
+}
+$("#fbShowDone").onchange = renderFeedback;
+$("#fbList").onclick = async e => {
+  const d = e.target.closest("[data-fbdone]"), x = e.target.closest("[data-fbdel]");
+  try {
+    if (d) await C.set(ref(db, `feedback/${d.dataset.fbdone}/done`), fbData[d.dataset.fbdone].done ? null : Date.now());
+    if (x && confirm("Delete this feedback?")) await C.remove(ref(db, `feedback/${x.dataset.fbdel}`));
+  } catch (err) { toast("Error: " + err.message, 4000); }
 };
