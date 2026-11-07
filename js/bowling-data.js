@@ -1,3 +1,4 @@
+import "./bowling-rules.js";   // sets globalThis.BowlRules
 // Bowling roster + standings, used by the admin page (results download and prize giving).
 // The bowling page (bowling.html) has its own copy of the same list (the built-in default).
 export const BOWL_ROOT = "bowling2026";
@@ -12,34 +13,9 @@ export function bowlingRoster(obj) {
   return a.length ? a : BOWL_ROSTER;
 }
 
-// data = contents of /bowling2026 → { teams, men, women } ranked like the bowling page
+// data = contents of /bowling2026 → standings ranked exactly like the bowling page
+// (rules: games, handicap, tie-break, categories — all in js/bowling-rules.js)
 export function bowlingStandings(data) {
   data = data || {};
-  const ROSTER = bowlingRoster(data.roster);
-  const sc = data.scores || {}, hdc = Number((data.settings || {}).hdcW) || 0;
-  const G = Array.from({ length: BOWL_GAMES }, (_, i) => i + 1);
-  const players = ROSTER.map(p => {
-    const s = sc[p.id] || {};
-    const games = G.map(g => (typeof s["g" + g] === "number" ? s["g" + g] : null));
-    const played = games.filter(x => x !== null);
-    const scratch = played.reduce((a, b) => a + b, 0);
-    const h = p.g === "P" ? hdc * played.length : 0;
-    return { ...p, games, played: played.length, scratch, hdc: h, total: scratch + h,
-      avg: played.length ? scratch / played.length : 0, high: played.length ? Math.max(...played) : 0 };
-  });
-  const teams = [...new Set(ROSTER.map(p => p.t))].map(t => {
-    const mem = players.filter(p => p.t === t);
-    const games = G.map((g, i) => mem.every(m => m.games[i] === null) ? null
-      : mem.reduce((a, m) => a + (m.games[i] || 0) + (m.g === "P" && m.games[i] !== null ? hdc : 0), 0));
-    return { t, n: t, mem, games, total: mem.reduce((a, m) => a + m.total, 0), done: mem.reduce((a, m) => a + m.played, 0),
-      high: Math.max(0, ...games.filter(x => x !== null)) };
-  });
-  const by = (a, b) => b.total - a.total || b.high - a.high || a.n.localeCompare(b.n);
-  return {
-    hdc, players,
-    teams: teams.sort(by),
-    men: players.filter(p => p.g === "L" && p.played).sort(by),
-    women: players.filter(p => p.g === "P" && p.played).sort(by),
-    highs: players.filter(p => p.played).sort((a, b) => b.high - a.high || b.total - a.total)
-  };
+  return globalThis.BowlRules.standings(bowlingRoster(data.roster), data.scores, data.settings);
 }

@@ -311,13 +311,21 @@ $("#btnExport").onclick = async () => {
   }
   try {
     const bw = bowlingStandings((await C.get(ref(db, BOWL_ROOT))).val());
-    rows.push(["TENPIN BOWLING" + (bw.hdc ? ` (women's handicap +${bw.hdc}/game)` : "")]);
-    rows.push(["Pos", "Team", "G1", "G2", "G3", "G4", "G5", "TPF"]);
-    bw.teams.forEach((t, i) => rows.push([i + 1, t.t, ...t.games.map(x => x ?? ""), t.total]));
-    for (const [lbl, list] of [["Men", bw.men], ["Women", bw.women]]) {
+    const GH = bw.G.map(g => "G" + g);
+    rows.push(["TENPIN BOWLING"]); rows.push(["Rules: " + globalThis.BowlRules.describe(bw.R)]);
+    rows.push(["Pos", "Team", ...GH, "TPF"]);
+    bw.teams.forEach((t, i) => rows.push([bw.rankOf(bw.teams, i), t.t, ...t.games.map(x => x ?? ""), t.total]));
+    for (const [lbl, list] of [["Men", bw.men], ["Women", bw.women], ["Overall", bw.overall]]) {
+      if (lbl === "Overall" && !bw.R.cats.overall) continue;
       rows.push([]); rows.push([`Bowling – ${lbl}`]);
-      rows.push(["Pos", "Name", "Team", "G1", "G2", "G3", "G4", "G5", "TPF", "Average"]);
-      list.forEach((p, i) => rows.push([i + 1, p.n, p.t, ...p.games.map(x => x ?? ""), p.total, p.avg.toFixed(1)]));
+      rows.push(["Pos", "Name", "Team", ...GH, "TPF", "Average"]);
+      list.forEach((p, i) => rows.push([bw.rankOf(list, i), p.n, p.t, ...p.games.map(x => x ?? ""), p.total, p.avg.toFixed(1)]));
+    }
+    rows.push([]); rows.push(["Bowling – High Game"]); rows.push(["Pos", "Name", "Team", "High game"]);
+    bw.highs.slice(0, 10).forEach((p, i) => rows.push([bw.rankOf(bw.highs, i, "highT"), p.n, p.t, p.highT]));
+    if (bw.R.cats.series) {
+      rows.push([]); rows.push([`Bowling – High Series (${bw.R.seriesN} games)`]); rows.push(["Pos", "Name", "Team", "Series"]);
+      bw.series.slice(0, 10).forEach((p, i) => rows.push([bw.rankOf(bw.series, i, "ser"), p.n, p.t, p.ser]));
     }
   } catch (e) { rows.push(["Bowling data could not be loaded"]); }
   const blob = new Blob(["﻿" + rows.map(r => r.map(q).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" });

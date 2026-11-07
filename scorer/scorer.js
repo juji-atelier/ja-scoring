@@ -90,6 +90,7 @@ $("#loginForm").onsubmit = async e => {
   }
 };
 $("#btnLogout").onclick = async () => {
+  if (!confirm("Log out of scoring?" + (curId ? "\n\nThe match you have open will be released." : ""))) return;
   if (curId) await releaseLock(curId);
   await C.signOut(auth);
 };

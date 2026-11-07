@@ -48,7 +48,7 @@ const LOG_PATH = "logs/bowling";                  // activity log (Admin → Too
 // Add ?test=1 to any link to try things safely: nothing is sent to Firebase,
 // scores are saved in this browser only. (&admin=1 = act as admin in test mode)
 const TEST_MODE = new URLSearchParams(location.search).get("test") === "1";
-const GAMES = 5;
+let GAMES = 5;            // set by Tournament rules (settings.games); 5 until rules are saved
 const POLL_MS = 10000;   // public board refresh (ms)
 const DEFAULT_TITLE = "Sabah Electricity (HQ) Closed Tenpin Bowling Championship 2026";
 // "SESB" is the old company name; any title saved with it is shown with the new name.
@@ -57,6 +57,7 @@ const DEFAULT_ROSTER = [{"id":"b01","n":"Nas Norniza","t":"NGEKET","g":"P"},{"id
 </script>
 <link rel="stylesheet" href="css/theme.css">
 <script src="js/theme.js?v=20261105b"></script>
+<script src="js/bowling-rules.js?v=20261107"></script>
 <style>
 :root{--silver:#A7AEB8;--bronze:#B07A4A;--f:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 *{box-sizing:border-box}
@@ -182,6 +183,19 @@ input:focus,select:focus{outline:2px solid color-mix(in srgb,var(--acc) 60%,tran
 .undo button{background:var(--acc);color:var(--acc-ink);border:0;border-radius:99px;padding:7px 14px;font-weight:800}
 details.danger{border-color:color-mix(in srgb,var(--bad) 45%,var(--line))}
 details.danger summary{color:var(--bad)}
+.hbtn{background:var(--bg2);border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:6px 10px;font-size:13px;font-weight:600;white-space:nowrap;flex:none;max-width:150px;overflow:hidden;text-overflow:ellipsis}
+#btnLogout{color:var(--bad)}
+@media (max-width:600px){#who{display:none}.bh .in:has(#btnLogout:not(.hide)) .logo-org{display:none}}
+@media (max-width:480px){.bh .in:has(#btnLogout:not(.hide)) [data-clock]{display:none}.hbtn{padding:6px 8px}.bh .brand{min-width:0;flex:0 1 auto}.bh .brand b{font-size:16px;overflow:hidden;text-overflow:ellipsis}}
+.stabs{margin:0 0 12px}
+.rules .sub{color:var(--mute);font-size:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cks{display:flex;flex-direction:column;gap:6px}
+.ck{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:var(--bg2);cursor:pointer;font-size:14px;font-weight:600}
+.ck input{width:18px;height:18px;margin:1px 0 0;flex:none;accent-color:var(--acc)}
+.ck small{display:block;color:var(--mute);font-weight:500;font-size:12px;margin-top:1px}
+.warnline:not(:empty){color:var(--warn);font-size:12px;font-weight:600;margin:-4px 0 10px}
+.rsum{margin-top:14px;padding:10px 12px;border-radius:11px;background:var(--acc-soft);font-size:13px;line-height:1.45}
 .linkbtn{background:none;border:0;color:var(--mute);text-decoration:underline;font-size:13px;padding:10px 0 0;width:100%}
 /* feedback */
 .fbbtn{display:block;margin:6px auto 0;background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:99px;padding:10px 18px;font-weight:700;font-size:14px}
@@ -263,7 +277,8 @@ function rosterFrom(obj) {
 }
 function applyRoster(obj) { ROSTER = rosterFrom(obj) || DEFAULT_ROSTER; TEAMS = [...new Set(ROSTER.map(p => p.t))]; }
 const annActive = a => !!(a && a.t && (!a.exp || a.exp > Date.now()));
-const G = Array.from({ length: GAMES }, (_, i) => i + 1);
+let G = Array.from({ length: GAMES }, (_, i) => i + 1);
+let RULES = BowlRules.rules({});
 let toastT;
 function toast(msg, bad) { const t = $("#toast"); t.textContent = msg; t.className = "toast show" + (bad ? " bad" : ""); clearTimeout(toastT); toastT = setTimeout(() => t.className = "toast", 1600); }
 const fmtTime = ts => ts ? new Date(ts).toLocaleTimeString("en-MY", { hour: "2-digit", minute: "2-digit" }) : "—";
@@ -291,6 +306,8 @@ const Store = {
     this.state = { scores: v.scores || {}, settings: Object.assign({ hdcW: 0, title: DEFAULT_TITLE }, v.settings || {}), updated: v.updated || 0,
                    roster: v.roster || null, ann: v.ann || null, locks: v.locks || {}, lanes: v.lanes || {} };
     this.state.settings.title = renameOrg(this.state.settings.title) || DEFAULT_TITLE;
+    RULES = BowlRules.rules(this.state.settings);
+    if (RULES.games !== GAMES) { GAMES = RULES.games; G = Array.from({ length: GAMES }, (_, i) => i + 1); }
     applyRoster(this.state.roster);
     this.emit();
   },
@@ -342,7 +359,7 @@ const Store = {
       for (const p of parts) o = o[p] = (o[p] && typeof o[p] === "object") ? o[p] : {};
       if (v === null) delete o[last]; else o[last] = v;
     }
-    applyRoster(this.state.roster); this._localSave();
+    applyRoster(this.state.roster); this.merge(JSON.parse(JSON.stringify(this.state))); this._localSave();
   },
   async setScore(id, g, val) {
     const now = Date.now(), key = `${id}/g${g}`;
@@ -417,35 +434,10 @@ function log(act) {
 }
 
 /* =================== calculations =================== */
-function compute(state) {
-  const hdc = +state.settings.hdcW || 0;
-  const players = ROSTER.map(p => {
-    const sc = state.scores[p.id] || {};
-    const games = G.map(g => (typeof sc["g" + g] === "number" ? sc["g" + g] : null));
-    const played = games.filter(x => x !== null);
-    const scratch = played.reduce((a, b) => a + b, 0);
-    const h = p.g === "P" ? hdc * played.length : 0;
-    return { ...p, games, played: played.length, scratch, hdc: h, total: scratch + h,
-      avg: played.length ? scratch / played.length : 0, high: played.length ? Math.max(...played) : 0 };
-  });
-  const teams = TEAMS.map(t => {
-    const mem = players.filter(p => p.t === t);
-    const games = G.map((g, i) => { const v = mem.map(m => m.games[i]); return v.every(x => x === null) ? null : v.reduce((a, b) => a + (b || 0) + 0, 0) + mem.reduce((a, m) => a + (m.g === "P" && m.games[i] !== null ? hdc : 0), 0); });
-    const total = mem.reduce((a, m) => a + m.total, 0);
-    const done = mem.reduce((a, m) => a + m.played, 0);
-    return { t, mem, games, total, done, slots: mem.length * GAMES, high: Math.max(0, ...games.filter(x => x !== null)) };
-  });
-  // ranking: total desc, then best single game desc, then name
-  const byTot = (a, b) => b.total - a.total || b.high - a.high || (a.n || a.t).localeCompare(b.n || b.t);
-  teams.sort(byTot);
-  const men = players.filter(p => p.g === "L").sort(byTot);
-  const women = players.filter(p => p.g === "P").sort(byTot);
-  const highs = players.filter(p => p.played).sort((a, b) => b.high - a.high || b.total - a.total);
-  return { hdc, players, teams, men, women, highs, anyScore: players.some(p => p.played) };
-}
-function rankOf(list, i, key = "total") { // shared rank for exact ties (same total + same high)
-  let r = i; while (r > 0 && list[r - 1][key] === list[i][key] && list[r - 1].high === list[i].high) r--; return r + 1;
-}
+// All ranking rules live in js/bowling-rules.js (shared with the admin page).
+function compute(state) { return BowlRules.standings(ROSTER, state.scores, state.settings); }
+const TITLES = Object.fromEntries(BowlRules.CATS.map(([k, l, sh]) => [k, { long: l, short: sh }]));
+const shownCats = () => BowlRules.CATS.map(([k]) => k).filter(k => RULES.cats[k]);
 
 /* =================== PUBLIC BOARD =================== */
 function viewBoard() {
@@ -465,10 +457,7 @@ function viewBoard() {
       <section class="hero"><h1 id="ttl"></h1>
         <div class="sub"><span class="dot" id="dot"></span><span id="st">Connecting…</span><span>·</span><span>Updated <b id="upd" class="num">—</b></span><span class="pill" id="mode"></span></div></section>
       <div id="annB"></div>
-      <div class="tabs" id="tabs">
-        <button data-t="team">Teams</button><button data-t="men">Men</button>
-        <button data-t="women">Women</button><button data-t="high">High Game</button>
-      </div>
+      <div class="tabs" id="tabs"></div>
       <div class="list" id="list"></div><div class="note" id="note"></div></div>
     <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>`;
   let last;
@@ -482,41 +471,48 @@ function viewBoard() {
     $("#st").textContent = Store.online ? "Live" : "No connection";
     $("#mode").textContent = Store.mode === "local" ? "TEST MODE" : `${GAMES} games`;
     $("#mode").style.display = Store.mode === "local" ? "" : "none";
-    [...$("#tabs").children].forEach(b => b.classList.toggle("on", b.dataset.t === tab));
+    const cats = shownCats();
+    if (!cats.includes(tab)) tab = cats[0];
+    $("#tabs").innerHTML = cats.map(k => `<button data-t="${k}" class="${k === tab ? "on" : ""}">${TITLES[k].short}</button>`).join("");
+    $("#tabs").classList.toggle("hide", cats.length < 2);
     const L = $("#list");
-    const hdcTxt = c.hdc ? ` Women's handicap: +${c.hdc} pins per game (included in totals).` : "";
+    const rulesTxt = " " + BowlRules.describe(c.R);
     const wide = WIDE.matches;
     document.body.classList.toggle("pc", wide);
-    if (!c.anyScore) { L.innerHTML = `<div class="empty">No scores yet. This page updates automatically.</div>`; $("#note").textContent = ""; return; }
+    if (!c.anyScore) { L.innerHTML = `<div class="empty">No scores yet. This page updates automatically.</div>`; $("#note").textContent = rulesTxt.trim(); return; }
     const gamesHTML = arr => `<div class="games num">${arr.map((v, i) => `<span class="${v === null ? "e" : ""}">${v === null ? "G" + (i + 1) : v}</span>`).join("")}</div>`;
+    const hiSmall = c.R.hdcHigh && c.hdc ? "incl. hdc" : "scratch";
     const section = k => {
-      if (k === "team") return c.teams.map((t, i) => { const r = rankOf(c.teams, i); return `
+      if (k === "team") return c.teams.map((t, i) => { const r = c.rankOf(c.teams, i); return `
         <div class="row click r${r}" data-team="${esc(t.t)}">
           <div class="rk num">${r}</div>
           <div><div class="nm">${esc(t.t)}${last.locks[tkey(t.t)] ? `<span class="badge ok">✓ FINAL</span>` : ""}</div><div class="meta">${last.lanes[tkey(t.t)] ? `<span>Lane ${esc(last.lanes[tkey(t.t)])}</span>` : ""}<span>${t.done}/${t.slots} games done</span>${t.high ? `<span>Best game ${t.high}</span>` : ""}</div>${gamesHTML(t.games)}</div>
           <div class="tot num"><b>${t.total}</b><small>TPF</small></div>
-          ${open.has(t.t) ? `<div class="members">${t.mem.map(m => `<div class="mem"><div>${esc(m.n)}<span class="tg ${m.g}">${m.g === "P" ? "F" : "M"}</span>${gamesHTML(m.games)}</div><div class="num"><b>${m.total}</b></div></div>`).join("")}</div>` : ""}
+          ${open.has(t.t) ? `<div class="members">${t.mem.map(m => `<div class="mem"><div>${esc(m.n)}<span class="tg ${m.g}">${m.g === "P" ? "F" : "M"}</span>${gamesHTML(m.games)}</div><div class="num"><b>${m.teamPins}</b></div></div>`).join("")}</div>` : ""}
         </div>`; }).join("");
-      if (k === "high") return c.highs.slice(0, wide ? 10 : 20).map((p, i) => `
-        <div class="row r${i + 1}"><div class="rk num">${i + 1}</div>
-          <div><div class="nm">${esc(p.n)} <span class="tg ${p.g}">${p.g === "P" ? "F" : "M"}</span></div><div class="meta"><span>${esc(p.t)}</span></div></div>
-          <div class="tot num"><b>${p.high}</b><small>scratch</small></div></div>`).join("");
-      const list = c[k].filter(p => p.played);
-      return list.length ? list.map((p, i) => { const r = rankOf(list, i); return `
+      if (k === "high" || k === "series") {
+        const key = k === "high" ? "highT" : "ser", list = (k === "high" ? c.highs : c.series).slice(0, wide ? 10 : 20);
+        return list.length ? list.map((p, i) => { const r = c.rankOf(list, i, key); return `
         <div class="row r${r}"><div class="rk num">${r}</div>
-          <div><div class="nm">${esc(p.n)}</div><div class="meta"><span>${esc(p.t)}</span><span>Avg ${p.avg.toFixed(1)}</span>${p.hdc ? `<span>+${p.hdc} hdc</span>` : ""}</div>${gamesHTML(p.games)}</div>
+          <div><div class="nm">${esc(p.n)} <span class="tg ${p.g}">${p.g === "P" ? "F" : "M"}</span></div><div class="meta"><span>${esc(p.t)}</span></div></div>
+          <div class="tot num"><b>${p[key]}</b><small>${k === "series" ? c.R.seriesN + " games · " : ""}${hiSmall}</small></div></div>`; }).join("")
+          : `<div class="empty">${k === "series" ? `Needs ${c.R.seriesN} games in a row.` : "No scores yet."}</div>`;
+      }
+      const list = c[k];
+      return list.length ? list.map((p, i) => { const r = c.rankOf(list, i); return `
+        <div class="row r${r}"><div class="rk num">${r}</div>
+          <div><div class="nm">${esc(p.n)}${k === "overall" ? ` <span class="tg ${p.g}">${p.g === "P" ? "F" : "M"}</span>` : ""}</div><div class="meta"><span>${esc(p.t)}</span><span>Avg ${p.avg.toFixed(1)}</span>${p.hdc ? `<span>+${p.hdc} hdc</span>` : ""}</div>${gamesHTML(p.games)}</div>
           <div class="tot num"><b>${p.total}</b><small>${p.played}/${GAMES} games</small></div></div>`; }).join("")
         : `<div class="empty">No scores yet.</div>`;
     };
     if (wide) {
-      const H = { team: "Team Standings", men: "Men's Individual", women: "Women's Individual", high: "High Game" };
-      L.innerHTML = `<div class="cols">${["team", "men", "women", "high"].map(k => `<section class="col"><h2>${H[k]}</h2><div class="list">${section(k)}</div></section>`).join("")}</div>`;
-      $("#note").textContent = "Click a team to see each member's scores. Ties are broken by the highest single game. High Game is scratch (no handicap)." + hdcTxt;
+      const n = cats.length, cols = n <= 4 ? n : 3;
+      L.innerHTML = `<div class="cols" style="grid-template-columns:${n === 4 ? "1.25fr 1fr 1fr .8fr" : `repeat(${cols},minmax(0,1fr))`}">${cats.map(k => `<section class="col"><h2>${TITLES[k].long}</h2><div class="list">${section(k)}</div></section>`).join("")}</div>`;
+      $("#note").textContent = (cats.includes("team") ? "Click a team to see each member's scores." : "") + rulesTxt;
       return;
     }
     L.innerHTML = section(tab);
-    $("#note").textContent = tab === "team" ? "Tap a team to see each member's scores. Ties are broken by the highest team game." + hdcTxt
-      : tab === "high" ? "Highest single game (scratch, no handicap)." : "Ties are broken by the highest single game." + hdcTxt;
+    $("#note").textContent = (tab === "team" ? "Tap a team to see each member's scores." : "") + rulesTxt;
   };
   $("#tabs").onclick = e => { const b = e.target.closest("button"); if (!b) return; tab = b.dataset.t; try { localStorage.setItem("bolTab", tab); } catch (e) {} draw(); scrollTo({ top: 0 }); };
   $("#list").onclick = e => { const r = e.target.closest("[data-team]"); if (!r) return; const t = r.dataset.team; open.has(t) ? open.delete(t) : open.add(t); draw(); };
@@ -538,6 +534,8 @@ function viewScorer() {
       <div data-clock></div>
       <img class="logo-org" src="img/sabah-electricity.png" alt="Sabah Electricity">
       <div data-theme-toggle></div>
+      <button class="hbtn hide" id="who" title="Change your name (shown in the activity log)"></button>
+      <button class="hbtn hide" id="btnLogout">Log out</button>
     </div></header>
     <div class="wrap">
       <section class="hero"><h1>Bowling score entry</h1>
@@ -551,22 +549,21 @@ function viewScorer() {
       </div>
       <div id="main" class="hide">
         <div id="pendBar"></div>
+        <div class="tabs stabs" id="stabs"><button data-s="scores" class="on">📝 Scores</button><button data-s="rules">⚙️ Tournament rules</button></div>
+        <div id="pRules" class="hide"></div>
+        <div id="pScores">
         <div id="annCard"></div>
         <div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px"><span style="font-size:12px;color:var(--mute)">Choose a team</span><button class="btn ghost small" id="newTeam">+ New team</button></div><div class="teamchips" id="chips"></div></div>
         <div class="card" id="grid"><div class="empty">Choose a team above to enter scores.</div></div>
-        <details class="card"><summary style="cursor:pointer;font-weight:700">Settings & export</summary>
-          <div style="margin-top:12px">
-            <div class="field"><label>Tournament title</label><input id="sTitle"></div>
-            <div class="field"><label>Women's handicap (pins per game, 0 = none)</label><input id="sHdc" type="number" inputmode="numeric" min="0" max="50"></div>
-            <div class="row2"><button class="btn small" id="save">Save settings</button><button class="btn ghost small" id="csv">Download results (CSV/Excel)</button>
-            <button class="btn ghost small" id="demo">Fill sample scores</button><button class="btn ghost small" id="out">Sign out</button></div>
-          </div></details>
+        <div class="card"><div class="row2" style="align-items:center"><span style="font-weight:700;flex:1">Results</span><button class="btn ghost small" id="csv">Download results (CSV/Excel)</button>
+            <button class="btn ghost small" id="demo">Fill sample scores</button></div></div>
         <details class="card danger"><summary style="cursor:pointer;font-weight:700">⚠️ Danger zone</summary>
           <div style="margin-top:10px">
             <div style="font-size:13px;margin-bottom:10px">Deletes <b>every bowling score for all teams</b> and removes all ✓ Verified locks. This can't be undone.</div>
             <div class="field"><label>Type DELETE ALL to confirm</label><input id="wipeTxt" autocomplete="off" autocapitalize="characters" placeholder="DELETE ALL"></div>
             <button class="btn small" id="wipe" style="background:var(--bad);color:#fff" disabled>Delete all scores</button>
           </div></details>
+        </div>
         <button class="fbbtn" id="fbOpen">💬 Send feedback</button>
       </div>
     </div>
@@ -620,7 +617,8 @@ function viewScorer() {
     });
     G.forEach((g, i) => { $(`[data-gt="${g}"]`).textContent = t.games[i] ?? ""; });
     $("#teamTot").textContent = t.total || "";
-    $("#hdcNote").textContent = (best ? `★ Gold box = team's high game (${best}). ` : "") + (c.hdc ? `TPF and team totals include women's handicap (+${c.hdc} pins per game).` : "");
+    $("#hdcNote").textContent = (best ? `★ Gold box = team's high game (${best}). ` : "") + (c.hdc ? (() => { const w = [c.R.hdcInd && "TPF", c.R.hdcTeam && "team totals"].filter(Boolean);
+      return w.length ? `${w.join(" and ")} include women's handicap (+${c.hdc} pins per game).` : `Women's handicap (+${c.hdc}) is not counted in totals.`; })() : "");
     const lane = $("#lane"); if (lane && lane !== document.activeElement) lane.value = laneOf(team);
     $("#lockBadge").innerHTML = lk ? `<span class="badge ok">🔒 VERIFIED</span>` : "";
     $("#lockArea").innerHTML = lk
@@ -641,15 +639,17 @@ function viewScorer() {
     $("#login").classList.toggle("hide", authed());
     $("#main").classList.toggle("hide", !authed());
     $("#demo").classList.toggle("hide", Store.mode !== "local");
+    $("#who").classList.toggle("hide", !authed()); $("#btnLogout").classList.toggle("hide", !authed());
+    $("#who").textContent = "👤 " + (SCORER_NAME || "Set name") + (isAdmin() ? " · admin" : "");
     if (!authed()) return;
     const c = compute(last); c.teamsAlpha = TEAMS.map(n => c.teams.find(t => t.t === n));
     drawChips(c);
     drawAnn();
     drawPending();
     if (team && !TEAMS.includes(team) && !editing) { team = null; $("#grid").innerHTML = `<div class="empty">Choose a team above to enter scores.</div>`; }
-    if (editing) {} else if (team && !$("#grid input[data-g]")) drawGrid(); else fillGrid();
-    if (document.activeElement !== $("#sTitle")) $("#sTitle").value = last.settings.title || DEFAULT_TITLE;
-    if (document.activeElement !== $("#sHdc")) $("#sHdc").value = last.settings.hdcW || 0;
+    const cols = $("#grid thead") ? $("#grid thead tr").children.length - 2 : 0;   // game columns now on screen
+    if (editing) {} else if (team && (!$("#grid input[data-g]") || cols !== GAMES)) drawGrid(); else fillGrid();
+    drawRules();
   };
   // "Deleted · Undo" bar for 5 seconds after a box is cleared
   let undoFn = null, undoT;
@@ -717,17 +717,16 @@ function viewScorer() {
     catch (e) { $("#lerr").textContent = (USE_LOGIN ? "Wrong password" : "Wrong PIN") + " or no connection. (" + (e.code || e.message) + ")"; }
   };
   $("#pw").onkeydown = e => { if (e.key === "Enter") $("#go").click(); };
-  $("#save").onclick = async () => {
-    const h = Math.max(0, Math.min(50, parseInt($("#sHdc").value || "0", 10) || 0));
-    const before = +last.settings.hdcW || 0;
-    try { await Store.setSetting("hdcW", h); await Store.setSetting("title", $("#sTitle").value.trim() || DEFAULT_TITLE); if (h !== before) log(`women's handicap ${before} → ${h}`); toast("Settings saved ✓"); } catch (e) { toast("Failed: " + (e.code || e.message), true); }
-  };
   $("#csv").onclick = () => {
     const c = compute(last); const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const rows = [["NAME", "TEAM", "GENDER (L=M, P=F)", ...G.map(g => "G" + g), "SCRATCH", "HANDICAP", "TPF", "AVERAGE", "HIGH GAME"]];
-    c.players.forEach(p => rows.push([p.n, p.t, p.g, ...p.games.map(x => x ?? ""), p.scratch, p.hdc, p.total, p.played ? p.avg.toFixed(2) : "", p.high || ""]));
+    const rows = [[last.settings.title || DEFAULT_TITLE], ["Rules: " + BowlRules.describe(c.R)], [],
+      ["NAME", "TEAM", "GENDER (L=M, P=F)", ...G.map(g => "G" + g), "SCRATCH", "HANDICAP", "TPF", "AVERAGE", "HIGH GAME", `HIGH SERIES (${c.R.seriesN})`]];
+    c.players.forEach(p => rows.push([p.n, p.t, p.g, ...p.games.map(x => x ?? ""), p.scratch, p.hdc, p.total, p.played ? p.avg.toFixed(2) : "", p.highT || "", p.ser || ""]));
     rows.push([]); rows.push(["TEAM STANDINGS"]); rows.push(["RANK", "TEAM", ...G.map(g => "G" + g), "TPF"]);
-    c.teams.forEach((t, i) => rows.push([rankOf(c.teams, i), t.t, ...t.games.map(x => x ?? ""), t.total]));
+    c.teams.forEach((t, i) => rows.push([c.rankOf(c.teams, i), t.t, ...t.games.map(x => x ?? ""), t.total]));
+    for (const k of ["men", "women", "overall"]) { if (!c.R.cats[k]) continue;
+      rows.push([]); rows.push([TITLES[k].long.toUpperCase()]); rows.push(["RANK", "NAME", "TEAM", "TPF", "AVERAGE"]);
+      c[k].forEach((p, i) => rows.push([c.rankOf(c[k], i), p.n, p.t, p.total, p.avg.toFixed(2)])); }
     const blob = new Blob(["﻿" + rows.map(r => r.map(q).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "Sabah_Electricity_Bowling_2026_Results.csv"; a.click();
   };
@@ -741,7 +740,100 @@ function viewScorer() {
     try { await Store.replaceScores({}); log("⚠️ DELETED ALL SCORES"); $("#wipeTxt").value = ""; $("#wipe").disabled = true; toast("All scores deleted"); }
     catch (e) { toast("Failed: " + (e.code || e.message), true); }
   };
-  $("#out").onclick = () => { log("signed out"); Store.logout(); };
+  /* ---------- header: name + log out (same place as the other sports) ---------- */
+  $("#who").onclick = () => {
+    const n = prompt("Your name (shown in the activity log):", SCORER_NAME);
+    if (n && n.trim()) { $("#nm").value = n; setName(); draw(); }
+  };
+  $("#btnLogout").onclick = () => {
+    const n = Object.keys(Store.pending).length;
+    if (!confirm(n ? `${n} score(s) haven't been sent yet!\n\nIf you log out now they may be lost. Log out anyway?` : "Log out of bowling scoring?")) return;
+    if (Store.mode === "local") return toast("Test mode – nothing to log out of");
+    log("signed out"); Store.logout();
+  };
+
+  /* ---------- Scores / Tournament rules tabs ---------- */
+  let sTab = "scores"; try { sTab = sessionStorage.getItem("bolSTab") || "scores"; } catch (e) {}
+  const showSTab = () => {
+    document.querySelectorAll("#stabs button").forEach(b => b.classList.toggle("on", b.dataset.s === sTab));
+    $("#pScores").classList.toggle("hide", sTab !== "scores"); $("#pRules").classList.toggle("hide", sTab !== "rules");
+  };
+  $("#stabs").onclick = e => { const b = e.target.closest("button"); if (!b) return; sTab = b.dataset.s; try { sessionStorage.setItem("bolSTab", sTab); } catch (e2) {} showSTab(); drawRules(true); };
+  showSTab();
+
+  /* ---------- Tournament rules (saved at bowling2026/settings; logic in js/bowling-rules.js) ---------- */
+  let rulesDirty = false;
+  const drawRules = force => {
+    if (rulesDirty && !force) return;          // don't overwrite while someone is editing
+    if (force) rulesDirty = false;
+    const R = RULES, title = last.settings.title || DEFAULT_TITLE;
+    const maxScored = Math.max(0, ...Object.values(last.scores || {}).flatMap(o => Object.keys(o || {}).map(k => +k.slice(1) || 0)));
+    const ck = (id, on, label, hint) => `<label class="ck"><input type="checkbox" id="${id}" ${on ? "checked" : ""}><span>${label}${hint ? `<small>${hint}</small>` : ""}</span></label>`;
+    $("#pRules").innerHTML = `<div class="card rules">
+      <div style="font-weight:800;font-size:16px">⚙️ Tournament rules</div>
+      <div class="sub" style="margin:2px 0 14px">Changes show on the public board, big screen and results download straight away. Every change is written in the activity log.</div>
+      <div class="field"><label>Tournament title</label><input id="rTitle" maxlength="120" value="${esc(title)}"></div>
+      <div class="grid2">
+        <div class="field"><label>Games per bowler</label><input id="rGames" type="number" inputmode="numeric" min="1" max="10" value="${R.games}"></div>
+        <div class="field"><label>Women's handicap (pins / game)</label><input id="rHdc" type="number" inputmode="numeric" min="0" max="50" value="${R.hdcW}"></div>
+      </div>
+      <div class="warnline" id="rGamesWarn"></div>
+      <div class="field"><label>Women's handicap counts in</label></div>
+      <div class="cks">${ck("rHInd", R.hdcInd, "Individual totals", "Men / Women / Overall")}${ck("rHTeam", R.hdcTeam, "Team totals")}${ck("rHHigh", R.hdcHigh, "High Game & High Series")}</div>
+      <div class="field" style="margin-top:14px"><label>Tie-break (same total pins)</label></div>
+      <div class="cks">${Object.entries(BowlRules.TIES).map(([k, l]) => `<label class="ck"><input type="radio" name="rTie" value="${k}" ${R.tie === k ? "checked" : ""}><span>${l}</span></label>`).join("")}</div>
+      <div class="field" style="margin-top:14px"><label>Show on the public board &amp; big screen</label></div>
+      <div class="cks">${BowlRules.CATS.map(([k, l]) => ck("rC_" + k, R.cats[k], l, k === "overall" ? "men and women together" : k === "series" ? "best run of games in a row" : "")).join("")}</div>
+      <div class="field" id="rSerF" style="margin-top:10px;max-width:220px"><label>High Series length (games in a row)</label><input id="rSer" type="number" inputmode="numeric" min="1" max="10" value="${R.seriesN}"></div>
+      <div class="rsum" id="rSum"></div>
+      <div class="row2" style="margin-top:12px"><button class="btn" id="rSave" style="flex:1">Save rules</button><button class="btn ghost" id="rReset">Undo changes</button></div>
+    </div>`;
+    $("#pRules").dataset.maxScored = maxScored;
+    previewRules();
+  };
+  const readRules = () => {
+    const v = id => $("#" + id), cats = {};
+    BowlRules.CATS.forEach(([k]) => { cats[k] = v("rC_" + k).checked; });
+    return BowlRules.rules({ games: v("rGames").value, hdcW: v("rHdc").value || 0, hdcInd: v("rHInd").checked, hdcTeam: v("rHTeam").checked, hdcHigh: v("rHHigh").checked,
+      tie: (document.querySelector('input[name="rTie"]:checked') || {}).value, seriesN: v("rSer").value, cats });
+  };
+  const previewRules = () => {
+    if (!$("#rSum")) return;
+    const r = readRules(), maxScored = +$("#pRules").dataset.maxScored || 0;
+    $("#rSerF").classList.toggle("hide", !$("#rC_series").checked);
+    $("#rGamesWarn").textContent = maxScored > r.games ? `⚠️ Some bowlers already have scores in G${r.games + 1}–G${maxScored}. They are kept, but hidden and not counted while games = ${r.games}.` : "";
+    $("#rSum").textContent = "Summary: " + BowlRules.describe(r) + " Showing: " + BowlRules.CATS.filter(([k]) => r.cats[k]).map(([, l]) => l).join(", ") + ".";
+  };
+  $("#pRules").addEventListener("input", () => { rulesDirty = true; previewRules(); });
+  $("#pRules").addEventListener("change", () => { rulesDirty = true; previewRules(); });
+  $("#pRules").addEventListener("click", async e => {
+    if (e.target.id === "rReset") return drawRules(true);
+    if (e.target.id !== "rSave") return;
+    const r = readRules(), old = RULES, title = $("#rTitle").value.replace(/\s+/g, " ").trim() || DEFAULT_TITLE;
+    const tieL = k => BowlRules.TIES[k], onoff = b => (b ? "on" : "off");
+    const changes = [];
+    if (title !== (last.settings.title || DEFAULT_TITLE)) changes.push(`title → "${title}"`);
+    if (r.games !== old.games) changes.push(`games ${old.games} → ${r.games}`);
+    if (r.hdcW !== old.hdcW) changes.push(`women's handicap ${old.hdcW} → ${r.hdcW}`);
+    if (r.hdcInd !== old.hdcInd) changes.push(`hdc in individual ${onoff(r.hdcInd)}`);
+    if (r.hdcTeam !== old.hdcTeam) changes.push(`hdc in team ${onoff(r.hdcTeam)}`);
+    if (r.hdcHigh !== old.hdcHigh) changes.push(`hdc in high game/series ${onoff(r.hdcHigh)}`);
+    if (r.tie !== old.tie) changes.push(`tie-break → ${tieL(r.tie)}`);
+    if (r.seriesN !== old.seriesN) changes.push(`high series ${old.seriesN} → ${r.seriesN} games`);
+    BowlRules.CATS.forEach(([k, l]) => { if (r.cats[k] !== old.cats[k]) changes.push(`${l} ${r.cats[k] ? "shown" : "hidden"}`); });
+    if (!changes.length) return toast("Nothing changed");
+    if (r.games < old.games && (+$("#pRules").dataset.maxScored || 0) > r.games &&
+        !confirm(`Change games from ${old.games} to ${r.games}?\n\nScores in G${r.games + 1} and later are kept but hidden and NOT counted.`)) return;
+    try {
+      e.target.disabled = true;
+      const st = { title, games: r.games, hdcW: r.hdcW, hdcInd: r.hdcInd, hdcTeam: r.hdcTeam, hdcHigh: r.hdcHigh, tie: r.tie, seriesN: r.seriesN, cats: r.cats };
+      const upd = { updated: Date.now() }; for (const [k, v] of Object.entries(st)) upd["settings/" + k] = v;
+      await Store.patch(upd);
+      log("rules: " + changes.join("; "));
+      toast("Rules saved ✓"); drawRules(true);
+      if (team && !editing) drawGrid();       // number of game columns may have changed
+    } catch (err) { e.target.disabled = false; toast("Failed: " + (err.code || err.message), true); }
+  });
 
   /* ---------- verified lock ---------- */
   $("#grid").addEventListener("click", async e => {
@@ -933,24 +1025,27 @@ function viewOverlay() {
   document.body.classList.add("ov"); document.documentElement.setAttribute("data-theme", "dark");
   const fixed = params.get("show"), side = params.get("side") === "left" ? "left" : "";
   const secs = Math.max(5, +params.get("sec") || 12), N = Math.max(3, Math.min(12, +params.get("n") || 8));
-  const order = fixed ? [fixed] : ["team", "men", "women", "high"];
-  const titles = { team: "Team Standings", men: "Men's Individual", women: "Women's Individual", high: "High Game" };
+  // rotates through the categories ticked in Tournament rules (or one fixed with &show=)
+  const order = () => fixed && TITLES[fixed] ? [fixed] : shownCats();
   let idx = 0, last;
   $("#app").innerHTML = `<div class="ovp ${side}"><div class="ovh"><img src="img/dragon.jpg" alt=""><div><div class="k">Tenpin Bowling · HQ Games 2026</div><div class="t" id="ot"></div></div></div><div class="ovb"><div id="ol"></div><div class="ovf"><span id="of"></span><span><span class="jamark"></span><span id="ou"></span></span></div></div></div>`;
   const draw = () => {
-    const c = compute(last), k = order[idx % order.length];
-    $("#ot").textContent = titles[k] || titles.team;
+    const c = compute(last), o = order(), k = o[idx % o.length];
+    $("#ot").textContent = TITLES[k].long;
     let rows = "";
-    if (k === "team") rows = c.teams.slice(0, N).map((t, i) => [rankOf(c.teams, i), t.t, `${t.done}/${t.slots} games`, t.total]);
-    else if (k === "high") rows = c.highs.slice(0, N).map((p, i) => [i + 1, p.n, p.t, p.high]);
-    else { const l = c[k].filter(p => p.played); rows = l.slice(0, N).map((p, i) => [rankOf(l, i), p.n, p.t, p.total]); }
+    if (k === "team") rows = c.teams.slice(0, N).map((t, i) => [c.rankOf(c.teams, i), t.t, `${t.done}/${t.slots} games`, t.total]);
+    else if (k === "high") rows = c.highs.slice(0, N).map((p, i) => [c.rankOf(c.highs, i, "highT"), p.n, p.t, p.highT]);
+    else if (k === "series") rows = c.series.slice(0, N).map((p, i) => [c.rankOf(c.series, i, "ser"), p.n, p.t, p.ser]);
+    else { const l = c[k]; rows = l.slice(0, N).map((p, i) => [c.rankOf(l, i), p.n, p.t, p.total]); }
     $("#ol").innerHTML = c.anyScore ? rows.map((r, i) => `<div class="ovr r${r[0]}" style="animation-delay:${i * 60}ms"><div class="rk">${r[0]}</div><div class="nm">${esc(r[1])}<small>${esc(r[2])}</small></div><div class="sc num">${r[3]}</div></div>`).join("")
       : `<div class="ovr"><div></div><div class="nm" style="color:#9fb0d6">Waiting for first scores…</div><div></div></div>`;
-    $("#of").textContent = k === "high" ? "Scratch" : (c.hdc ? `TPF · women's hdc +${c.hdc}` : "TPF (total pinfall)");
+    const hiTxt = c.R.hdcHigh && c.hdc ? `incl. women's hdc +${c.hdc}` : "Scratch";
+    $("#of").textContent = k === "high" ? hiTxt : k === "series" ? `Best ${c.R.seriesN} games in a row · ${hiTxt}`
+      : (c.hdc && (k === "team" ? c.R.hdcTeam : c.R.hdcInd) ? `TPF · women's hdc +${c.hdc}` : "TPF (total pinfall)");
     $("#ou").textContent = "Updated " + fmtTime(last.updated);
   };
   Store.on(s => { last = s; draw(); });
-  if (order.length > 1) setInterval(() => { idx++; draw(); }, secs * 1000);
+  setInterval(() => { if (order().length > 1) { idx++; draw(); } }, secs * 1000);
 }
 
 /* =================== boot =================== */

@@ -78,6 +78,9 @@ Open https://console.firebase.google.com → **JA Scoring System**.
   When a team has all 20 scores, check the sheet with the captain and tap **✓ Verified – lock team**. Only the admin can unlock
   (sign in on the bowling scorer page with *Sign in as admin instead*). Cleared a box by mistake? Tap **Undo** within 5 seconds.
   An amber dot on a box means the score hasn't reached Firebase yet (no internet); it is kept on the phone and re-sent.
+- **⚙️ Tournament rules** tab (bowling scorer page): games per bowler, women's handicap and where it counts, tie-break,
+  which tables show (Team, Men, Women, Overall, High Game, High Series). The board, big screen, CSV and Admin all follow it.
+  The ranking logic is in `js/bowling-rules.js` (one copy, shared by every page).
 - **💬 Send feedback** (bottom of the bowling scorer page) lands in Admin → **Feedback**.
 - **Try changes safely:** add `&test=1` to the bowling link (e.g. `bowling.html?v=scorer&test=1`). Nothing is sent to Firebase.
 
