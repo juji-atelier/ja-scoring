@@ -31,7 +31,7 @@ function pickDefault() {
 
 function renderTabs() {
   $("#tabs").innerHTML = Object.entries(SPORTS).map(([id, s]) =>
-    `<a href="#${id}" class="${id === sport ? "on" : ""}" style="--c:${s.color}">${esc(s.name)}<small>${esc(s.day)}</small></a>`).join("") + `<a href="../bowling.html" style="--c:#8b5cf6">Bowling<small>Sabah Electricity Bowling</small></a>`;
+    `<a href="#${id}" class="${id === sport ? "on" : ""}" style="--c:${s.color}">${esc(s.name)}<small>${esc(s.day)}</small></a>`).join("") + `<a href="../bowling.html" style="--c:#8b5cf6">Bowling<small>Sabah Electricity Bowling</small></a><a href="../mlbb.html" style="--c:#f59e0b">Mobile Legends<small>E-Sport HQ Championship</small></a>`;
   document.documentElement.style.setProperty("--sport", SPORTS[sport].color);
   const on = $("#tabs .on");
   if (on) on.scrollIntoView({ inline: "center", block: "nearest" });
