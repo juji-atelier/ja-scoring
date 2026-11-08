@@ -60,6 +60,12 @@ tr.cut td{border-bottom:2px dashed var(--gold)}
 .form{display:flex;gap:3px;justify-content:center}
 .form i{width:9px;height:9px;border-radius:50%;background:var(--line)}
 .form i.W{background:var(--ok)}.form i.L,.form i.WO{background:var(--bad)}
+.live-ann{display:flex;gap:12px;align-items:center;margin:4px 0 12px;padding:13px 15px;border-radius:14px;background:linear-gradient(100deg,#9b0f22,#e2394d);color:#fff;box-shadow:var(--shadow)}
+.live-ann .ai{font-size:26px;line-height:1}.live-ann b{display:block;font-size:15px;letter-spacing:.04em}.live-ann small{display:block;font-size:12px;opacity:.9;margin-top:2px}
+.live-ann a{display:inline-block;margin-top:6px;background:#fff;color:#9b0f22;font-weight:800;font-size:14px;padding:7px 14px;border-radius:999px;text-decoration:none;word-break:break-all}
+.lvtag{background:var(--live);color:#fff;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:800;letter-spacing:.06em}
+.pend{background:#ffb020;color:#1a1200;border-radius:6px;padding:3px 8px;letter-spacing:.06em}
+.pendbox{margin:14px 0 0;padding:12px 14px;border-radius:14px;background:color-mix(in srgb,#ffb020 16%,var(--card));border:1px solid color-mix(in srgb,#ffb020 60%,var(--line));font-size:14px;line-height:1.4}
 .key{display:flex;flex-wrap:wrap;gap:6px 14px;color:var(--mute);font-size:12px;margin:10px 2px}
 @media(max-width:600px){.wrap{padding:0 12px}.hd .wrap{height:60px;gap:8px}.hd .brand b{font-size:18px}.hd .brand small{display:none}.logo-org{height:16px}.logo-dragon{width:36px;height:36px}
   .hero{padding:20px}.hero h1{font-size:28px}.hide-s{display:none}th,td{padding:8px 4px}table{font-size:13px}}
@@ -156,10 +162,11 @@ const sgn = n => (n > 0 ? "+" : "") + n;
 const cls = n => n > 0 ? "pos" : n < 0 ? "neg" : "";
 const logo = u => u ? `<img class="lg" src="${esc(u)}" alt="" loading="lazy">` : "";
 
-function table(G, rows, q, nRounds) {
+function table(G, rows, q, nRounds, pend) {
   if (!rows || !rows.length) return "";
   const n = rows.length;
-  return `<h2><span class="gtag" style="background:var(--g${G.toLowerCase()})">GROUP ${G}</span> ${n} teams</h2>
+  if (pend) q = 0;
+  return `<h2><span class="gtag" style="background:var(--g${G.toLowerCase()})">GROUP ${G}</span> ${n} teams${pend ? ` <span class="pend">⚖ Pending · organiser decision</span>` : ""}</h2>
   <div class="tw ${G}"><table><tr><th>#</th><th class="t">Team</th><th class="hide-s">Form</th><th>P</th><th>W</th><th>L</th><th>KD</th><th class="hide-s">Kill</th><th>Pts</th></tr>` +
   rows.map((t, i) => {
     const f = (t.form || []).slice(0, nRounds || 7);
@@ -176,10 +183,11 @@ function side(x, w, me) {
     <span class="n">${logo(x.logo)}${esc(x.name || "TBC")}</span>
     <span class="b">${x.score ?? ""}${x.kills != null && x.score == null ? `<span class="k">${x.kills} K</span>` : ""}</span></div>`;
 }
-function mcard(m, label) {
+function mcard(m, label, onStream) {
   const st = m.st === "live" ? "Live" : m.st === "done" ? (m.wo ? "Walkover" : "Final") : "Up next";
+  if (onStream && m.st !== "done") label = (label ? label + " " : "") + '<span class="lvtag">● ON STREAM</span>';
   const hid = x => m.st === "scheduled" ? { ...x, score: null } : x;
-  return `<div class="m ${m.st === "live" ? "live" : ""}"><div class="meta">${label ? `<span>${esc(label)}</span>` : ""}<span class="st">${st}</span></div>${side(hid(m.a || {}), m.w, "a")}${side(hid(m.b || {}), m.w, "b")}</div>`;
+  return `<div class="m ${m.st === "live" ? "live" : ""}"><div class="meta">${label ? `<span>${label}</span>` : ""}<span class="st">${st}</span></div>${side(hid(m.a || {}), m.w, "a")}${side(hid(m.b || {}), m.w, "b")}</div>`;
 }
 
 function render() {
@@ -193,7 +201,9 @@ function render() {
   const q = D.qualify || 2;
   if (sub === "table") {
     const g = D.groups || {};
-    h += table("A", g.A, q, rd.total) + table("B", g.B, q, rd.total);
+    const rv = D.review || {};
+    h += table("A", g.A, q, rd.total, rv.A) + table("B", g.B, q, rd.total, rv.B);
+    if (rv.A || rv.B) h = `<div class="pendbox">⚖ <b>Group ${[rv.A && "A", rv.B && "B"].filter(Boolean).join(" & ")}: result pending.</b> The organiser is deciding who goes to the semi-final. This page updates once it is decided.</div>` + h;
     if (!g.A && !g.B) h += `<div class="empty">No standings yet.</div>`;
     else h += `<div class="key"><span>Win 3 pts · Loss 0 · Walkover loss 0</span><span>★ Top ${q} of each group → Semi-final</span><span>Ties: Pts › Wins › Kill diff › Kills</span></div>`;
   } else if (sub === "matches") {
@@ -208,10 +218,18 @@ function render() {
     const list = [...(p.semis || []).map((m, i) => [m, "Semi-final " + (i + 1)]), ...(p.third_m ? [[p.third_m, "3rd place"]] : []), ...(p.final ? [[p.final, "Final"]] : [])];
     if (!list.length) h += `<div class="empty">Semi-finals start after the group stage. Top ${q} of each group go through.</div>`;
     else {
-      if (p.final) h += `<h2>Final</h2>` + mcard(p.final, p.final.bo ? "Best of " + p.final.bo : "");
-      if (p.third_m) h += `<h2>3rd place</h2>` + mcard(p.third_m, "");
-      if ((p.semis || []).length) h += `<h2>Semi-finals</h2>` + p.semis.map((m, i) => mcard(m, "Semi " + (i + 1) + (m.bo ? " · Best of " + m.bo : ""))).join("");
+      const SW = D.stream || { final: true };
+      if (p.final) h += `<h2>Final</h2>` + mcard(p.final, p.final.bo ? "Best of " + p.final.bo : "", SW.final);
+      if (p.third_m) h += `<h2>3rd place</h2>` + mcard(p.third_m, "", SW.third);
+      if ((p.semis || []).length) h += `<h2>Semi-finals</h2>` + p.semis.map((m, i) => mcard(m, "Semi " + (i + 1) + (m.bo ? " · Best of " + m.bo : ""), SW["sf" + (i + 1)])).join("");
     }
+  }
+  const SW2 = D.stream || {}, onAir = ["sf1", "sf2", "third", "final"].filter(k => SW2[k]);
+  if (onAir.length && !(D.playoffs || {}).champion) {
+    const nm = { sf1: "Semi-final 1", sf2: "Semi-final 2", third: "3rd place", final: "Final" }, list = onAir.map(k => nm[k]).join(", ").replace(/, ([^,]*)$/, " & $1");
+    const L = String(D.streamLink || "").trim(), url = /^https?:\/\//i.test(L) ? L : (L ? "https://" + L : "");
+    h = `<div class="live-ann"><span class="ai">📺</span><div><b>${esc(list)} — live on stream</b>` +
+      (url ? `<small>Watch the livestream:</small><a href="${esc(url)}" target="_blank" rel="noopener">▶ ${esc(L.replace(/^https?:\/\/(www\.)?/i, ""))}</a>` : `<small>The organiser will announce the livestream link.</small>`) + `</div></div>` + h;
   }
   $("#body").innerHTML = h;
   tick();
@@ -226,7 +244,7 @@ setInterval(tick, 1000);
 
 function demo() {
   const mk = (slot, name, w, l, kd, kills, form) => ({ slot, name, p: w + l, w, l, kd, kills, pts: w * 3, form });
-  return { at: Date.now(), event: "E-Sport HQ Championship", qualify: 2, round: { done: 4, total: 7, next: 5 },
+  return { at: Date.now(), event: "E-Sport HQ Championship", qualify: 2, review: new URLSearchParams(location.search).has("pend") ? { B: true } : {}, stream: { sf1: true, sf2: true, final: true }, streamLink: new URLSearchParams(location.search).get("link") || "", round: { done: 4, total: 7, next: 5 },
     groups: {
       A: [mk("A3", "Outcast", 4, 0, 45, 114, ["W","W","W","W"]), mk("A4", "Riri and Friends", 4, 0, 39, 98, ["W","W","W","W"]), mk("A1", "Zerobyte X", 3, 1, 69, 105, ["L","W","W","W"]), mk("A7", "YTJT ESPORT", 3, 1, 29, 75, ["W","L","W","W"]), mk("A2", "ZRB OG", 3, 1, 26, 91, ["W","W","W","L"]), mk("A5", "REMMACS", 1, 3, -26, 53, ["L","L","W","L"]), mk("A6", "VOLTRA", 1, 3, -44, 48, ["L","L","L","W"])],
       B: [mk("B1", "6SCD", 3, 1, 19, 77, ["W","W","L","W"]), mk("B7", "KAKI_KS", 2, 2, 12, 73, ["W","L","W","L"]), mk("B5", "4T1G", 2, 2, 10, 86, ["L","W","L","W"]), mk("B6", "SapuRata", 2, 2, 3, 83, ["W","L","W","L"]), mk("B3", "ARA ESPORT", 0, 4, -36, 63, ["L","L","L","L"]), mk("B2", "Aura Volt", 0, 4, -52, 38, ["L","L","L","L"]), mk("B4", "HRKT", 0, 4, -94, 26, ["L","L","L","L"])] },
