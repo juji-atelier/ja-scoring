@@ -26,6 +26,7 @@ html,body{margin:0;font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing
 .hero .pill{display:inline-block;margin-top:10px;background:#ffffff1f;border-radius:999px;padding:5px 12px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;position:relative}
 nav{display:flex;gap:8px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none}
 nav::-webkit-scrollbar{display:none}
+@media(min-width:700px){nav{flex-wrap:wrap;overflow:visible}}
 nav a{flex:none;display:flex;align-items:center;gap:7px;text-decoration:none;color:var(--mute);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-weight:600;font-size:13px;line-height:1.1}
 nav a:before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c,var(--acc));flex:none}
 nav a.on{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
