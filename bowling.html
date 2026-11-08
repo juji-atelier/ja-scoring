@@ -73,6 +73,14 @@ button{font:inherit;cursor:pointer}
 .bh .brand b{display:block;font-family:Rajdhani,Inter;font-size:22px;letter-spacing:1.4px;line-height:1;text-transform:uppercase;white-space:nowrap}
 .bh .brand small{color:var(--mute);font-size:12px}
 .bh .sp{flex:1}
+/* 2026-11-08: same sport chips as the Live Scores page, so Bowling feels like one of the tabs (not a separate site) */
+.sportnav{display:flex;gap:8px;overflow-x:auto;padding:2px 0 6px;margin:0 0 10px;scrollbar-width:none}
+.sportnav::-webkit-scrollbar{display:none}
+@media(min-width:700px){.sportnav{flex-wrap:wrap;overflow:visible}}
+.sportnav a{flex:none;display:flex;align-items:center;gap:7px;text-decoration:none;color:var(--mute);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-weight:600;font-size:13px;line-height:1.1}
+.sportnav a:before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c,var(--acc));flex:none}
+.sportnav a.on{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+.sportnav a.on:before{background:#fff}
 .wrap{max-width:860px;margin:0 auto;padding:0 18px 10px}
 .hero{background:var(--hero);color:#fff;border-radius:22px;margin:18px 0 14px;padding:22px 26px;position:relative;overflow:hidden}
 .hero:after{content:"";position:absolute;right:-70px;top:-90px;width:320px;height:320px;border-radius:50%;background:radial-gradient(#ffffff26,transparent 65%);pointer-events:none}
@@ -519,6 +527,7 @@ function viewBoard() {
     <div class="wrap">
       <section class="hero" id="hero"><h1 id="ttl"></h1>
         <div class="sub"><span class="dot" id="dot"></span><span id="st">Connecting…</span><span>·</span><span id="upd"></span><span class="pill" id="mode"></span></div></section>
+      <nav class="sportnav" id="sportNav"></nav>
       <div id="annB"></div>
       <div id="evInfo"></div>
       <div id="podium"></div>
@@ -527,6 +536,11 @@ function viewBoard() {
       <div class="tabs" id="tabs"></div>
       <div class="list" id="list"></div><div class="note" id="note"></div></div>
     <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>`;
+  import("./config.js").then(m => { const nav = document.getElementById("sportNav"); if (!nav) return;
+    const E = x => String(x).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    nav.innerHTML = Object.entries(m.SPORTS).map(([id, sp]) => `<a href="live/#${id}" style="--c:${sp.color}">${E(sp.name)}</a>`).join("") +
+      `<a href="bowling.html" class="on" style="--c:#8b5cf6">Bowling</a><a href="mlbb.html" style="--c:#f59e0b">Mobile Legends</a>`;
+    const on = nav.querySelector(".on"); if (on) on.scrollIntoView({ inline: "center", block: "nearest" }); }).catch(() => {});
   let last;
   const lane = t => (last.lanes && last.lanes[tkey(t)]) || "";
   const laneN = l => { const m = String(l || "").match(/\d+/); return m ? +m[0] : Infinity; };
