@@ -46,6 +46,7 @@ html,body{margin:0;font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing
 /* sport chips */
 nav{display:flex;gap:8px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none}
 nav::-webkit-scrollbar{display:none}
+@media(min-width:700px){nav{flex-wrap:wrap;overflow:visible}}
 nav a{flex:none;display:flex;align-items:center;gap:7px;text-decoration:none;color:var(--mute);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-weight:600;font-size:13px;line-height:1.1}
 nav a:before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c,var(--acc));flex:none}
 nav a small{display:none}
@@ -129,6 +130,6 @@ tr.me td{background:color-mix(in srgb,var(--gold) 14%,var(--card))}
   </main>
 </div>
 <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
-<script type="module" src="live.js?v=20261108a"></script>
+<script type="module" src="live.js?v=20261108b"></script>
 </body>
 </html>
