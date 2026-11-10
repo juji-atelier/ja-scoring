@@ -1,5 +1,5 @@
 /* JA Scoring System — scorer + admin styles. Colours come from theme.css. */
-@import url("theme.css");
+@import url("theme.css?v=20261110e");
 
 :root{
   --sport:#B3162D;
