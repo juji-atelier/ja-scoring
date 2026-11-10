@@ -1,7 +1,7 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261110c";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261110d";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS } from "../js/engines.js?v=20261110c";
-import * as C from "../js/common.js?v=20261110c";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS } from "../js/engines.js?v=20261110d";
+import * as C from "../js/common.js?v=20261110d";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -24,6 +24,8 @@ document.documentElement.style.setProperty("--sport", SP.color);
 document.title = `${SP.name} · Scorer`;
 $("#sportName").textContent = SP.name;
 $("#sportDay").textContent = `${SP.day} · ${SP.venue || EVENT_DEFAULTS.venue}`;
+// wording of the (i) hints depends on the sport ("points per game" vs "per set")
+if (window.JAHints) { window.JAHints.ctx = { sport: S, name: SP.name, unit: UNIT, kind: KIND }; window.JAHints.apply(); }
 
 let DEV = store("ja_dev");
 if (!DEV) { DEV = Math.random().toString(36).slice(2, 10); store("ja_dev", DEV); }

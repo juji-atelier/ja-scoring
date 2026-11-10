@@ -7,9 +7,10 @@
 <link rel="icon" type="image/png" sizes="192x192" href="../img/icon-192.png">
 <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
 <meta name="theme-color" content="#F6F4F2">
-<script src="../js/theme.js?v=20261110c"></script>
+<script src="../js/hints.js?v=20261110d"></script>
+<script src="../js/theme.js?v=20261110d"></script>
 <title>Scorer · JA Scoring</title>
-<link rel="stylesheet" href="../css/app.css?v=20261110c">
+<link rel="stylesheet" href="../css/app.css?v=20261110d">
 </head>
 <body>
 <header class="top">
@@ -68,7 +69,7 @@
   <!-- SETUP -->
   <section id="vSetup" class="hide">
     <div class="card">
-      <h3>Teams</h3>
+      <h3 id="teamsTitle">Teams</h3>
       <p class="muted">One team per line: <b>Name | Short name | Group</b>. Short name and group are optional. Group is used for the standings table.</p>
       <textarea id="teamBulk" placeholder="Jabatan Kerja Raya | JKR | A&#10;Jabatan Pendidikan | JPN | A&#10;Jabatan Kesihatan | JKN | B"></textarea>
       <div class="row" style="margin-top:8px"><button class="primary" id="btnAddTeams">Add teams</button></div>
@@ -97,7 +98,7 @@
     </div>
 
     <div class="card" id="pasteCard">
-      <h3>Paste the schedule</h3>
+      <h3 id="pasteTitle">Paste the schedule</h3>
       <p class="muted">Copy rows from Excel / Google Sheets (or type one match per line) and paste here. Columns in this order:<br>
         <b>No · Time · Court · Team A · Team B</b> · Round · Group · Event &nbsp;<span style="white-space:nowrap">(last three optional)</span>.
         Columns can be separated by tabs (Excel), <b>|</b> or commas. A header row is skipped automatically.</p>
@@ -175,6 +176,6 @@
 </div>
 <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
 <div id="toast"></div>
-<script type="module" src="scorer.js?v=20261110c"></script>
+<script type="module" src="scorer.js?v=20261110d"></script>
 </body>
 </html>
