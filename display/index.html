@@ -7,8 +7,8 @@
 <link rel="icon" type="image/png" sizes="192x192" href="../img/icon-192.png">
 <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
 <title>Big Screen · JA Scoring</title>
-<link rel="stylesheet" href="../css/theme.css?v=20261110g">
-<script src="../js/theme.js?v=20261110g"></script>
+<link rel="stylesheet" href="../css/theme.css?v=20261110h">
+<script src="../js/theme.js?v=20261110h"></script>
 <style>
 :root{--sport:#B3162D;--bg:#16181D;--card:#23262E;--line:#343844;--text:#F2F3F5;--muted:#9A9FAA;--gold:#D2AC70}
 *{box-sizing:border-box}
@@ -52,6 +52,16 @@ main.solo{grid-template-columns:1fr}
 .hist{margin-top:.5vw;font-size:1vw;color:var(--muted);font-variant-numeric:tabular-nums}
 .clk{font-variant-numeric:tabular-nums}
 
+/* bowling team table */
+.bw{display:grid;gap:.5vw;grid-auto-flow:column;grid-template-rows:repeat(var(--rows,11),auto);align-content:start}
+.bw.two{grid-template-columns:1fr 1fr;column-gap:1.2vw}
+.bw-r{display:grid;grid-template-columns:2.6vw 1fr auto 6vw;align-items:center;gap:1vw;background:var(--card);border:1px solid var(--line);border-left:.4vw solid var(--sport);border-radius:.7vw;padding:.42vw 1.2vw;min-width:0}
+.bw-p{font-size:1.7vw;font-weight:900;color:var(--muted);text-align:center}
+.bw-r:nth-child(1) .bw-p{color:var(--gold)}
+.bw-n{font-size:1.8vw;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bw-g{font-size:.95vw;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.bw-r.fin .bw-g{color:var(--gold)}
+.bw-t{font-size:2.1vw;font-weight:900;font-variant-numeric:tabular-nums;text-align:right;line-height:1}
 /* side lists */
 .list .it{display:grid;grid-template-columns:auto 1fr auto;gap:.8vw;align-items:center;padding:.6vw .8vw;border-bottom:1px solid var(--line);font-size:1.15vw}
 .list .it .n{color:var(--muted);font-weight:700;font-size:.95vw;white-space:nowrap}
@@ -131,6 +141,6 @@ main.solo{grid-template-columns:1fr}
   <div class="ann" id="ann" hidden></div>
   <div class="tick"><div class="lbl cond">RESULTS</div><div class="mq"><span id="ticker"></span></div><div class="ja"><span class="jamark"></span>JUJI-ATELIER</div></div>
 </div>
-<script type="module" src="display.js?v=20261110g"></script>
+<script type="module" src="display.js?v=20261110h"></script>
 </body>
 </html>

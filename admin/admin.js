@@ -1,9 +1,10 @@
-import { SPORTS, ADMIN_EMAIL, EVENT_DEFAULTS } from "../config.js?v=20261110g";
-import { publicRecord, standings, FORMATS, ENGINE_OF } from "../js/engines.js?v=20261110g";
-import { bowlingStandings, BOWL_ROOT } from "../js/bowling-data.js?v=20261110g";
-import { BOARDS } from "../js/boards.js?v=20261110g";
-import { firebaseConfig } from "../config.js?v=20261110g";
-import * as C from "../js/common.js?v=20261110g";
+import { SPORTS, ADMIN_EMAIL, EVENT_DEFAULTS } from "../config.js?v=20261110h";
+import { publicRecord, standings, FORMATS, ENGINE_OF } from "../js/engines.js?v=20261110h";
+import { bowlingStandings, BOWL_ROOT } from "../js/bowling-data.js?v=20261110h";
+import { BOARDS, mlbbMatches } from "../js/boards.js?v=20261110h";
+import { applySportInfo, SPORT_BASE } from "../js/sportinfo.js?v=20261110h";
+import { firebaseConfig } from "../config.js?v=20261110h";
+import * as C from "../js/common.js?v=20261110h";
 const { $, $$, esc, toast, ref } = C;
 
 if (!C.configured) { C.notConfiguredScreen(); throw new Error("not configured"); }
@@ -47,14 +48,28 @@ function start() {
   C.onValue(ref(db, "sports"), s => { raw = s.val() || {}; renderOverview(); }, () => {});
   for (const [id, b] of Object.entries(BOARDS)) watchBoard(id, b);
   setInterval(renderOverview, 30000);
-  C.onValue(ref(db, "settings"), s => { settings = s.val() || {}; fillScreenForm(); });
+  C.onValue(ref(db, "settings"), s => {
+    settings = s.val() || {};
+    // sport names / dates / venues edited below are used everywhere on this page
+    if (applySportInfo(settings.sportInfo)) { fillSportSelects(); renderLinks(); renderOverview(); fillMatchSelect(); }
+    fillScreenForm();
+  });
   renderLinks();
-  const opts = Object.entries(SPORTS).map(([id, s]) => `<option value="${id}">${esc(s.name)}</option>`).join("");
-  $("#sSport").innerHTML = opts; $("#clrSport").innerHTML = opts;
-  $("#logSport").innerHTML = opts + Object.entries(BOARDS).filter(([, b]) => b.log).map(([id, b]) => `<option value="${id}">${esc(b.name)}</option>`).join("");
+  fillSportSelects();
   startFeedback();
   $("#logSport").onchange = startLog;
   startLog();
+}
+
+function fillSportSelects() {
+  const keep = id => { const el = $("#" + id), v = el.value; return () => { if (v) el.value = v; }; };
+  const back = ["sSport", "clrSport", "logSport"].map(keep);
+  const opts = Object.entries(SPORTS).map(([id, s]) => `<option value="${id}">${esc(s.name)}</option>`).join("");
+  const bopt = f => Object.entries(BOARDS).filter(([, b]) => f(b)).map(([id, b]) => `<option value="${id}">${esc(b.name)}</option>`).join("");
+  $("#sSport").innerHTML = opts + bopt(() => true);   // bowling / Mobile Legends can be pinned too
+  $("#clrSport").innerHTML = opts;
+  $("#logSport").innerHTML = opts + bopt(b => b.log);
+  back.forEach(f => f());
 }
 
 // ---------------- overview
@@ -110,18 +125,8 @@ function watchBoard(id, b) {
 }
 const clock = t => new Date(t).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 const boardButtons = (id, b) => `<div class="row" style="margin-top:8px">${(b.links || []).slice(0, 3).map(([l, u], i) =>
-  `<a href="${BASE + u}" target="_blank"><button class="small ${i ? "ghost" : ""}">${esc(l.replace(/\s*\(.*\)/, ""))} ↗</button></a>`).join("")}</div>`;
+  `<a href="${BASE + u}" target="_blank"><button class="small ${i ? "ghost" : ""}">${esc(l.replace(/\s*\(.*\)/, ""))} ↗</button></a>`).join("")}<button class="small ghost" data-pin="${id}">Pin on big screen</button></div>`;
 
-// Mobile Legends: data published by the JA ESPORT console at mlbb/live
-function mlbbMatches(D) {
-  const out = [];
-  for (const r of D.rounds || []) (r.matches || []).forEach((m, i) => out.push({ ...m, label: `R${r.no} M${i + 1}` }));
-  const p = D.playoffs || {};
-  (p.semis || []).forEach((m, i) => out.push({ ...m, label: "Semi " + (i + 1) }));
-  if (p.third_m) out.push({ ...p.third_m, label: "3rd place" });
-  if (p.final) out.push({ ...p.final, label: "Final" });
-  return out;
-}
 function mlbbCard(id, b) {
   const D = boardData[id];
   if (!D) return "";
@@ -179,7 +184,8 @@ function bowlingCard() {
     ${warn.map(w => `<div class="hwarn">${w}</div>`).join("")}
     <div class="row" style="margin-top:8px"><a href="${BW}?v=scorer" target="_blank"><button class="small">Open scorer ↗</button></a>
       <a href="${BW}" target="_blank"><button class="small ghost">Public board ↗</button></a>
-      <a href="${BW}?v=overlay" target="_blank"><button class="small ghost">OBS overlay ↗</button></a></div></div>`;
+      <a href="${BW}?v=overlay" target="_blank"><button class="small ghost">OBS overlay ↗</button></a>
+      <button class="small ghost" data-pin="bowling">Pin on big screen</button></div></div>`;
 }
 
 function renderOverview() {
@@ -205,7 +211,7 @@ function renderOverview() {
       <button class="small ghost" data-pin="${id}">Pin on big screen</button></div></div>`;
   }).join("") + boardCards();
   $$("[data-feat]").forEach(b => b.onclick = () => saveDisplay({ mode: "match", match: b.dataset.feat }, "Featured on big screen"));
-  $$("[data-pin]").forEach(b => b.onclick = () => saveDisplay({ mode: "sport", sport: b.dataset.pin }, `${SPORTS[b.dataset.pin].name} pinned`));
+  $$("[data-pin]").forEach(b => b.onclick = () => saveDisplay({ mode: "sport", sport: b.dataset.pin }, `${nameOf(b.dataset.pin)} pinned`));
 }
 
 async function saveDisplay(patch, msg) {
@@ -227,8 +233,11 @@ function fillScreenForm() {
   $("#sRotate").value = d.rotate || 15;
   fillAwards(settings.awards);
   $("#sSports").innerHTML = Object.entries(SPORTS).map(([id, s]) =>
-    `<label><input type="checkbox" value="${id}" ${!d.sports || d.sports[id] !== false ? "checked" : ""}> ${esc(s.name)}</label>`).join("");
+    `<label><input type="checkbox" value="${id}" ${!d.sports || d.sports[id] !== false ? "checked" : ""}> ${esc(s.name)}</label>`).join("") +
+    // boards with their own page: off unless ticked
+    Object.entries(BOARDS).map(([id, b]) => `<label><input type="checkbox" value="${id}" ${d.sports && d.sports[id] === true ? "checked" : ""}> ${esc(b.name)}</label>`).join("");
   fillMatchSelect();
+  fillSportInfo();
 }
 function fillMatchSelect() {
   const cur = (settings.display || {}).match || $("#sMatch").value;
@@ -255,6 +264,22 @@ $("#btnSaveScreen").onclick = async () => {
   toast("Big screen updated");
 };
 
+// ---------------- sport names, dates & venues (settings/sportInfo)
+function fillSportInfo() {
+  const info = settings.sportInfo || {}, main = settings.venue || EVENT_DEFAULTS.venue;
+  const cell = (id, k, ph, max) => `<td><input data-si="${id}" data-k="${k}" maxlength="${max}" value="${esc((info[id] || {})[k] || "")}" placeholder="${esc(ph)}"></td>`;
+  $("#sportInfo").innerHTML = `<table class="sitab"><tr><th>Sport</th><th>Name shown</th><th>Date</th><th>Venue</th></tr>` +
+    Object.keys(SPORTS).map(id => { const b = SPORT_BASE[id];
+      return `<tr><td><b style="color:${SPORTS[id].color}">●</b> ${esc(b.name)}</td>${cell(id, "name", b.name, 30)}${cell(id, "day", b.day, 24)}${cell(id, "venue", b.venue || main + " (main venue)", 90)}</tr>`; }).join("") + `</table>`;
+}
+$("#btnSaveSportInfo").onclick = async () => {
+  const out = {};
+  $$("#sportInfo input").forEach(i => { const v = i.value.trim(); if (v) (out[i.dataset.si] = out[i.dataset.si] || {})[i.dataset.k] = v; });
+  await C.set(ref(db, "settings/sportInfo"), Object.keys(out).length ? out : null);
+  document.activeElement && document.activeElement.blur();
+  toast("Sport details saved");
+};
+
 // ---------------- links & QR
 function copy(text) {
   navigator.clipboard.writeText(text).then(() => toast("Copied")).catch(() => prompt("Copy this link:", text));
@@ -274,7 +299,7 @@ function renderLinks() {
     <button class="small" data-copy="${esc(url)}">Copy</button><a href="${esc(url)}" target="_blank"><button class="small ghost">Open</button></a></div>`;
   $("#scorerLinks").innerHTML = Object.entries(SPORTS).map(([id, s]) => row(s.name, `${BASE}scorer/?sport=${id}`)).join("");
   $("#displayLinks").innerHTML = row("Main (follows admin)", BASE + "display/") +
-    Object.entries(SPORTS).map(([id, s]) => row(s.name + " only", `${BASE}display/?sport=${id}`)).join("") +
+    Object.entries({ ...SPORTS, ...BOARDS }).map(([id, s]) => row(s.name + " only", `${BASE}display/?sport=${id}`)).join("") +
     row("Transparent overlay", BASE + "display/?bg=transparent");
   $("#boardLinks").innerHTML = Object.values(BOARDS).map(b => `<div class="card"><h3>${esc(b.name)} (separate page)</h3>
     <p class="muted">${esc(b.note || `${b.name} has its own pages.`)} Its public page is also linked from the main live-scores page.</p>

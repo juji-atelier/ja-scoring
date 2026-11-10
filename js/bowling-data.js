@@ -1,4 +1,4 @@
-import "./bowling-rules.js?v=20261110g";   // sets globalThis.BowlRules
+import "./bowling-rules.js?v=20261110h";   // sets globalThis.BowlRules
 // Bowling roster + standings, used by the admin page (results download and prize giving).
 // The bowling page (bowling.html) has its own copy of the same list (the built-in default).
 export const BOWL_ROOT = "bowling2026";

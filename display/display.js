@@ -1,10 +1,14 @@
-import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261110g";
-import { clockMs, mmss } from "../js/engines.js?v=20261110g";
-import * as C from "../js/common.js?v=20261110g";
+import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261110h";
+import { clockMs, mmss } from "../js/engines.js?v=20261110h";
+import * as C from "../js/common.js?v=20261110h";
+import { applySportInfo } from "../js/sportinfo.js?v=20261110h";
+import { BOARDS, mlbbMatches } from "../js/boards.js?v=20261110h";
+import { bowlingStandings } from "../js/bowling-data.js?v=20261110h";
+import { firebaseConfig } from "../config.js?v=20261110h";
 const { $, esc, ref } = C;
 
 const P = new URLSearchParams(location.search);
-const FORCE_SPORT = SPORTS[P.get("sport")] ? P.get("sport") : null;   // ?sport=badminton → one sport only
+const FORCE_SPORT = SPORTS[P.get("sport")] || BOARDS[P.get("sport")] ? P.get("sport") : null;   // ?sport=badminton → one sport only
 const FORCE_MATCH = P.get("match");                                     // ?match=badminton/<id>
 if (P.get("bg") === "transparent") document.body.classList.add("transparent");
 if (!C.configured) { document.body.innerHTML = `<div class="setup">Paste your Firebase config into config.js</div>`; throw new Error("not configured"); }
@@ -13,7 +17,35 @@ let pub = {}, settings = {};
 let current = null, rotStart = 0, rotList = [];
 
 C.onValue(ref(C.db, "pub"), s => { pub = s.val() || {}; render(); checkGoals(); });
-C.onValue(ref(C.db, "settings"), s => { settings = s.val() || {}; rotStart = 0; render(); });
+C.onValue(ref(C.db, "settings"), s => { settings = s.val() || {}; applySportInfo(settings.sportInfo); rotStart = 0; render(); });
+// Boards with their own page (bowling, Mobile Legends) can be shown here too – see js/boards.js.
+// Their data is only loaded while Admin has them pinned or ticked for the rotation.
+const boardData = {}, boardOn = {};
+function watchBoard(id) {
+  if (boardOn[id]) return; boardOn[id] = true;
+  const b = BOARDS[id], got = v => { boardData[id] = v || {}; render(); };
+  C.onValue(ref(C.db, b.path), s => got(s.val()), () => {
+    const url = String(firebaseConfig.databaseURL || "").replace(/\/$/, "") + "/" + b.path + ".json";
+    const poll = () => fetch(url, { cache: "no-store" }).then(r => r.ok ? r.json() : null).then(got).catch(() => {});
+    poll(); setInterval(poll, 15000);
+  });
+}
+const boardWanted = id => FORCE_SPORT ? FORCE_SPORT === id : ((disp().mode === "sport" && disp().sport === id) || !!(disp().sports && disp().sports[id] === true));
+// matches of a board in the same shape as a sport's matches, so the same cards can draw them
+function boardRecs(id) {
+  if (id !== "mlbb") return [];
+  const val = x => x.score ?? (x.kills != null ? x.kills + " K" : "");
+  return mlbbMatches(boardData[id] || {}).map((m, i) => {
+    const a = m.a || {}, b = m.b || {}, st = m.st === "live" || m.st === "done" ? m.st : "scheduled";
+    return { id: "m" + i, no: i + 1, a: a.name || "TBC", b: b.name || "TBC", st, w: m.w, rd: m.label, lb: m.label, t: i,
+      sc: [val(a), val(b)], v: { big: [val(a), val(b)] } };
+  });
+}
+function boardState(id) {   // has anything to show? is it going on right now?
+  const D = boardData[id] || {};
+  if (id === "bowling") { const any = !!(D.scores && Object.keys(D.scores).length); return { data: any, live: any && Date.now() - (D.updated || 0) < 15 * 60000 }; }
+  const r = boardRecs(id); return { data: r.length > 0, live: r.some(x => x.st === "live") };
+}
 // Warn on the screen itself when this computer loses the internet (scores would silently go stale).
 let offSince = 0;
 C.onValue(ref(C.db, ".info/connected"), s => { offSince = s.val() ? 0 : (offSince || Date.now()); renderOffline(); });
@@ -36,10 +68,11 @@ const disp = () => settings.display || {};
 function pickSport() {
   if (FORCE_SPORT) return FORCE_SPORT;
   const d = disp();
-  if (d.mode === "sport" && SPORTS[d.sport]) return d.sport;
-  const enabled = Object.keys(SPORTS).filter(s => !d.sports || d.sports[s] !== false);
-  const withData = enabled.filter(s => recs(s).length);
-  const withLive = withData.filter(s => recs(s).some(r => r.st === "live"));
+  if (d.mode === "sport" && (SPORTS[d.sport] || BOARDS[d.sport])) return d.sport;
+  // sports are in the rotation unless unticked; boards (bowling, Mobile Legends) only when ticked
+  const enabled = [...Object.keys(SPORTS).filter(s => !d.sports || d.sports[s] !== false), ...Object.keys(BOARDS).filter(s => d.sports && d.sports[s] === true)];
+  const withData = enabled.filter(s => BOARDS[s] ? boardState(s).data : recs(s).length);
+  const withLive = withData.filter(s => BOARDS[s] ? boardState(s).live : recs(s).some(r => r.st === "live"));
   const list = withLive.length ? withLive : withData.length ? withData : enabled;
   const changed = list.join() !== rotList.join();
   rotList = list;
@@ -130,7 +163,7 @@ setInterval(renderGoal, 1000);
 function listHTML(arr, kind) {
   if (!arr.length) return `<div class="empty">${kind === "next" ? "No more matches scheduled" : "No results yet"}</div>`;
   return `<div class="list">` + arr.map(r => {
-    if (kind === "next") return `<div class="it"><span class="n">${r.tm ? esc(r.tm) : "#" + esc(r.no)}${r.ct ? " · C" + esc(r.ct) : ""}</span>
+    if (kind === "next") return `<div class="it"><span class="n">${r.tm ? esc(r.tm) : r.lb ? esc(r.lb) : "#" + esc(r.no)}${r.ct ? " · C" + esc(r.ct) : ""}</span>
       <span class="t">${esc(r.a)} <span style="color:var(--muted)">vs</span> ${esc(r.b)}</span><span></span></div>`;
     const s = r.wo ? "W/O" : `${(r.sc || [])[0]}–${(r.sc || [])[1]}`;
     return `<div class="it"><span class="n">${esc(r.rd || "#" + r.no)}</span>
@@ -143,6 +176,7 @@ function render() {
   $("#evName").textContent = ev;
   $("#evVenue").textContent = settings.venue || EVENT_DEFAULTS.venue;
   const main = $("#main");
+  for (const id of Object.keys(BOARDS)) if (boardWanted(id)) watchBoard(id);
 
   if (!FORCE_SPORT && !FORCE_MATCH && disp().mode === "awards") {
     renderAwards(main);
@@ -166,11 +200,12 @@ function render() {
       ${v.hist ? `<div class="hist">${esc(v.hist)}</div>` : ""}${evHTML(r)}</div>`;
   } else {
     const sp = pickSport();
-    const SP = SPORTS[sp];
+    const SP = SPORTS[sp] || BOARDS[sp];
     document.documentElement.style.setProperty("--sport", SP.color);
     $("#sportChip").textContent = SP.name;
     $("#dots").innerHTML = !FORCE_SPORT && rotList.length > 1 ? rotList.map(s => `<i class="${s === sp ? "on" : ""}"></i>`).join("") : "";
-    const all = recs(sp);
+    if (sp === "bowling") { main.className = ""; main.innerHTML = bowlingHTML(); renderTicker(); renderAnn(); tick(); return; }
+    const all = BOARDS[sp] ? boardRecs(sp) : recs(sp);
     const live = all.filter(r => r.st === "live").sort((x, y) => String(x.ct).localeCompare(String(y.ct), undefined, { numeric: true }) || byNo(x, y)).slice(0, 6);
     const next = all.filter(r => r.st === "scheduled").sort(byNo);
     const done = all.filter(r => r.st === "done").sort((x, y) => (y.t || 0) - (x.t || 0));
@@ -194,6 +229,21 @@ function render() {
   renderTicker();
   renderAnn();
   tick();
+}
+
+// ---------------- bowling standings (teams on the left, top bowlers on the right)
+function bowlingHTML() {
+  const D = boardData.bowling;
+  if (!D) return `<div class="col"><h2>Tenpin Bowling</h2><div class="empty">Loading…</div></div><div class="col"></div>`;
+  const bw = bowlingStandings(D), N = bw.N;
+  if (!bw.anyScore) return `<div class="col"><h2>Tenpin Bowling</h2><div class="empty">Scores will appear here soon.</div></div><div class="col"></div>`;
+  const teams = bw.teams, two = teams.length > 11;
+  const trow = (t, i) => `<div class="bw-r ${t.done >= t.slots ? "fin" : ""}"><span class="bw-p cond">${bw.rankOf(teams, i)}</span><span class="bw-n cond">${esc(t.t)}</span>
+    <span class="bw-g">${t.done >= t.slots ? "Final" : t.done ? "Game " + Math.min(N, Math.ceil(t.done / Math.max(1, t.mem.length))) + "/" + N : ""}</span><span class="bw-t cond">${t.done ? t.total : "–"}</span></div>`;
+  const plist = arr => arr.length ? `<div class="list">` + arr.slice(0, 5).map((p, i) => `<div class="it"><span class="n">${bw.rankOf(arr, i)}</span>
+    <span class="t">${i === 0 ? `<b>${esc(p.n)}</b>` : esc(p.n)} <span style="color:var(--muted);font-weight:500">· ${esc(p.t)}</span></span><span class="s">${p.total}</span></div>`).join("") + `</div>` : `<div class="empty">No scores yet</div>`;
+  return `<div class="col"><h2>Team standings · Tenpin Bowling</h2><div class="bw ${two ? "two" : ""}" style="--rows:${two ? Math.ceil(teams.length / 2) : teams.length}">${teams.map(trow).join("")}</div></div>
+    <div class="col"><h2>Top men</h2>${plist(bw.men)}<h2>Top women</h2>${plist(bw.women)}</div>`;
 }
 
 // ---------------- scorer announcements (pub/<sport>/ann)

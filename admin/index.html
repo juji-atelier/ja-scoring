@@ -8,9 +8,9 @@
 <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
 <title>Admin · JA Scoring</title>
 <meta name="theme-color" content="#F6F4F2">
-<script src="../js/hints.js?v=20261110g"></script>
-<script src="../js/theme.js?v=20261110g"></script>
-<link rel="stylesheet" href="../css/app.css?v=20261110g">
+<script src="../js/hints.js?v=20261110h"></script>
+<script src="../js/theme.js?v=20261110h"></script>
+<link rel="stylesheet" href="../css/app.css?v=20261110h">
 <style>
 :root{--sport:var(--acc)}
 .sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
@@ -62,6 +62,8 @@ table.aw th{white-space:nowrap}
 .fbi .ty{font-size:11px;font-weight:800;padding:1px 7px;border-radius:99px;background:var(--bg2);margin-right:6px}
 .filebtn{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-weight:600;font-size:14px;cursor:pointer;text-transform:none;letter-spacing:0;color:var(--text);margin:0;background:var(--card)}
 #restoreBox .checks label{align-items:flex-start}
+.sitab{width:100%;border-collapse:collapse;min-width:640px}.sitab th{text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:4px 6px}
+.sitab td{padding:4px 6px;white-space:nowrap}.sitab td input{width:100%;min-width:130px}.sitab td:first-child{font-weight:600}
 </style>
 </head>
 <body>
@@ -121,12 +123,18 @@ table.aw th{white-space:nowrap}
           <div><label>Featured match</label><select id="sMatch"></select></div>
           <div><label>Rotate every (seconds)</label><input id="sRotate" inputmode="numeric"></div>
         </div>
-        <label>Sports included in auto rotation</label>
+        <label>Sports included in auto rotation <span style="text-transform:none;letter-spacing:0;font-weight:500">(bowling and Mobile Legends are off unless ticked)</span></label>
         <div class="checks" id="sSports"></div>
         <div class="row" style="margin-top:14px">
           <button class="primary" id="btnSaveScreen">Apply to big screen</button>
           <a id="previewLink" target="_blank"><button class="ghost" type="button">Open big screen ↗</button></a>
         </div>
+      </div>
+      <div class="card">
+        <h3>Sport names, dates &amp; venues</h3>
+        <p class="muted">Shown at the top of each scorer page, on the public page's sport tabs and on the big screen. Leave a box empty to keep the standard text shown in grey. An empty venue means the main venue above.</p>
+        <div id="sportInfo" style="overflow-x:auto"></div>
+        <div class="row" style="margin-top:14px"><button class="primary" id="btnSaveSportInfo">Save sport details</button></div>
       </div>
       <div class="card">
         <h3>Prize giving</h3>
@@ -213,6 +221,6 @@ table.aw th{white-space:nowrap}
 <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
 <div id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script type="module" src="admin.js?v=20261110g"></script>
+<script type="module" src="admin.js?v=20261110h"></script>
 </body>
 </html>

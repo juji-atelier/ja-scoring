@@ -1,7 +1,8 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261110g";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261110h";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS } from "../js/engines.js?v=20261110g";
-import * as C from "../js/common.js?v=20261110g";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS } from "../js/engines.js?v=20261110h";
+import * as C from "../js/common.js?v=20261110h";
+import { applySportInfo } from "../js/sportinfo.js?v=20261110h";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -22,8 +23,15 @@ const SPORT_EMAIL = `${S}@${EMAIL_DOMAIN}`;
 
 document.documentElement.style.setProperty("--sport", SP.color);
 document.title = `${SP.name} · Scorer`;
-$("#sportName").textContent = SP.name;
-$("#sportDay").textContent = `${SP.day} · ${SP.venue || EVENT_DEFAULTS.venue}`;
+let mainVenue = EVENT_DEFAULTS.venue;
+function showSportHead() {
+  document.title = `${SP.name} · Scorer`;
+  $("#sportName").textContent = SP.name;
+  $("#sportDay").textContent = `${SP.day} · ${SP.venue || mainVenue}`;
+}
+showSportHead();
+// name / date / venue can be changed in Admin
+C.onValue(ref(C.db, "settings"), s => { const v = s.val() || {}; applySportInfo(v.sportInfo); mainVenue = v.venue || EVENT_DEFAULTS.venue; showSportHead(); }, () => {});
 // wording of the (i) hints depends on the sport ("points per game" vs "per set")
 if (window.JAHints) { window.JAHints.ctx = { sport: S, name: SP.name, unit: UNIT, kind: KIND }; window.JAHints.apply(); }
 

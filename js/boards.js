@@ -10,7 +10,18 @@
 //  (SPORTS) and js/engines.js (FORMATS / ENGINE_OF) instead; Admin picks
 //  those up the same way.
 // =====================================================================
-import { BOWL_ROOT } from "./bowling-data.js?v=20261110g";
+import { BOWL_ROOT } from "./bowling-data.js?v=20261110h";
+
+// Mobile Legends: every match in the data published by the JA ESPORT console (mlbb/live)
+export function mlbbMatches(D) {
+  const out = [];
+  for (const r of (D && D.rounds) || []) (r.matches || []).forEach((m, i) => out.push({ ...m, label: `R${r.no} M${i + 1}` }));
+  const p = (D && D.playoffs) || {};
+  (p.semis || []).forEach((m, i) => out.push({ ...m, label: "Semi " + (i + 1) }));
+  if (p.third_m) out.push({ ...p.third_m, label: "3rd place" });
+  if (p.final) out.push({ ...p.final, label: "Final" });
+  return out;
+}
 
 export const BOARDS = {
   bowling: {
