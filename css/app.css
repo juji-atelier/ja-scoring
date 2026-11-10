@@ -174,3 +174,14 @@ table.paste tr.skip td{color:var(--mute);text-decoration:line-through}
 .fbwrap{text-align:center;margin:18px 0 0}
 .fbwrap.hide{display:none}
 .fbbtn{border-radius:999px;padding:10px 18px;font-weight:700}
+
+/* unsent scores found on this phone after a refresh */
+.unsentbar{margin:10px 0;padding:12px 14px;border-radius:12px;font-weight:700;font-size:14px;background:color-mix(in srgb,var(--warn) 14%,var(--card));border:1px solid color-mix(in srgb,var(--warn) 45%,var(--line))}
+.unsentbar.hide{display:none}
+.unsentbar .urow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-weight:500}
+.unsentbar .urow>div{flex:1;min-width:200px}
+.unsentbar small{display:block;color:var(--mute);font-size:12.5px;margin-top:2px}
+/* keyboard hint: only where there is a real keyboard */
+.kbhint{display:none;text-align:center;color:var(--mute);font-size:12.5px;margin:14px 0 0}
+.kbhint kbd{font:700 11px/1 Inter,system-ui,sans-serif;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:2px 6px;background:var(--card);color:var(--ink)}
+@media (hover:hover) and (pointer:fine){.kbhint{display:block}}

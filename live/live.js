@@ -174,7 +174,7 @@ function render() {
       h += `<h2>Group ${esc(g)}</h2><table><tr><th class="t">Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>+/−</th><th>Pts</th></tr>` +
         tbl[g].map(t => `<tr class="${isMe(t.team) ? "me" : ""}"><td class="t">${isMe(t.team) ? "★ " : ""}${mark(t.team)}</td><td>${t.p}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.f - t.a > 0 ? "+" : ""}${t.f - t.a}</td><td><b>${t.pts}</b></td></tr>`).join("") + `</table>`;
     }
-    if (gs.length) h += `<p class="empty">Win 3 · Draw 1 · Loss 0. Ties split by score difference.</p>`;
+    if (gs.length) h += `<p class="empty">Win 3 · Draw 1 · Loss 0. Ties: head-to-head result first, then score difference.</p>`;
   }
   const champs = champions();
   if (champs.length) h = champs.map(c => `<div class="champ"><div class="k">🏆 ${esc(SPORTS[sport].name)}${c.ev ? " · " + esc(c.ev) : ""} · Champion</div>

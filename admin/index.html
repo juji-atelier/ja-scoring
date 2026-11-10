@@ -9,7 +9,7 @@
 <title>Admin · JA Scoring</title>
 <meta name="theme-color" content="#F6F4F2">
 <script src="../js/theme.js?v=20261105b"></script>
-<link rel="stylesheet" href="../css/app.css?v=20261105c">
+<link rel="stylesheet" href="../css/app.css?v=20261110a">
 <style>
 :root{--sport:var(--acc)}
 .sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
@@ -59,6 +59,8 @@ table.aw th{white-space:nowrap}
 .fbi .meta{font-size:12px;color:var(--muted);grid-column:1}
 .fbi .act{grid-column:2;grid-row:1/span 2;display:flex;gap:6px}
 .fbi .ty{font-size:11px;font-weight:800;padding:1px 7px;border-radius:99px;background:var(--bg2);margin-right:6px}
+.filebtn{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-weight:600;font-size:14px;cursor:pointer;text-transform:none;letter-spacing:0;color:var(--text);margin:0;background:var(--card)}
+#restoreBox .checks label{align-items:flex-start}
 </style>
 </head>
 <body>
@@ -158,11 +160,7 @@ table.aw th{white-space:nowrap}
         <p class="muted">Each committee scans their own sport's code to open the scorer page. Give the password separately – never print it on this sheet.</p>
         <div class="qrgrid" id="scorerQR"></div>
       </div>
-      <div class="card">
-        <h3>Tenpin bowling (separate page)</h3>
-        <p class="muted">Bowling has its own scorer, public page and OBS panel. Its public page is also linked from the main live-scores page.</p>
-        <div id="bowlLinks"></div>
-      </div>
+      <div id="boardLinks"></div>
       <div class="card">
         <h3>Big screen links for OBS (Browser Source, 1920 × 1080)</h3>
         <div id="displayLinks"></div>
@@ -183,6 +181,13 @@ table.aw th{white-space:nowrap}
         <h3>Download results</h3>
         <p class="muted">One file with every match, score and group table for all sports, plus bowling standings. Opens in Excel.</p>
         <button class="primary" id="btnExport">Download all results (Excel / CSV)</button>
+      </div>
+      <div class="card">
+        <h3>Backup &amp; restore</h3>
+        <p class="muted">A backup is one file with <b>everything</b>: all sports' teams, matches and scores, bowling, Mobile Legends and your settings. Download one before each day starts and after each sport finishes. If something is deleted by mistake, choose the file below to put it back.</p>
+        <div class="row"><button class="primary" id="btnBackup">Download backup file</button>
+          <label class="filebtn">Restore from a backup file… <input type="file" id="inRestore" accept=".json,application/json" hidden></label></div>
+        <div id="restoreBox" style="margin-top:12px"></div>
       </div>
       <div class="card">
         <h3>Refresh public data</h3>
@@ -207,6 +212,6 @@ table.aw th{white-space:nowrap}
 <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
 <div id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script type="module" src="admin.js?v=20261107a"></script>
+<script type="module" src="admin.js?v=20261110a"></script>
 </body>
 </html>

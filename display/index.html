@@ -90,19 +90,23 @@ main.solo{grid-template-columns:1fr}
 /* prize giving */
 .aw-wrap{height:100%;display:flex;flex-direction:column;gap:1.4vw}
 .aw-title{margin:0;font-size:2.6vw;letter-spacing:.12em;text-transform:uppercase;text-align:center;color:var(--gold)}
-.aw-grid{display:grid;grid-template-columns:repeat(var(--cols,3),1fr);gap:1.2vw;align-content:start}
-.aw-card{background:var(--card);border:1px solid var(--line);border-top:.35vw solid var(--c);border-radius:1vw;padding:1vw 1.3vw;animation:awin .6s both;box-shadow:0 .4vw 1.2vw #0000004d}
+.aw-grid{display:grid;grid-template-columns:repeat(var(--cols,3),minmax(0,1fr));gap:1.2vw;align-content:start}
+.aw-card{min-width:0;background:var(--card);border:1px solid var(--line);border-top:.35vw solid var(--c);border-radius:1vw;padding:1vw 1.3vw;animation:awin .6s both;box-shadow:0 .4vw 1.2vw #0000004d}
 .aw-cat{font-size:1.5vw;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.6vw}
 .aw-row{display:flex;align-items:center;gap:.9vw;padding:.35vw 0}
 .aw-m{width:2.2vw;height:2.2vw;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:1.1vw;color:#fff;flex:none}
 .aw-row.p1 .aw-m{background:#D2AC70;box-shadow:0 0 1vw #D2AC7066}.aw-row.p2 .aw-m{background:#A7AEB8}.aw-row.p3 .aw-m{background:#B07A4A}
 .aw-n{font-weight:800;font-size:1.6vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .aw-row.p1 .aw-n{font-size:2vw;color:#fff}
+.aw-grid.many{gap:1vw;margin-top:1vw}.aw-grid.many .aw-card{padding:1.4vw 1.1vw 1.6vw}.aw-grid.many .aw-cat{font-size:1.25vw;margin-bottom:1vw}.aw-grid.many .aw-row{padding:.6vw 0;gap:.7vw}.aw-grid.many .aw-n{font-size:1.3vw;white-space:normal;line-height:1.15;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}.aw-grid.many .aw-row.p1 .aw-n{font-size:1.55vw}
 .aw-empty{display:grid;place-items:center;height:100%;font-size:3vw;color:var(--muted);font-weight:700}
 @keyframes awin{from{opacity:0;transform:translateY(1.5vw)}to{opacity:1;transform:none}}
+#offline{position:fixed;left:50%;bottom:8vh;transform:translateX(-50%);z-index:50;background:#B7791F;color:#fff;font:600 1.5vw/1.3 Inter,system-ui,sans-serif;padding:.7vw 1.6vw;border-radius:99px;box-shadow:0 4px 24px #0008;white-space:nowrap}
+#offline b{font-weight:800}
 </style>
 </head>
 <body>
+<div id="offline" hidden></div>
 <div class="wrap">
   <div class="bar">
     <img class="lg" src="../img/dragon.jpg" alt="">
@@ -117,6 +121,6 @@ main.solo{grid-template-columns:1fr}
   <div class="ann" id="ann" hidden></div>
   <div class="tick"><div class="lbl cond">RESULTS</div><div class="mq"><span id="ticker"></span></div><div class="ja"><span class="jamark"></span>JUJI-ATELIER</div></div>
 </div>
-<script type="module" src="display.js?v=20261105e"></script>
+<script type="module" src="display.js?v=20261110a"></script>
 </body>
 </html>

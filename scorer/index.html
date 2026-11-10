@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#F6F4F2">
 <script src="../js/theme.js?v=20261105b"></script>
 <title>Scorer · JA Scoring</title>
-<link rel="stylesheet" href="../css/app.css?v=20261105c">
+<link rel="stylesheet" href="../css/app.css?v=20261110a">
 </head>
 <body>
 <header class="top">
@@ -49,6 +49,8 @@
 
   <!-- WAITING TO SEND (filled by scorer.js) -->
   <div id="pendBar" class="pendbar hide"></div>
+  <!-- SCORES SAVED ON THIS PHONE BUT NEVER SENT (filled by scorer.js) -->
+  <div id="unsentBar" class="unsentbar hide"></div>
   <!-- TABS -->
   <nav class="tabs hide" id="tabs">
     <button data-tab="list" class="on">Matches</button>
@@ -173,6 +175,6 @@
 </div>
 <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
 <div id="toast"></div>
-<script type="module" src="scorer.js?v=20261107a"></script>
+<script type="module" src="scorer.js?v=20261110a"></script>
 </body>
 </html>

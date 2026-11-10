@@ -225,14 +225,17 @@ export function view(sport, m, now = Date.now()) {
 }
 
 // Group standings from /pub records. Win 3, draw 1, loss 0.
-// Tie-break: points, score difference, score for, name.
+// Tie-break: points, then head-to-head between the tied teams (points, then
+// score difference in the matches they played against each other), then
+// overall score difference, score for, name.
 export function standings(records) {
-  const groups = {};
+  const groups = {}, played = {};
   for (const r of Object.values(records || {})) {
     if (!r || !r.gr) continue;
     const g = (groups[r.gr] = groups[r.gr] || {});
     for (const n of [r.a, r.b]) g[n] = g[n] || { team: n, p: 0, w: 0, d: 0, l: 0, f: 0, a: 0, pts: 0 };
     if (r.st !== "done") continue;
+    (played[r.gr] = played[r.gr] || []).push(r);
     const A = g[r.a], B = g[r.b], sc = r.sc || [0, 0];
     A.p++; B.p++;
     A.f += Number(sc[0]) || 0; A.a += Number(sc[1]) || 0;
@@ -241,9 +244,29 @@ export function standings(records) {
     else if (r.w === "b") { B.w++; A.l++; B.pts += 3; }
     else { A.d++; B.d++; A.pts++; B.pts++; }
   }
+  const overall = (x, y) => (y.f - y.a) - (x.f - x.a) || y.f - x.f || x.team.localeCompare(y.team);
   const out = {};
   for (const [g, t] of Object.entries(groups)) {
-    out[g] = Object.values(t).sort((x, y) => y.pts - x.pts || (y.f - y.a) - (x.f - x.a) || y.f - x.f || x.team.localeCompare(y.team));
+    const list = Object.values(t).sort((x, y) => y.pts - x.pts || overall(x, y));
+    // re-order every block of teams level on points by their head-to-head record
+    for (let i = 0; i < list.length;) {
+      let j = i + 1;
+      while (j < list.length && list[j].pts === list[i].pts) j++;
+      if (j - i > 1 && list[i].p > 0) {
+        const names = new Set(list.slice(i, j).map(x => x.team)), h = {};
+        for (const n of names) h[n] = { pts: 0, diff: 0 };
+        for (const r of played[g] || []) {
+          if (!names.has(r.a) || !names.has(r.b) || r.a === r.b) continue;
+          const sc = r.sc || [0, 0], d = (Number(sc[0]) || 0) - (Number(sc[1]) || 0);
+          h[r.a].diff += d; h[r.b].diff -= d;
+          if (r.w === "a") h[r.a].pts += 3; else if (r.w === "b") h[r.b].pts += 3; else { h[r.a].pts++; h[r.b].pts++; }
+        }
+        const block = list.slice(i, j).sort((x, y) => h[y.team].pts - h[x.team].pts || h[y.team].diff - h[x.team].diff || overall(x, y));
+        list.splice(i, j - i, ...block);
+      }
+      i = j;
+    }
+    out[g] = list;
   }
   return out;
 }

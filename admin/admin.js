@@ -1,6 +1,8 @@
 import { SPORTS, ADMIN_EMAIL, EVENT_DEFAULTS } from "../config.js";
 import { publicRecord, standings, FORMATS, ENGINE_OF } from "../js/engines.js";
 import { bowlingStandings, BOWL_ROOT } from "../js/bowling-data.js";
+import { BOARDS } from "../js/boards.js";
+import { firebaseConfig } from "../config.js";
 import * as C from "../js/common.js";
 const { $, $$, esc, toast, ref } = C;
 
@@ -10,6 +12,8 @@ const BASE = new URL("../", location.href).href;
 const PUBLIC_URL = BASE + "live/";
 
 let pub = {}, settings = {}, started = false, logUnsub = null, raw = {}, bowl = null;
+const boardData = {};   // board id → its data (see js/boards.js)
+const nameOf = id => (SPORTS[id] || BOARDS[id] || {}).name || id;
 
 // ---------------- auth
 $("#loginForm").onsubmit = async e => {
@@ -41,12 +45,13 @@ function start() {
   C.onValue(ref(db, "pub"), s => { pub = s.val() || {}; renderOverview(); fillMatchSelect(); });
   // raw scorer data (start/update times) for the health check, and bowling for its card
   C.onValue(ref(db, "sports"), s => { raw = s.val() || {}; renderOverview(); }, () => {});
-  C.onValue(ref(db, BOWL_ROOT), s => { bowl = s.val() || {}; renderOverview(); }, () => {});
+  for (const [id, b] of Object.entries(BOARDS)) watchBoard(id, b);
   setInterval(renderOverview, 30000);
   C.onValue(ref(db, "settings"), s => { settings = s.val() || {}; fillScreenForm(); });
   renderLinks();
   const opts = Object.entries(SPORTS).map(([id, s]) => `<option value="${id}">${esc(s.name)}</option>`).join("");
-  $("#sSport").innerHTML = opts; $("#logSport").innerHTML = opts + `<option value="bowling">Tenpin Bowling</option>`; $("#clrSport").innerHTML = opts;
+  $("#sSport").innerHTML = opts; $("#clrSport").innerHTML = opts;
+  $("#logSport").innerHTML = opts + Object.entries(BOARDS).filter(([, b]) => b.log).map(([id, b]) => `<option value="${id}">${esc(b.name)}</option>`).join("");
   startFeedback();
   $("#logSport").onchange = startLog;
   startLog();
@@ -92,6 +97,64 @@ function healthOf(sp) {
   return { total: ms.length, done: ms.filter(m => m.status === "done").length, warn };
 }
 const fbOpen = sp => Object.values(fbData || {}).filter(f => !f.done && (f.sport || "") === sp).length;
+
+// Live data for one board. If this login can't open a live connection to it, fall back to
+// reading the public copy every 15 s (the same way the public pages do).
+function watchBoard(id, b) {
+  const got = v => { boardData[id] = v || {}; if (id === "bowling") bowl = boardData[id]; renderOverview(); };
+  C.onValue(ref(db, b.path), s => got(s.val()), () => {
+    const url = String(firebaseConfig.databaseURL || "").replace(/\/$/, "") + "/" + b.path + ".json";
+    const poll = () => fetch(url, { cache: "no-store" }).then(r => r.ok ? r.json() : null).then(got).catch(() => {});
+    poll(); setInterval(poll, 15000);
+  });
+}
+const clock = t => new Date(t).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+const boardButtons = (id, b) => `<div class="row" style="margin-top:8px">${(b.links || []).slice(0, 3).map(([l, u], i) =>
+  `<a href="${BASE + u}" target="_blank"><button class="small ${i ? "ghost" : ""}">${esc(l.replace(/\s*\(.*\)/, ""))} ↗</button></a>`).join("")}</div>`;
+
+// Mobile Legends: data published by the JA ESPORT console at mlbb/live
+function mlbbMatches(D) {
+  const out = [];
+  for (const r of D.rounds || []) (r.matches || []).forEach((m, i) => out.push({ ...m, label: `R${r.no} M${i + 1}` }));
+  const p = D.playoffs || {};
+  (p.semis || []).forEach((m, i) => out.push({ ...m, label: "Semi " + (i + 1) }));
+  if (p.third_m) out.push({ ...p.third_m, label: "3rd place" });
+  if (p.final) out.push({ ...p.final, label: "Final" });
+  return out;
+}
+function mlbbCard(id, b) {
+  const D = boardData[id];
+  if (!D) return "";
+  const has = D.groups || D.rounds || D.playoffs;
+  const all = has ? mlbbMatches(D) : [], cnt = st => all.filter(m => (m.st || "scheduled") === st).length;
+  const rd = D.round || {}, p = D.playoffs || {}, g = D.groups || {}, rv = D.review || {};
+  const val = x => x.score ?? (x.kills != null ? x.kills + " K" : "");
+  const warn = [];
+  for (const G of Object.keys(rv)) if (rv[G]) warn.push(`⚖ Group ${esc(G)}: result pending – organiser decision`);
+  const quiet = D.at ? Date.now() - D.at : 0;
+  if (cnt("live") && quiet > 30 * 60000) warn.push(`⏸ A match is live but nothing was published for ${ago(quiet)}`);
+  const fb = fbOpen(id); if (fb) warn.push(`💬 ${fb} unread feedback`);
+  const mini = (l, x, v) => `<div class="mini"><span>${l}</span><b>${v}</b></div>`;
+  return `<div class="scard" style="--c:${b.color}">
+    <div class="row"><h4 style="flex:1">${esc(b.name)}</h4><span class="muted" style="font-size:12px">${D.at ? "last update " + clock(D.at) : "not published yet"}</span></div>
+    ${has ? `<div class="cnt"><span><b>${cnt("live")}</b> live</span><span><b>${cnt("scheduled")}</b> upcoming</span><span><b>${cnt("done")}</b> finished</span>${rd.total ? `<span>Round ${Math.min(rd.done || 0, rd.total)}/${rd.total}</span>` : ""}</div>` : `<p class="muted" style="margin:6px 0">${esc(b.note || "")} Nothing published yet.</p>`}
+    ${rd.total ? `<div class="pbar"><i style="width:${Math.round(Math.min(rd.done || 0, rd.total) / rd.total * 100)}%"></i></div>` : ""}
+    ${all.filter(m => m.st === "live").map(m => mini(`${esc(m.label)} · ${esc((m.a || {}).name || "TBC")} vs ${esc((m.b || {}).name || "TBC")}`, 0, `${val(m.a || {})}–${val(m.b || {})}`)).join("")}
+    ${p.champion ? mini(`🏆 Champion: <b>${esc(p.champion)}</b>`, 0, "") + (p.runner ? mini(`🥈 ${esc(p.runner)}`, 0, "") : "")
+      : Object.keys(g).sort().map(G => (g[G] || [])[0] ? mini(`Group ${esc(G)} leader: <b>${esc(g[G][0].name)}</b>`, 0, (g[G][0].pts | 0) + " pts") : "").join("")}
+    ${warn.map(w => `<div class="hwarn">${w}</div>`).join("")}
+    ${boardButtons(id, b)}</div>`;
+}
+// Any board without its own card still shows up, with its links and last update time.
+function plainCard(id, b) {
+  const D = boardData[id] || {}, at = D.at || D.updated;
+  const fb = fbOpen(id);
+  return `<div class="scard" style="--c:${b.color}">
+    <div class="row"><h4 style="flex:1">${esc(b.name)}</h4><span class="muted" style="font-size:12px">${at ? "last update " + clock(at) : "no data yet"}</span></div>
+    ${b.note ? `<p class="muted" style="margin:6px 0">${esc(b.note)}</p>` : ""}${fb ? `<div class="hwarn">💬 ${fb} unread feedback</div>` : ""}${boardButtons(id, b)}</div>`;
+}
+const BOARD_CARD = { bowling: () => bowlingCard(), mlbb: mlbbCard };
+const boardCards = () => Object.entries(BOARDS).map(([id, b]) => (BOARD_CARD[id] || plainCard)(id, b)).join("");
 
 function bowlingCard() {
   if (!bowl) return "";
@@ -140,7 +203,7 @@ function renderOverview() {
       ${warn.map(w => `<div class="hwarn">${w}</div>`).join("")}
       <div class="row" style="margin-top:8px"><a href="${BASE}scorer/?sport=${id}" target="_blank"><button class="small">Open scorer ↗</button></a>
       <button class="small ghost" data-pin="${id}">Pin on big screen</button></div></div>`;
-  }).join("") + bowlingCard();
+  }).join("") + boardCards();
   $$("[data-feat]").forEach(b => b.onclick = () => saveDisplay({ mode: "match", match: b.dataset.feat }, "Featured on big screen"));
   $$("[data-pin]").forEach(b => b.onclick = () => saveDisplay({ mode: "sport", sport: b.dataset.pin }, `${SPORTS[b.dataset.pin].name} pinned`));
 }
@@ -213,17 +276,17 @@ function renderLinks() {
   $("#displayLinks").innerHTML = row("Main (follows admin)", BASE + "display/") +
     Object.entries(SPORTS).map(([id, s]) => row(s.name + " only", `${BASE}display/?sport=${id}`)).join("") +
     row("Transparent overlay", BASE + "display/?bg=transparent");
-  const BW = BASE + "bowling.html";
-  $("#bowlLinks").innerHTML = row("Scorer (bowling AJK)", BW + "?v=scorer") + row("Public page", BW) +
-    row("OBS panel – rotates", BW + "?v=overlay") + row("OBS panel – teams only", BW + "?v=overlay&show=team");
+  $("#boardLinks").innerHTML = Object.values(BOARDS).map(b => `<div class="card"><h3>${esc(b.name)} (separate page)</h3>
+    <p class="muted">${esc(b.note || `${b.name} has its own pages.`)} Its public page is also linked from the main live-scores page.</p>
+    ${(b.links || []).map(([l, u]) => row(l, BASE + u)).join("")}</div>`).join("");
   $$("[data-copy]").forEach(b => b.onclick = () => copy(b.dataset.copy));
-  renderScorerQR(BW);
+  renderScorerQR();
 }
 
-// one QR per scorer link (6 sports + bowling)
-function renderScorerQR(BW) {
+// one QR per scorer link (every sport + every board that has a scorer page)
+function renderScorerQR() {
   const items = [...Object.entries(SPORTS).map(([id, s]) => ({ id, name: s.name, color: s.color, url: `${BASE}scorer/?sport=${id}` })),
-    { id: "bowling", name: "Bowling", color: "#8b5cf6", url: BW + "?v=scorer" }];
+    ...Object.entries(BOARDS).filter(([, b]) => b.scorer).map(([id, b]) => ({ id, name: b.short || b.name, color: b.color, url: BASE + b.scorer }))];
   $("#scorerQR").innerHTML = items.map(it => `<div class="qrc" style="--c:${it.color}"><b>${esc(it.name)}</b>
     <div class="qrbox" id="qr-${it.id}"></div>
     <div class="row"><button class="small" data-qrdl="${it.id}">Download</button><button class="small ghost" data-copy="${esc(it.url)}">Copy link</button></div></div>`).join("");
@@ -296,9 +359,7 @@ $("#btnClearMatches").onclick = () => clearSport(true);
 // ---------------- prize giving
 const AW_CATS = [
   ...Object.entries(SPORTS).map(([id, s]) => ({ id, label: s.name, color: s.color })),
-  { id: "bowl_team", label: "Bowling · Team", color: "#8b5cf6" },
-  { id: "bowl_men", label: "Bowling · Men", color: "#8b5cf6" },
-  { id: "bowl_women", label: "Bowling · Women", color: "#8b5cf6" }
+  ...Object.values(BOARDS).flatMap(b => (b.awards || []).map(([id, label]) => ({ id, label, color: b.color })))
 ];
 const PLACES = ["1st", "2nd", "3rd"];
 function awardsFromForm() {
@@ -351,6 +412,8 @@ $("#btnAutoAwards").onclick = async () => {
     auto.bowl_men = bw.men.slice(0, 3).map(p => p.n);
     auto.bowl_women = bw.women.slice(0, 3).map(p => p.n);
   }
+  const ml = ((boardData.mlbb || {}).playoffs) || {};
+  if (ml.champion) auto.mlbb = [ml.champion, ml.runner || "", ml.third || ""];
   let filled = 0;
   for (const c of AW_CATS) (auto[c.id] || []).forEach((v, i) => {
     const el = $(`#awardsForm input[data-c="${c.id}"][data-i="${i}"]`);
@@ -402,6 +465,25 @@ $("#btnExport").onclick = async () => {
       bw.series.slice(0, 10).forEach((p, i) => rows.push([bw.rankOf(bw.series, i, "ser"), p.n, p.t, p.ser]));
     }
   } catch (e) { rows.push(["Bowling data could not be loaded"]); }
+  const ML = boardData.mlbb;
+  if (ML && (ML.groups || ML.playoffs)) {
+    rows.push([]); rows.push(["MOBILE LEGENDS"]);
+    for (const G of Object.keys(ML.groups || {}).sort()) {
+      rows.push([`Mobile Legends – Group ${G}`]); rows.push(["Pos", "Slot", "Team", "Played", "Won", "Lost", "Kill diff", "Kills", "Points"]);
+      (ML.groups[G] || []).forEach((t, i) => rows.push([i + 1, t.slot, t.name, t.p | 0, t.w | 0, t.l | 0, t.kd | 0, t.kills | 0, t.pts | 0]));
+      rows.push([]);
+    }
+    const ms = mlbbMatches(ML);
+    if (ms.length) {
+      rows.push(["Mobile Legends – Matches"]); rows.push(["Match", "Team A", "Team B", "Status", "A", "B", "Winner"]);
+      const val = x => x.score ?? x.kills ?? "";
+      ms.forEach(m => { const a = m.a || {}, b = m.b || {};
+        rows.push([m.label, a.name, b.name, m.st === "done" ? (m.wo ? "Walkover" : "Finished") : m.st === "live" ? "Live" : "Scheduled", val(a), val(b), m.w === "a" ? a.name : m.w === "b" ? b.name : ""]); });
+      rows.push([]);
+    }
+    const pl = ML.playoffs || {};
+    if (pl.champion) rows.push(["Champion", pl.champion], ["Runner-up", pl.runner || ""], ["3rd", pl.third || ""]);
+  }
   const blob = new Blob(["﻿" + rows.map(r => r.map(q).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" });
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
   a.download = `${(settings.event || "HQ Games 2026").replace(/[^\w]+/g, "_")}_Results.csv`; a.click();
@@ -435,3 +517,72 @@ $("#fbList").onclick = async e => {
     if (x && confirm("Delete this feedback?")) await C.remove(ref(db, `feedback/${x.dataset.fbdel}`));
   } catch (err) { toast("Error: " + err.message, 4000); }
 };
+
+
+// ---------------- backup & restore (one file with everything; can put it back)
+async function collectBackup() {
+  const get = async path => { try { return (await C.get(ref(db, path))).val(); } catch (e) { return undefined; } };
+  const out = { app: "ja-scoring", version: 1, at: Date.now(), event: settings.event || EVENT_DEFAULTS.name,
+    sports: (await get("sports")) || {}, pub: (await get("pub")) || {}, settings: (await get("settings")) || {}, boards: {} };
+  for (const [id, b] of Object.entries(BOARDS)) { const v = await get(b.path); out.boards[id] = v === undefined ? (boardData[id] || null) : v; }
+  return out;
+}
+function saveFile(name, text, type) {
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+const stamp = () => { const d = new Date(), z = n => String(n).padStart(2, "0"); return `${d.getFullYear()}${z(d.getMonth() + 1)}${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}`; };
+async function downloadBackup(tag) {
+  const b = await collectBackup();
+  saveFile(`${(b.event || "event").replace(/[^\w]+/g, "_")}_${tag || "Backup"}_${stamp()}.json`, JSON.stringify(b), "application/json");
+  return b;
+}
+$("#btnBackup").onclick = async () => {
+  try { await downloadBackup(); toast("Backup downloaded – keep the file safe"); } catch (e) { toast("Error: " + e.message, 4000); }
+};
+let restoreFile = null;
+$("#inRestore").onchange = async e => {
+  const f = e.target.files[0]; restoreFile = null; $("#restoreBox").innerHTML = "";
+  if (!f) return;
+  let b; try { b = JSON.parse(await f.text()); } catch (err) { b = null; }
+  if (!b || b.app !== "ja-scoring" || !b.sports) { $("#restoreBox").innerHTML = `<p style="color:var(--bad)">This is not a JA Scoring backup file.</p>`; return; }
+  restoreFile = b;
+  const n = o => Object.keys(o || {}).length;
+  const line = (val, label, info, ok = true) => `<label><input type="checkbox" value="${val}" ${ok ? "" : "disabled"}> <span><b>${esc(label)}</b> <span class="muted">${info}</span></span></label>`;
+  const known = Object.keys(b.sports).filter(sp => SPORTS[sp]);
+  $("#restoreBox").innerHTML = `<p>Backup of <b>${esc(b.event || "")}</b>, made <b>${new Date(b.at).toLocaleString()}</b>. Tick what to put back:</p>
+    <div class="checks" style="flex-direction:column;gap:8px">
+    ${known.map(sp => line("sport:" + sp, SPORTS[sp].name, `${n((b.sports[sp] || {}).matches)} matches, ${n((b.sports[sp] || {}).teams)} teams`)).join("")}
+    ${Object.entries(BOARDS).map(([id, bd]) => b.boards && b.boards[id] ? line("board:" + id, bd.name, bd.restore ? "all scores and settings" : "kept in the file for your records – " + esc(bd.note || "restored from its own tool"), !!bd.restore) : "").join("")}
+    ${line("settings", "Event & big screen settings", "event name, announcement, what the screen shows, prize winners")}
+    </div>
+    <p class="muted">Everything you tick is <b>replaced</b> by what is in the file. A safety copy of the current data is downloaded first.</p>
+    <div class="row"><button class="primary" id="btnRestore">Restore ticked items</button></div>`;
+  $("#btnRestore").onclick = doRestore;
+};
+async function doRestore() {
+  const b = restoreFile, picks = $$("#restoreBox input:checked").map(c => c.value);
+  if (!b) return;
+  if (!picks.length) return toast("Tick at least one item");
+  const names = picks.map(v => v === "settings" ? "Settings" : nameOf(v.split(":")[1]));
+  if (prompt(`This replaces the current data for:\n\n${names.join(", ")}\n\nType RESTORE to confirm`) !== "RESTORE") return toast("Cancelled");
+  try {
+    await downloadBackup("Before_restore");
+    const upd = {};
+    for (const v of picks) {
+      const [kind, id] = v.split(":");
+      if (v === "settings") upd.settings = b.settings || null;
+      else if (kind === "sport" && SPORTS[id]) {
+        const sp = JSON.parse(JSON.stringify(b.sports[id] || {}));
+        for (const m of Object.values(sp.matches || {})) delete m.lock;      // nobody is scoring a restored match yet
+        const pm = {};
+        for (const [mid, m] of Object.entries(sp.matches || {})) pm[mid] = publicRecord(id, m, sp.teams || {});
+        upd[`sports/${id}`] = sp;
+        upd[`pub/${id}`] = { ...((b.pub || {})[id] || {}), m: pm };
+      } else if (kind === "board" && BOARDS[id] && BOARDS[id].restore) upd[BOARDS[id].path] = b.boards[id];
+    }
+    await C.update(ref(db), upd);
+    toast("Restored: " + names.join(", "), 4000);
+    $("#inRestore").value = ""; $("#restoreBox").innerHTML = ""; restoreFile = null;
+  } catch (e) { toast("Restore failed: " + e.message, 5000); }
+}

@@ -73,7 +73,7 @@ function renderPending() {
   el.classList.toggle("hide", !showIt);
   if (showIt) el.innerHTML = `⏳ ${pending} action${pending > 1 ? "s" : ""} waiting to send` +
     (online ? "…" : " – no internet") +
-    `<small>${online ? "Slow connection. Keep scoring – nothing is lost." : "Keep scoring on this phone – everything is saved here and sends by itself when the connection is back. Don't close this page."}</small>`;
+    `<small>${online ? "Slow connection. Keep scoring – nothing is lost." : "Keep scoring on this phone – everything is saved here and sends by itself when the connection is back. Try to keep this page open. If it closes, open it again and you will be asked to send the saved scores."}</small>`;
 }
 setInterval(renderPending, 1000);
 addEventListener("beforeunload", e => { if (pending) { e.preventDefault(); e.returnValue = ""; } });
@@ -92,6 +92,105 @@ function log(id, m, act) {
     m: id, no: (m && m.no) ?? "", act, by: NAME || "?", dev: DEV, at: C.serverTimestamp()
   })).catch(() => {});
 }
+
+// ---------------------------------------------------------------- unsent scores (safety net)
+// While an action hasn't reached the server, the match's score is also kept in this
+// phone's storage. If the page is refreshed or closed while offline, the next visit
+// finds it here and offers to send it.
+const UNSENT_KEY = "ja_unsent_" + S;
+const SCORE_FIELDS = ["status", "rallies", "events", "turns", "pen", "winner", "wo", "firstServer", "startedAt", "endedAt", "clock"];
+const unsentOpen = {};   // match id → actions still on their way (this page load)
+const unsentAll = () => { try { return JSON.parse(store(UNSENT_KEY) || "{}") || {}; } catch (e) { return {}; } };
+const unsentPut = all => store(UNSENT_KEY, Object.keys(all).length ? JSON.stringify(all) : null);
+const scoreOf = m => { const o = {}; for (const f of SCORE_FIELDS) if (m && m[f] != null) o[f] = m[f]; return o; };
+const sameScore = (x, y) => { const k = o => { const c = { ...o }; delete c.clock; delete c.startedAt; delete c.endedAt; return JSON.stringify(c, Object.keys(c).sort()); }; return k(scoreOf(x)) === k(scoreOf(y)); };
+function unsentNote(id, base, m) {
+  try {
+    const all = unsentAll(), old = all[id];
+    all[id] = { base: old && unsentOpen[id] > 1 ? old.base : base, at: Date.now(), m: scoreOf(m) };
+    unsentPut(all);
+  } catch (e) { /* storage full or blocked – scoring still works */ }
+}
+function unsentSettle(id) {
+  unsentOpen[id] = Math.max(0, (unsentOpen[id] || 1) - 1);
+  if (unsentOpen[id]) return;
+  try { const all = unsentAll(); if (all[id]) { delete all[id]; unsentPut(all); } } catch (e) {}
+}
+function renderUnsent() {
+  const el = $("#unsentBar"); if (!el) return;
+  let all; try { all = unsentAll(); } catch (e) { return; }
+  let changed = false; const rows = [];
+  for (const [id, u] of Object.entries(all)) {
+    if (unsentOpen[id]) continue;                       // still sending in this page
+    const m = matches[id];
+    if (!m || !u || !u.m || sameScore(m, u.m)) { delete all[id]; changed = true; continue; }
+    const sc = x => { const v = view(S, { ...m, ...x }, C.now()); return `${v.big[0]}–${v.big[1]}${v.small ? ` (${UNIT.toLowerCase()}s ${v.small[0]}–${v.small[1]})` : ""}`; };
+    const gone = {}; for (const f of SCORE_FIELDS) gone[f] = null;
+    rows.push(`<div class="urow"><div><b>#${esc(m.no)} ${esc(tn(m.teamA))} vs ${esc(tn(m.teamB))}</b>
+      <small>On this phone: <b>${sc({ ...gone, ...u.m })}</b> · Saved online: <b>${sc({})}</b>${(m.updatedAt || 0) !== (u.base || 0) ? " · ⚠ changed on another device since" : ""}</small></div>
+      <button class="small primary" data-usend="${id}">Send now</button><button class="small" data-udrop="${id}">Discard</button></div>`);
+  }
+  if (changed) unsentPut(all);
+  el.classList.toggle("hide", !rows.length);
+  el.innerHTML = rows.length ? `⚠ Scores entered on this phone were not sent (the page closed while offline)${rows.join("")}` : "";
+}
+async function unsentSend(id) {
+  const u = unsentAll()[id], m0 = matches[id];
+  if (!u || !m0) return renderUnsent();
+  if (lockedByOther(m0) && !confirm(`${m0.lock.name} is scoring this match on another device now.\n\nReplace the score with the one saved on this phone?`)) return;
+  try {
+    const r = await track(C.runTransaction(matchRef(id), m => {
+      if (!m) return m;
+      for (const f of SCORE_FIELDS) { if (u.m[f] == null) delete m[f]; else m[f] = u.m[f]; }
+      m.updatedAt = C.now();
+      return m;
+    }));
+    if (!r.committed || !r.snapshot.val()) return toast("Could not send – check the connection", 3500);
+    publish(id, r.snapshot.val());
+    log(id, r.snapshot.val(), "sent scores saved on this phone");
+    const all = unsentAll(); delete all[id]; unsentPut(all);
+    toast("Saved scores sent ✓");
+  } catch (e) { toast("Error: " + e.message, 4000); }
+  renderUnsent();
+}
+document.addEventListener("click", e => {
+  const a = e.target.closest && e.target.closest("[data-usend]"), d = e.target.closest && e.target.closest("[data-udrop]");
+  if (a) unsentSend(a.dataset.usend);
+  if (d && confirm("Discard the score saved on this phone? The online score stays as it is.")) {
+    const all = unsentAll(); delete all[d.dataset.udrop]; unsentPut(all); renderUnsent();
+  }
+});
+
+// ---------------------------------------------------------------- keyboard (laptop scorers)
+// A = left side, L = right side, Z = undo. Futsal/netball: Space = clock. Darts: type the score, Enter.
+document.addEventListener("keydown", e => {
+  if (!curId || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+  const box = $("#vScore");
+  if (!box || box.classList.contains("hide") || document.querySelector("dialog[open]")) return;
+  const t = e.target;
+  if (t && t.closest && t.closest("input,textarea,select,[contenteditable]")) return;
+  const press = sel => { const b = box.querySelector(sel); if (!b || b.disabled) return false; e.preventDefault(); b.click(); return true; };
+  const side = i => (swapped() ? ["b", "a"] : ["a", "b"])[i];
+  const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  if (KIND === "rally") {
+    if (k === "a") press(`[data-pt="${side(0)}"]`);
+    else if (k === "l") press(`[data-pt="${side(1)}"]`);
+    else if (k === "z") press(`[data-a="undoRally"]`);
+  } else if (KIND === "goals") {
+    if (k === "a") press(`[data-a="goal"][data-s="${side(0)}"]`);
+    else if (k === "l") press(`[data-a="goal"][data-s="${side(1)}"]`);
+    else if (k === "z") press(`[data-a="undoGoals"]`);
+    else if (k === " ") press(`[data-a="clock"]`);
+  } else if (KIND === "darts") {
+    if (/^[0-9]$/.test(k)) press(`[data-a="key"][data-v="${k}"]`);
+    else if (k === "Backspace" || k === "Delete") press(`[data-a="key"][data-v="C"]`);
+    else if (k === "Enter") press(`[data-a="enter"]`);
+    else if (k === "z") press(`[data-a="undoDarts"]`);
+  }
+});
+const KB_HINT = { rally: "<kbd>A</kbd> left side +1 · <kbd>L</kbd> right side +1 · <kbd>Z</kbd> undo",
+  goals: "<kbd>A</kbd> goal left · <kbd>L</kbd> goal right · <kbd>Space</kbd> clock · <kbd>Z</kbd> undo",
+  darts: "Type the score · <kbd>Enter</kbd> · <kbd>Backspace</kbd> clear · <kbd>Z</kbd> undo" };
 
 // ---------------------------------------------------------------- auth
 $("#btnAdminMode").onclick = () => {
@@ -157,6 +256,7 @@ function startData() {
     teams = v.teams || {};
     matches = v.matches || {};
     render();
+    renderUnsent();
   }, err => toast("No access: " + err.message, 4000));
   C.onValue(annRef(), snap => { ann = snap.val(); renderAnnBar(); }, () => {});
   setInterval(renderAnnBar, 20000);   // drops an expired announcement from view
@@ -303,16 +403,22 @@ async function act(mutate, label) {
   const id = curId;
   if (!id) return false;
   let reason = "";
+  unsentOpen[id] = (unsentOpen[id] || 0) + 1;
   try {
-    const r = await track(C.runTransaction(matchRef(id), m => {
+    const tx = C.runTransaction(matchRef(id), m => {
       reason = "";
       if (!m) return m;
       if (!m.lock || m.lock.dev !== DEV) { reason = "lock"; return; }
+      const base = m.updatedAt || 0;
       if (mutate(m) === false) { reason = "noop"; return; }
       m.lock.at = C.now();
       m.updatedAt = C.now();
+      unsentNote(id, base, m);   // kept on this phone until the server confirms
       return m;
-    }));
+    });
+    const settle = () => unsentSettle(id);
+    tx.then(settle, settle);
+    const r = await track(tx);
     if (!r.committed) {
       if (reason === "lock") toast("Another device has control of this match.", 3500);
       return false;
@@ -539,6 +645,7 @@ function renderScore() {
   if (st !== "scheduled" && KIND === "goals") html += goalsBody(m, f, mine, order);
   if (st !== "scheduled" && KIND === "darts") html += dartsBody(m, f, mine, order);
 
+  if (st === "live" && mine) html += `<p class="kbhint">Keyboard: ${KB_HINT[KIND] || ""}</p>`;
   const el = $("#vScore");
   el.innerHTML = html;
   if (wasOpen && $("#menu")) $("#menu").open = true;

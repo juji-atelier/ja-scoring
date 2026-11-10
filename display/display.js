@@ -14,6 +14,17 @@ let current = null, rotStart = 0, rotList = [];
 
 C.onValue(ref(C.db, "pub"), s => { pub = s.val() || {}; render(); });
 C.onValue(ref(C.db, "settings"), s => { settings = s.val() || {}; rotStart = 0; render(); });
+// Warn on the screen itself when this computer loses the internet (scores would silently go stale).
+let offSince = 0;
+C.onValue(ref(C.db, ".info/connected"), s => { offSince = s.val() ? 0 : (offSince || Date.now()); renderOffline(); });
+function renderOffline() {
+  const el = $("#offline"); if (!el) return;
+  const show = offSince && Date.now() - offSince > 6000;   // ignore the first seconds while connecting
+  el.hidden = !show;
+  if (show) { const m = Math.floor((Date.now() - offSince) / 60000);
+    el.innerHTML = `<b>⚠ No internet on this screen</b> – scores may be out of date${m ? ` (offline ${m} min)` : ""}. Reconnecting…`; }
+}
+setInterval(renderOffline, 2000);
 let bowlAnn = null;   // bowling has its own page; its announcement lives at bowling2026/ann
 C.onValue(ref(C.db, "bowling2026/ann"), s => { bowlAnn = s.val(); renderAnn(); }, () => {});
 const ANN_SRC = { bowling: { name: "Bowling", color: "#8b5cf6" } };
@@ -217,9 +228,10 @@ function renderAwards(main) {
     .filter(a => a && a.p && a.p[0]);
   main.className = "solo";
   if (!list.length) { main.innerHTML = `<div class="aw-empty">Winners will be announced soon</div>`; return; }
-  const cols = list.length <= 2 ? list.length : list.length <= 4 ? 2 : 3;
+  // never more than two rows, so nothing drops off the bottom of the screen (7–8 categories: 4 across, 9–10: 5, 11–12: 6)
+  const cols = list.length <= 2 ? list.length : list.length <= 4 ? 2 : list.length <= 6 ? 3 : Math.min(6, Math.ceil(list.length / 2));
   main.innerHTML = `<div class="aw-wrap"><h2 class="aw-title cond">Champions · ${esc(settings.event || EVENT_DEFAULTS.name)}</h2>
-    <div class="aw-grid" style="--cols:${cols}">` + list.map((a, n) => `
+    <div class="aw-grid ${cols > 3 ? "many" : ""}" style="--cols:${cols}">` + list.map((a, n) => `
     <div class="aw-card" style="--c:${esc(a.color || "#B3162D")};animation-delay:${n * 90}ms">
       <div class="aw-cat cond">${esc(a.label)}</div>
       ${a.p.map((name, i) => name ? `<div class="aw-row p${i + 1}"><span class="aw-m">${i + 1}</span><span class="aw-n">${esc(name)}</span></div>` : "").join("")}
