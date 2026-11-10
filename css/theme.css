@@ -40,7 +40,7 @@ html,body{background:var(--bg);color:var(--ink);transition:background-color .25s
 
 /* ---------- "Powered by" footer ---------- */
 .jafoot{display:flex;align-items:center;justify-content:center;gap:10px;color:var(--mute);font:600 11px/1 Inter,system-ui,sans-serif;letter-spacing:2px;text-transform:uppercase;padding:28px 16px 34px}
-.jamark{width:30px;height:18px;background:currentColor;-webkit-mask:url(../img/ja.png) center/contain no-repeat;mask:url(../img/ja.png) center/contain no-repeat;flex:none}
+.jamark{width:30px;height:18px;background:currentColor;-webkit-mask:url(../img/ja.svg) center/contain no-repeat;mask:url(../img/ja.svg) center/contain no-repeat;flex:none}
 
 /* live pulse dot */
 .pulse{display:inline-flex;align-items:center;gap:6px;color:var(--live);font-weight:800;font-size:11px;letter-spacing:1px}
