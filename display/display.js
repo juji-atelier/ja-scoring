@@ -11,6 +11,7 @@ const P = new URLSearchParams(location.search);
 const FORCE_SPORT = SPORTS[P.get("sport")] || BOARDS[P.get("sport")] ? P.get("sport") : null;   // ?sport=badminton → one sport only
 const FORCE_MATCH = P.get("match");                                     // ?match=badminton/<id>
 if (P.get("bg") === "transparent") document.body.classList.add("transparent");
+if (P.get("fx") !== "off") document.body.classList.add("fx");   // animations; add ?fx=off (or &fx=off) to the link for a still screen
 if (!C.configured) { document.body.innerHTML = `<div class="setup">Paste your Firebase config into config.js</div>`; throw new Error("not configured"); }
 
 let pub = {}, settings = {};
@@ -108,13 +109,13 @@ function rowHTML(r, s) {
     <span class="srv ${r.st === "live" && v.srv === s ? "on" : ""}"></span>
     <span class="nm cond">${esc(r[s])}${tag ? `<span class="tag">${esc(tag)}</span>` : ""}</span>
     <span class="sm cond">${small !== "" && small != null ? small : ""}</span>
-    <span class="bg cond">${big ?? ""}</span></div>`;
+    <span class="bg cond" data-k="${esc(r.id)}:${s}">${big ?? ""}</span></div>`;
 }
 
 function cardHTML(r) {
   const v = r.v || {};
   const st = r.st === "live" ? (v.stx || "Live") + clockSpan(v) : r.st === "done" ? "Final" : (r.tm || "Up next");
-  return `<div class="card">
+  return `<div class="card ${r.st === "live" ? "lv" : ""}">
     <div class="meta">${r.ct ? `<span>Court ${esc(r.ct)}</span>` : ""}<span>${esc(r.rd || "")}</span>${r.ev ? `<span>${esc(r.ev)}</span>` : ""}<span class="st">${st}</span></div>
     ${rowHTML(r, "a")}${rowHTML(r, "b")}
     ${v.hist ? `<div class="hist">${esc(v.hist)}</div>` : ""}</div>`;
@@ -140,11 +141,30 @@ function checkGoals() {
       const key = sp + "/" + r.id, n = (r.sc || [0, 0])[0] + (r.sc || [0, 0])[1];
       if (goalReady && r.st === "live" && SPORTS[sp].engine === "goals" && goalSeen[key] != null && n > goalSeen[key]) goalFlash = { key, sp, until: Date.now() + 7000 };
       goalSeen[key] = n;
+      if (goalReady && stSeen[key] === "live" && r.st === "done") finQueue.push({ key, sp });
+      stSeen[key] = r.st;
     }
   }
   goalReady = true;
   renderGoal();
 }
+// "FINAL" card: slides in at the top right for a few seconds when a live match finishes
+const stSeen = {}, finQueue = []; let finNow = null;
+function renderFin() {
+  const el = $("#fin"); if (!el) return;
+  if (finNow && Date.now() > finNow.until) { finNow = null; el.hidden = true; }
+  if (finNow || !finQueue.length || !document.body.classList.contains("fx")) return;
+  const q = finQueue.shift(), [sp, id] = q.key.split("/"), r = recs(sp).find(x => x.id === id);
+  if (!r) return;
+  const w = r.w === "a" ? r.a : r.w === "b" ? r.b : "";
+  el.style.setProperty("--fc", SPORTS[sp].color);
+  el.innerHTML = `<div class="fk cond">🏁 Final · ${esc(SPORTS[sp].name)}${r.rd ? " · " + esc(r.rd) : ""}</div>
+    <div class="fs cond">${esc(r.a)} <b>${r.wo ? "W/O" : `${(r.sc || [])[0]} – ${(r.sc || [])[1]}`}</b> ${esc(r.b)}</div>${w ? `<div class="fw">🏆 ${esc(w)}</div>` : ""}`;
+  el.hidden = false;
+  finNow = { until: Date.now() + 7000 };
+}
+setInterval(renderFin, 500);
+
 function renderGoal() {
   const el = $("#goal"); if (!el) return;
   if (!goalFlash || Date.now() > goalFlash.until) { el.hidden = true; goalFlash = null; return; }
@@ -171,7 +191,37 @@ function listHTML(arr, kind) {
   }).join("") + `</div>`;
 }
 
-function render() {
+function render() { renderView(); fx(); }
+
+// ---------------- lively bits: content slides in when the view changes, a score "bumps" when it changes
+let fxKey = "", fxPrev = {}, fxEnterAt = 0;
+const fxBumpAt = {};
+function fx() {
+  const main = $("#main"), chip = $("#sportChip"), f = featured(), t = Date.now();
+  const key = main.className.replace("enter", "").trim() + "|" + chip.textContent + "|" + (f ? f.rec.id : "");
+  const changed = key !== fxKey; fxKey = key;
+  if (changed) { fxEnterAt = t; chip.classList.remove("pop"); void chip.offsetWidth; chip.classList.add("pop"); }
+  // the screen is redrawn whenever data arrives, so keep the slide-in going for its full length
+  main.classList.toggle("enter", t - fxEnterAt < 1100);
+  const seen = {};
+  for (const el of main.querySelectorAll("[data-k]")) {
+    const k = el.dataset.k, v = el.textContent; seen[k] = v;
+    if (!changed && fxPrev[k] !== undefined && fxPrev[k] !== v && v !== "") fxBumpAt[k] = t;
+    const age = t - (fxBumpAt[k] || 0);
+    if (age < 800) { el.classList.add("bump"); el.style.animationDelay = -age + "ms"; }   // carry on where it was
+  }
+  fxPrev = seen;
+}
+// thin line under the top bar: time left before the screen moves to the next sport
+function renderRot() {
+  const el = $("#rot"); if (!el) return;
+  const on = !FORCE_SPORT && !featured() && (disp().mode || "auto") === "auto" && rotList.length > 1;
+  const pct = on ? Math.min(100, (Date.now() - rotStart) / (Math.max(5, Number(disp().rotate) || 15) * 1000) * 100) : 0;
+  el.style.transition = pct < (el._p || 0) ? "none" : "";
+  el.style.width = pct + "%"; el._p = pct;
+}
+
+function renderView() {
   const ev = settings.event || EVENT_DEFAULTS.name;
   $("#evName").textContent = ev;
   $("#evVenue").textContent = settings.venue || EVENT_DEFAULTS.venue;
@@ -239,7 +289,7 @@ function bowlingHTML() {
   if (!bw.anyScore) return `<div class="col"><h2>Tenpin Bowling</h2><div class="empty">Scores will appear here soon.</div></div><div class="col"></div>`;
   const teams = bw.teams, two = teams.length > 11;
   const trow = (t, i) => `<div class="bw-r ${t.done >= t.slots ? "fin" : ""}"><span class="bw-p cond">${bw.rankOf(teams, i)}</span><span class="bw-n cond">${esc(t.t)}</span>
-    <span class="bw-g">${t.done >= t.slots ? "Final" : t.done ? "Game " + Math.min(N, Math.ceil(t.done / Math.max(1, t.mem.length))) + "/" + N : ""}</span><span class="bw-t cond">${t.done ? t.total : "–"}</span></div>`;
+    <span class="bw-g">${t.done >= t.slots ? "Final" : t.done ? "Game " + Math.min(N, Math.ceil(t.done / Math.max(1, t.mem.length))) + "/" + N : ""}</span><span class="bw-t cond" data-k="bw:${esc(t.t)}">${t.done ? t.total : "–"}</span></div>`;
   const plist = arr => arr.length ? `<div class="list">` + arr.slice(0, 5).map((p, i) => `<div class="it"><span class="n">${bw.rankOf(arr, i)}</span>
     <span class="t">${i === 0 ? `<b>${esc(p.n)}</b>` : esc(p.n)} <span style="color:var(--muted);font-weight:500">· ${esc(p.t)}</span></span><span class="s">${p.total}</span></div>`).join("") + `</div>` : `<div class="empty">No scores yet</div>`;
   return `<div class="col"><h2>Team standings · Tenpin Bowling</h2><div class="bw ${two ? "two" : ""}" style="--rows:${two ? Math.ceil(teams.length / 2) : teams.length}">${teams.map(trow).join("")}</div></div>
@@ -302,6 +352,7 @@ function tick() {
 }
 setInterval(() => {
   tick();
+  renderRot();
   renderAnn();
   if (!FORCE_SPORT && !featured() && (disp().mode || "auto") === "auto") {
     const before = current;
@@ -321,7 +372,11 @@ function renderAwards(main) {
   if (!list.length) { main.innerHTML = `<div class="aw-empty">Winners will be announced soon</div>`; return; }
   // never more than two rows, so nothing drops off the bottom of the screen (7–8 categories: 4 across, 9–10: 5, 11–12: 6)
   const cols = list.length <= 2 ? list.length : list.length <= 4 ? 2 : list.length <= 6 ? 3 : Math.min(6, Math.ceil(list.length / 2));
-  main.innerHTML = `<div class="aw-wrap"><h2 class="aw-title cond">Champions · ${esc(settings.event || EVENT_DEFAULTS.name)}</h2>
+  // confetti (same pattern every time, so it does not jump when the winners are edited)
+  const CF = ["#D2AC70", "#B3162D", "#F2F3F5", "#E0364F", "#A7AEB8"];
+  const confetti = `<div class="confetti">` + Array.from({ length: 44 }, (_, i) =>
+    `<i style="left:${(i * 37) % 100}%;background:${CF[i % CF.length]};animation-delay:${((i * 53) % 90) / 10}s;animation-duration:${6 + (i * 7) % 5}s;width:${0.5 + (i % 3) * 0.2}vw"></i>`).join("") + `</div>`;
+  main.innerHTML = confetti + `<div class="aw-wrap"><h2 class="aw-title cond">Champions · ${esc(settings.event || EVENT_DEFAULTS.name)}</h2>
     <div class="aw-grid ${cols > 3 ? "many" : ""}" style="--cols:${cols}">` + list.map((a, n) => `
     <div class="aw-card" style="--c:${esc(a.color || "#B3162D")};animation-delay:${n * 90}ms">
       <div class="aw-cat cond">${esc(a.label)}</div>
