@@ -1,7 +1,7 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261110f";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261110g";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS } from "../js/engines.js?v=20261110f";
-import * as C from "../js/common.js?v=20261110f";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS } from "../js/engines.js?v=20261110g";
+import * as C from "../js/common.js?v=20261110g";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -662,6 +662,7 @@ function headerHTML(m) {
   }
   if (st === "live" && !(m.rallies || m.events || m.turns)) items.push(`<button data-a="unstart">Back to "not started"</button>`);
   if (st === "done") items.push(`<button data-a="reopen">Reopen match</button>`);
+  items.push(`<button data-a="bigscreen">📺 Open the big screen</button>`);
   items.push(`<button data-a="announce">📢 Make an announcement…</button>`);
   items.push(`<button data-a="swap">Swap sides on this screen</button>`);
   items.push(`<button data-a="release">Release match (let another device score)</button>`);
@@ -842,6 +843,7 @@ function onScoreClick(e) {
     case "finish": return A.finish();
     case "reopen": return A.reopen();
     case "wo": return A.walkover(s);
+    case "bigscreen": return window.open(BIG_URL, "_blank", "noopener");
     case "announce": return openAnn();
     case "swap": store("ja_swap_" + curId, swapped() ? null : "1"); return renderScore();
     case "release": { const id = curId; curId = null; clearInterval(heartbeat); clearInterval(ticker); goTab("list"); return releaseLock(id); }
@@ -1146,6 +1148,11 @@ function renderAnnBar() {
     el.innerHTML = `<button class="annbtn" data-ann="new">📢 Make an announcement</button>`;
   }
 }
+// this sport's own big screen (the same page OBS shows, filtered to this sport)
+const BIG_URL = new URL(`../display/?sport=${S}`, location.href).href;
+$("#bigBar").innerHTML = `<a class="bigbtn" href="${BIG_URL}" target="_blank" rel="noopener">
+  <span>📺 Open the ${esc(SP.name)} big screen</span><small>Live scores of this sport, full screen · opens in a new tab</small></a>`;
+
 $("#annBar").addEventListener("click", e => {
   const b = e.target.closest("[data-ann]");
   if (!b) return;

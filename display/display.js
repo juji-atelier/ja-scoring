@@ -1,6 +1,6 @@
-import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261110f";
-import { clockMs, mmss } from "../js/engines.js?v=20261110f";
-import * as C from "../js/common.js?v=20261110f";
+import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261110g";
+import { clockMs, mmss } from "../js/engines.js?v=20261110g";
+import * as C from "../js/common.js?v=20261110g";
 const { $, esc, ref } = C;
 
 const P = new URLSearchParams(location.search);
