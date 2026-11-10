@@ -10,7 +10,7 @@
 //  (SPORTS) and js/engines.js (FORMATS / ENGINE_OF) instead; Admin picks
 //  those up the same way.
 // =====================================================================
-import { BOWL_ROOT } from "./bowling-data.js";
+import { BOWL_ROOT } from "./bowling-data.js?v=20261110c";
 
 export const BOARDS = {
   bowling: {

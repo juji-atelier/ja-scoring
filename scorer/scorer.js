@@ -1,7 +1,7 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261110c";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS } from "../js/engines.js";
-import * as C from "../js/common.js";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS } from "../js/engines.js?v=20261110c";
+import * as C from "../js/common.js?v=20261110c";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
