@@ -1,6 +1,6 @@
 import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName } from "../js/engines.js";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS } from "../js/engines.js";
 import * as C from "../js/common.js";
 const { $, $$, esc, toast, store, ref } = C;
 
@@ -23,7 +23,7 @@ const SPORT_EMAIL = `${S}@${EMAIL_DOMAIN}`;
 document.documentElement.style.setProperty("--sport", SP.color);
 document.title = `${SP.name} · Scorer`;
 $("#sportName").textContent = SP.name;
-$("#sportDay").textContent = `${SP.day} · ${EVENT_DEFAULTS.venue}`;
+$("#sportDay").textContent = `${SP.day} · ${SP.venue || EVENT_DEFAULTS.venue}`;
 
 let DEV = store("ja_dev");
 if (!DEV) { DEV = Math.random().toString(36).slice(2, 10); store("ja_dev", DEV); }
@@ -98,7 +98,7 @@ function log(id, m, act) {
 // phone's storage. If the page is refreshed or closed while offline, the next visit
 // finds it here and offers to send it.
 const UNSENT_KEY = "ja_unsent_" + S;
-const SCORE_FIELDS = ["status", "rallies", "events", "turns", "pen", "winner", "wo", "firstServer", "startedAt", "endedAt", "clock"];
+const SCORE_FIELDS = ["status", "rallies", "events", "turns", "pen", "winner", "wo", "firstServer", "startedAt", "endedAt", "clock", "tl"];
 const unsentOpen = {};   // match id → actions still on their way (this page load)
 const unsentAll = () => { try { return JSON.parse(store(UNSENT_KEY) || "{}") || {}; } catch (e) { return {}; } };
 const unsentPut = all => store(UNSENT_KEY, Object.keys(all).length ? JSON.stringify(all) : null);
@@ -433,6 +433,39 @@ async function act(mutate, label) {
     return false;
   }
 }
+// ---- optional match details (goal sports): scorers, cards, minute
+const DET = KIND === "goals" ? (DETAILS[S] || {}) : null;
+let who = null;   // the open "who scored / who got the card?" strip: { mid, side, kind: g|y|r, tid }
+const tlId = () => "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+const roster = (m, side) => parsePlayers((teams[side === "a" ? m.teamA : m.teamB] || {}).players);
+function minuteOf(mm) {
+  const f = fmtOf(S, mm), ms = clockMs(mm.clock, C.now());
+  if (!ms) return 0;                                      // clock not used → no minute shown
+  const d = deriveGoals(mm, f);
+  return Math.floor(ms / 60000) + 1 + Math.min(d.period, d.periods - 1) * (Number(f.minutes) || 0);
+}
+const TL_ICON = { g: "⚽", og: "⚽", y: "🟨", r: "🟥" };
+function whoHTML(m) {
+  if (!who || who.mid !== curId) return "";
+  const goal = who.kind === "g", list = roster(m, who.side);
+  const title = goal ? `⚽ Who scored for <b>${esc(sideName(m, who.side))}</b>?` : `${TL_ICON[who.kind]} ${who.kind === "r" ? "Red" : "Yellow"} card – which <b>${esc(sideName(m, who.side))}</b> player?`;
+  return `<div class="whobox"><div class="wt">${title} <span class="muted">(optional)</span></div>
+    <div class="wl">${list.map(p => `<button data-a="pick" data-n="${esc(p.label)}">${p.no ? `<b>${esc(p.no)}</b> ` : ""}${esc(p.name)}</button>`).join("")}
+      <button class="ghost" data-a="pickType">Type a name…</button>
+      ${goal ? `<button class="ghost" data-a="pickOwn">Own goal</button>` : `<button class="ghost" data-a="pick" data-n="">No name</button>`}
+      <button class="ghost" data-a="pickSkip">${goal ? "Skip" : "Cancel"}</button></div></div>`;
+}
+function tlHTML(m, mine) {
+  const list = timeline(m).filter(e => e.k !== "g" || e.n || roster(m, e.s).length);
+  if (!list.length) return "";
+  return `<div class="tlist">` + list.map(e => {
+    const named = e.n || e.k === "og";
+    const txt = e.k === "og" ? `Own goal${e.n ? " – " + esc(e.n) : ""}` : e.n ? esc(e.n) : `<span class="muted">Goal – no name</span>`;
+    const btn = !mine ? "" : (e.k === "g" && !e.n) ? `<button class="small" data-a="tlWho" data-id="${e.id}" data-s="${e.s}">Who?</button>` : `<button class="small ghost" data-a="tlDel" data-id="${e.id}" title="Remove">✕</button>`;
+    return `<div class="tl ${e.s}"><span class="tm">${e.min ? e.min + "'" : ""}</span><span>${TL_ICON[e.k]}</span><span class="tn">${txt} <span class="muted">· ${esc(sideName(m, e.s))}</span></span>${btn}</div>`;
+  }).join("") + `</div>`;
+}
+
 const tapOK = () => { const t = Date.now(); if (t - lastTap < 300) return false; lastTap = t; return true; };
 const buzz = () => { try { navigator.vibrate && navigator.vibrate(25); } catch (e) {} };
 
@@ -488,11 +521,47 @@ const A = {
     return act(m => { if (!m.rallies || m.status !== "live") return false; m.rallies = m.rallies.slice(0, -1); }, "undo point");
   },
   // goals
-  goal(side) {
+  async goal(side) {
     if (!tapOK()) return;
     buzz();
-    const m = matches[curId];
-    return act(mm => { if (mm.status !== "live") return false; mm.events = (mm.events || "") + side; }, `goal ${sideName(m, side)}`);
+    const m = matches[curId], mid = curId, tid = tlId();
+    const ok = await act(mm => {
+      if (mm.status !== "live") return false;
+      const i = (mm.events || "").length;
+      mm.events = (mm.events || "") + side;
+      if (DET) { mm.tl = mm.tl || {}; mm.tl[tid] = { k: "g", s: side, n: "", min: minuteOf(mm), i, at: C.now() }; }   // time of the goal; name comes after
+    }, `goal ${sideName(m, side)}`);
+    // optional: ask who scored (only when this team has a player list)
+    if (ok && DET && curId === mid && roster(m, side).length) { who = { mid, tid, side, kind: "g" }; renderScore(); }
+  },
+  card(side, kind) {
+    who = { mid: curId, side, kind };
+    renderScore();
+  },
+  // a player (or typed name) chosen in the "who?" strip
+  pick(name, own) {
+    const w = who, m = matches[curId];
+    if (!w || w.mid !== curId) return;
+    who = null;
+    if (w.kind === "g") return act(mm => {
+      if (!mm.tl || !mm.tl[w.tid]) return false;
+      mm.tl[w.tid].n = name; mm.tl[w.tid].k = own ? "og" : "g";
+    }, own ? `own goal${name ? " – " + name : ""} (for ${sideName(m, w.side)})` : `scorer: ${name} (${sideName(m, w.side)})`).then(renderScore);
+    const tid = tlId();
+    return act(mm => {
+      if (mm.status !== "live") return false;
+      mm.tl = mm.tl || {}; mm.tl[tid] = { k: w.kind, s: w.side, n: name, min: minuteOf(mm), at: C.now() };
+    }, `${w.kind === "r" ? "red" : "yellow"} card ${sideName(m, w.side)}${name ? " – " + name : ""}`).then(renderScore);
+  },
+  tlRemove(tid) {
+    const m = matches[curId], e = m && m.tl && m.tl[tid];
+    if (!e) return;
+    const isGoal = e.k === "g" || e.k === "og";
+    if (!confirm(isGoal ? `Remove the name "${e.n}" from this goal? (The goal itself stays – use Undo to remove a goal.)` : `Remove this ${e.k === "r" ? "red" : "yellow"} card${e.n ? " for " + e.n : ""}?`)) return;
+    return act(mm => {
+      if (!mm.tl || !mm.tl[tid]) return false;
+      if (isGoal) { mm.tl[tid].n = ""; mm.tl[tid].k = "g"; } else delete mm.tl[tid];
+    }, isGoal ? "goal name removed" : "card removed");
   },
   foul(side) {
     if (!tapOK()) return;
@@ -503,9 +572,15 @@ const A = {
     const m = matches[curId];
     const last = (m.events || "").slice(-1);
     if (!last) return;
+    who = null;
     const what = last === "|" ? "the end of the last period" : /[ab]/.test(last) ? `the last goal (${sideName(m, last)})` : `the last foul (${sideName(m, last.toLowerCase())})`;
     if (!confirm(`Undo ${what}?`)) return;
-    return act(mm => { if (!mm.events || mm.status !== "live") return false; mm.events = mm.events.slice(0, -1); }, "undo " + what);
+    return act(mm => {
+      if (!mm.events || mm.status !== "live") return false;
+      mm.events = mm.events.slice(0, -1);
+      const gone = mm.events.length;   // a removed goal takes its scorer/time with it
+      for (const [tid, e] of Object.entries(mm.tl || {})) if (e && e.i === gone && (e.k === "g" || e.k === "og")) delete mm.tl[tid];
+    }, "undo " + what);
   },
   clockToggle() {
     return act(m => {
@@ -630,8 +705,8 @@ function renderScore() {
   }
 
   if (st === "scheduled") {
-    if (KIND === "goals") {
-      html += `<div class="card" style="text-align:center"><h3>Ready?</h3><p class="muted">${f.periods} × ${f.minutes} min</p>
+    if (KIND === "goals" || f.serve === "none") {
+      html += `<div class="card" style="text-align:center"><h3>Ready?</h3><p class="muted">${KIND === "goals" ? `${f.periods} × ${f.minutes} min` : `best of ${f.bestOf}, first to ${f.points}`}</p>
         <button class="primary" data-a="start" ${mine ? "" : "disabled"} style="padding:18px 30px;font-size:18px">Start match</button></div>`;
     } else {
       html += `<div class="card" style="text-align:center"><h3>${KIND === "darts" ? "Who throws first?" : "Who serves first?"}</h3>
@@ -649,6 +724,7 @@ function renderScore() {
   const el = $("#vScore");
   el.innerHTML = html;
   if (wasOpen && $("#menu")) $("#menu").open = true;
+  if (who && $(".whobox")) $(".whobox").scrollIntoView({ block: "nearest" });
   el.onclick = onScoreClick;
   tickClock();
 }
@@ -666,7 +742,7 @@ function rallyBody(m, f, mine, order) {
     button: true, disabled: !mine || !live || !!d.winner,
     big: d.winner ? d.won[s === "a" ? 0 : 1] : d.cur[s === "a" ? 0 : 1],
     small: `${UNIT}s won: ${d.won[s === "a" ? 0 : 1]}`,
-    serving: live && !d.winner && d.srv === s, tag: live ? d.point[s] : null,
+    serving: live && !d.winner && f.serve !== "none" && d.srv === s, tag: live ? d.point[s] : null,
     hint: live && !d.winner ? "Tap to add a point" : ""
   })).join("") + `</div>`;
   if (live) h += `<div class="controls"><button data-a="undoRally" ${mine && m.rallies ? "" : "disabled"}>↶ Undo last point</button></div>`;
@@ -692,7 +768,9 @@ function goalsBody(m, f, mine, order) {
     const run = m.clock && m.clock.run;
     if (!d.ended) h += `<div class="controls"><button class="primary" data-a="clock" ${mine ? "" : "disabled"} style="font-size:18px">${run ? "⏸ Pause clock" : "▶ Start clock"}</button></div>`;
     h += `<div class="gbtns">` + order.map(s => `<button class="g${s}" data-a="goal" data-s="${s}" ${mine && !d.ended ? "" : "disabled"}>+ Goal<br><small>${esc(sideName(m, s))}</small></button>`).join("") + `</div>`;
+    h += whoHTML(m);
     if (f.fouls && !d.ended) h += `<div class="gbtns">` + order.map(s => `<button data-a="foul" data-s="${s}" ${mine ? "" : "disabled"}>+ Foul ${esc(sideName(m, s))}</button>`).join("") + `</div>`;
+    if (DET && DET.cards) h += `<div class="gbtns cards">` + order.map(s => `<div><button data-a="card" data-s="${s}" data-k="y" ${mine ? "" : "disabled"}>🟨 Yellow</button><button data-a="card" data-s="${s}" data-k="r" ${mine ? "" : "disabled"}>🟥 Red</button></div>`).join("") + `</div>`;
     h += `<div class="controls">
       <button data-a="undoGoals" ${mine && m.events ? "" : "disabled"}>↶ Undo last</button>
       ${!d.ended ? `<button data-a="endPeriod" ${mine ? "" : "disabled"}>End ${periodName(S, per, d.periods)}</button>` : ""}
@@ -700,6 +778,7 @@ function goalsBody(m, f, mine, order) {
   }
   const hist = d.perPeriod.slice(0, d.periods).filter((p, i) => i <= d.period).map((p, i) => `${periodName(S, i + 1, d.periods)} ${p.join("–")}`);
   if (hist.length) h += `<div class="hist">${hist.join(" · ")}${d.pen ? ` · Pens ${d.pen[0]}–${d.pen[1]}` : ""}</div>`;
+  if (DET) h += tlHTML(m, mine && live);
   return h;
 }
 
@@ -767,6 +846,13 @@ function onScoreClick(e) {
     case "undoRally": return A.undoRally();
     case "clock": return A.clockToggle();
     case "goal": return A.goal(s);
+    case "card": return A.card(s, b.dataset.k);
+    case "pick": return A.pick(b.dataset.n || "", false);
+    case "pickOwn": return A.pick("", true);
+    case "pickType": { const n = prompt("Player name (and number):"); return n && n.trim() ? A.pick(n.trim().slice(0, 40), false) : undefined; }
+    case "pickSkip": who = null; return renderScore();
+    case "tlWho": who = { mid: curId, tid: b.dataset.id, side: s, kind: "g" }; return renderScore();
+    case "tlDel": return A.tlRemove(b.dataset.id);
     case "foul": return A.foul(s);
     case "undoGoals": return A.undoGoals();
     case "endPeriod": return A.endPeriod();
@@ -821,7 +907,7 @@ function renderSetup() {
   // teams
   const tarr = Object.entries(teams).sort((a, b) => (a[1].group || "").localeCompare(b[1].group || "") || a[1].name.localeCompare(b[1].name));
   // keep whatever is being typed if the list refreshes while editing
-  const draft = editingTeam && $("#teName") ? { name: $("#teName").value, short: $("#teShort").value, group: $("#teGroup").value } : null;
+  const draft = editingTeam && $("#teName") ? { name: $("#teName").value, short: $("#teShort").value, group: $("#teGroup").value, players: $("#tePlayers") ? $("#tePlayers").value : "" } : null;
   if (editingTeam && !teams[editingTeam]) editingTeam = null;
   $("#teamList").innerHTML = tarr.length ? `<table class="teams"><tr><th>Team</th><th></th></tr>` +
     tarr.map(([id, t]) => {
@@ -833,10 +919,13 @@ function renderSetup() {
             <div><label>Short name</label><input id="teShort" value="${esc(d.short || "")}" placeholder="optional"></div>
             <div><label>Group</label><input id="teGroup" value="${esc(d.group || "")}" placeholder="e.g. A"></div>
           </div>
+          ${DET ? `<label style="margin-top:10px">Players <span class="muted" style="text-transform:none;letter-spacing:0">– optional. One per line: number then name. With a list, the scorer can tap who scored${DET.cards ? " or got a card" : ""}.</span></label>
+          <textarea id="tePlayers" rows="6" placeholder="1 Ali bin Abu&#10;7 Siti Aminah&#10;10 John Lee">${esc(d.players || "")}</textarea>` : ""}
           <div class="row" style="margin-top:10px"><button class="small primary" data-tsave="${id}">Save</button><button class="small ghost" data-tcancel>Cancel</button></div>
         </td></tr>`;
       }
-      const sub = [t.short, t.group ? "Group " + t.group : ""].filter(Boolean).join(" · ");
+      const np = DET ? parsePlayers(t.players).length : 0;
+      const sub = [t.short, t.group ? "Group " + t.group : "", np ? np + " players" : ""].filter(Boolean).join(" · ");
       return `<tr><td><b>${esc(t.name)}</b>${sub ? `<br><span class="muted" style="font-size:12px">${esc(sub)}</span>` : ""}</td>
         <td style="text-align:right;white-space:nowrap"><button class="small" data-te="${id}">Edit</button> <button class="small danger" data-td="${id}">Delete</button></td></tr>`;
     }).join("") + `</table>`
@@ -899,6 +988,8 @@ async function saveTeam(id) {
   const clash = Object.entries(teams).some(([k, t]) => k !== id && t.name.toLowerCase() === name.toLowerCase());
   if (clash) { toast("Another team already has that name"); $("#teName").focus(); return; }
   const val = { name, short, group };
+  if ($("#tePlayers")) val.players = parsePlayers($("#tePlayers").value).map(p => p.label).join("\n");
+  else if (teams[id].players) val.players = teams[id].players;
   try {
     await C.update(ref(db, `sports/${S}/teams/${id}`), val);
   } catch (e) { toast("Couldn't save – check the connection"); return; }

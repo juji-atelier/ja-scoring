@@ -101,12 +101,22 @@ main.solo{grid-template-columns:1fr}
 .aw-grid.many{gap:1vw;margin-top:1vw}.aw-grid.many .aw-card{padding:1.4vw 1.1vw 1.6vw}.aw-grid.many .aw-cat{font-size:1.25vw;margin-bottom:1vw}.aw-grid.many .aw-row{padding:.6vw 0;gap:.7vw}.aw-grid.many .aw-n{font-size:1.3vw;white-space:normal;line-height:1.15;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}.aw-grid.many .aw-row.p1 .aw-n{font-size:1.55vw}
 .aw-empty{display:grid;place-items:center;height:100%;font-size:3vw;color:var(--muted);font-weight:700}
 @keyframes awin{from{opacity:0;transform:translateY(1.5vw)}to{opacity:1;transform:none}}
+.evs{display:grid;grid-template-columns:1fr 1fr;gap:3vw;margin-top:1.2vw;font-size:1.5vw;color:var(--muted);text-align:left}
+.evs span{display:block;line-height:1.5}.evs i{font-style:normal;opacity:.7}.evs>div:last-child{text-align:right}
+.feat.hasev{gap:1vw}.feat.hasev .trow{--nm:4vw;--big:7.5vw;padding:.4vw 2vw}.feat.hasev .evs{margin-top:.2vw;padding:0 2.6vw;font-size:1.45vw}
+#goal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:40;min-width:52vw;max-width:86vw;text-align:center;background:linear-gradient(160deg,#16181dF2,#0b0c0fF2);border:.25vw solid var(--gc,#16a34a);border-radius:2vw;padding:2.2vw 3.5vw;box-shadow:0 2vw 6vw #000c;animation:goalin .45s cubic-bezier(.2,.9,.3,1.2) both;color:#fff}
+#goal .gk{font-size:5.5vw;font-weight:700;letter-spacing:.08em;color:var(--gc,#16a34a);line-height:1}
+#goal .gs{font-size:2.6vw;font-weight:700;margin-top:1vw;text-wrap:balance}#goal .gs b{color:#D2AC70;margin:0 .8vw}
+#goal .gn{font-size:2.2vw;margin-top:.8vw;font-weight:700}
+#goal .gp{font-size:1.3vw;letter-spacing:.2em;text-transform:uppercase;opacity:.6;margin-top:1vw}
+@keyframes goalin{from{opacity:0;transform:translate(-50%,-50%) scale(.7)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 #offline{position:fixed;left:50%;bottom:8vh;transform:translateX(-50%);z-index:50;background:#B7791F;color:#fff;font:600 1.5vw/1.3 Inter,system-ui,sans-serif;padding:.7vw 1.6vw;border-radius:99px;box-shadow:0 4px 24px #0008;white-space:nowrap}
 #offline b{font-weight:800}
 </style>
 </head>
 <body>
 <div id="offline" hidden></div>
+<div id="goal" hidden></div>
 <div class="wrap">
   <div class="bar">
     <img class="lg" src="../img/dragon.jpg" alt="">
@@ -121,6 +131,6 @@ main.solo{grid-template-columns:1fr}
   <div class="ann" id="ann" hidden></div>
   <div class="tick"><div class="lbl cond">RESULTS</div><div class="mq"><span id="ticker"></span></div><div class="ja"><span class="jamark"></span>JUJI-ATELIER</div></div>
 </div>
-<script type="module" src="display.js?v=20261110a"></script>
+<script type="module" src="display.js?v=20261110b"></script>
 </body>
 </html>

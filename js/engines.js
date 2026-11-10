@@ -3,22 +3,31 @@
 //  Stored match fields used here:
 //    rally : fmt, firstServer ('a'|'b'), rallies  (string like "aabab")
 //    goals : fmt, events (string: a/b = goal, A/B = foul, | = period end),
-//            clock {run, st, el}, pen {a,b}
+//            clock {run, st, el}, pen {a,b},
+//            tl { id: {k: g|og|y|r, s: a|b, n: "10 Ali", min, i} }  optional details
+//            (k: goal / own goal / yellow / red; i = position of a goal in `events`)
 //    darts : fmt, firstServer, turns (string "60,45,100")
 // =====================================================================
 
 export const FORMATS = {
   badminton:   { bestOf: 3, points: 21, cap: 30, serve: "winner" },
   pingpong:    { bestOf: 3, points: 11, cap: 0,  serve: "tt" },
-  sepaktakraw: { bestOf: 3, points: 21, cap: 25, decPoints: 15, decCap: 17, serve: "takraw" },
+  sepaktakraw: { bestOf: 3, points: 21, cap: 25, decPoints: 15, decCap: 17, serve: "takraw", unit: "Set" },
   futsal:      { periods: 2, minutes: 20, fouls: true },
   bolajaring:  { periods: 4, minutes: 10, fouls: false },
-  dart:        { bestOf: 3, start: 501 }
+  dart:        { bestOf: 3, start: 501 },
+  // added from the HQ Games schedule – each match's numbers can be changed by the scorer in Setup
+  bolasepak:   { periods: 2, minutes: 20, fouls: false },
+  bolatampar:  { bestOf: 3, points: 25, cap: 0, decPoints: 15, decCap: 0, serve: "winner", unit: "Set" },
+  pickleball:  { bestOf: 3, points: 11, cap: 0, serve: "winner" },                 // rally scoring, win by 2
+  karom:       { bestOf: 3, points: 25, cap: 25, serve: "none" }                   // first to 25, no serving side
 };
+// Goal sports: which optional details the scorer can record (goal scorers need a player list on the team).
+export const DETAILS = { futsal: { cards: true }, bolasepak: { cards: true }, bolajaring: { cards: false } };
 
 export const ENGINE_OF = {
-  badminton: "rally", pingpong: "rally", sepaktakraw: "rally",
-  futsal: "goals", bolajaring: "goals", dart: "darts"
+  badminton: "rally", pingpong: "rally", sepaktakraw: "rally", bolatampar: "rally", pickleball: "rally", karom: "rally",
+  futsal: "goals", bolajaring: "goals", bolasepak: "goals", dart: "darts"
 };
 
 const other = s => (s === "a" ? "b" : "a");
@@ -92,7 +101,7 @@ export function deriveRally(m, f) {
     }
     const half = Math.ceil(r.points / 2);
     const last = rallies[used - 1];
-    if (last && (cur[0] + cur[1]) > 0 && cur[idx(last)] === half && cur[idx(other(last))] < half) interval = true;
+    if (f.serve !== "none" && last && (cur[0] + cur[1]) > 0 && cur[idx(last)] === half && cur[idx(other(last))] < half) interval = true;
   }
   return { games, cur, won, srv: winner ? null : srv, winner, need, point, interval,
            gameNo: games.length + (winner ? 0 : 1), deciding: r.deciding, rules: r };
@@ -118,6 +127,19 @@ export function deriveGoals(m, f) {
   else if (pen && pen[0] !== pen[1]) winner = pen[0] > pen[1] ? "a" : "b";
   return { score, period, periods, ended, fouls: fouls[Math.min(period, fouls.length - 1)], perPeriod,
            pen, winner, draw: !winner, lenMs: (Number(f.minutes) || 20) * 60000 };
+}
+
+// Match details in time order: [{ id, k, s, n, min, i }]
+export function timeline(m) {
+  return Object.entries((m && m.tl) || {}).filter(([, e]) => e && e.k && e.s).map(([id, e]) => ({ id, ...e }))
+    .sort((x, y) => (x.min || 0) - (y.min || 0) || (x.at || 0) - (y.at || 0) || x.id.localeCompare(y.id));
+}
+// "10 Ali bin Abu" per line → [{ no, name, label }]
+export function parsePlayers(text) {
+  return String(text || "").split(/\r?\n/).map(l => l.replace(/\s+/g, " ").trim()).filter(Boolean).slice(0, 40).map(l => {
+    const x = l.match(/^#?(\d{1,3})[.)\-:]?\s+(.+)$/);
+    return x ? { no: x[1], name: x[2], label: `${x[1]} ${x[2]}` } : { no: "", name: l, label: l };
+  });
 }
 
 export function clockMs(clock, now) {
@@ -185,10 +207,10 @@ export function view(sport, m, now = Date.now()) {
   const f = fmtOf(sport, m);
   if (kind === "rally") {
     const d = deriveRally(m, f);
-    const unit = sport === "sepaktakraw" ? "Set" : "Game";
+    const unit = f.unit || "Game";
     return {
       kind, big: d.winner ? [d.won[0], d.won[1]] : d.cur, small: d.won, smallLabel: unit + "s",
-      serve: m.status === "live" ? d.srv : null,
+      serve: m.status === "live" && f.serve !== "none" ? d.srv : null,
       status: d.winner ? "Final" : (m.status === "live" ? `${unit} ${d.gameNo}` + (d.deciding ? " (decider)" : "") : ""),
       tag: d.point, hist: d.games.map(g => g.join("-")).join("  ·  "),
       winner: d.winner, sc: d.won, bigIsFinal: !!d.winner
@@ -291,5 +313,9 @@ export function publicRecord(sport, m, teams) {
     sc: v.sc || [0, 0],
     t: m.updatedAt || Date.now()
   };
+  if (v.kind === "goals") {
+    const tl = timeline(m).map(e => ({ k: e.k, s: e.s, n: e.n || "", m: e.min || 0 }));
+    if (tl.length) rec.tl = tl;
+  }
   return JSON.parse(JSON.stringify(rec));
 }

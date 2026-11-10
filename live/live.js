@@ -128,7 +128,25 @@ function card(r) {
   let st = r.st === "live" ? esc(v.stx || "Live") : r.st === "done" ? "Final" : esc(r.tm || "");
   if (r.st === "live" && v.clock) st += ` · <span class="clk" data-c='${esc(JSON.stringify(v.clock))}'>--:--</span>`;
   return `<div class="m ${r.st === "live" ? "live" : ""}"><div class="meta">${r.ct ? `<span>Court ${esc(r.ct)}</span>` : ""}${r.rd ? `<span>${esc(r.rd)}</span>` : ""}${r.ev ? `<span>${esc(r.ev)}</span>` : ""}<span class="st">${st}</span></div>
-    ${row(r, "a")}${row(r, "b")}${v.hist ? `<div class="h">${esc(v.hist)}</div>` : ""}</div>`;
+    ${row(r, "a")}${row(r, "b")}${v.hist ? `<div class="h">${esc(v.hist)}</div>` : ""}${events(r)}</div>`;
+}
+// goal scorers and cards under a match (only when the scorer recorded them)
+const ICON = { g: "⚽", og: "⚽", y: "🟨", r: "🟥" };
+function events(r) {
+  const tl = (Array.isArray(r.tl) ? r.tl : Object.values(r.tl || {})).filter(e => e && (e.n || e.k !== "g"));
+  if (!tl.length) return "";
+  const col = s => tl.filter(e => e.s === s).map(e =>
+    `<span>${ICON[e.k] || ""} ${e.k === "og" ? "Own goal" + (e.n ? " (" + esc(e.n) + ")" : "") : esc(e.n) || (e.k === "r" ? "Red card" : "Yellow card")}${e.m ? ` <i>${e.m}'</i>` : ""}</span>`).join("");
+  return `<div class="evs"><div>${col("a")}</div><div>${col("b")}</div></div>`;
+}
+function topScorers() {
+  const t = {};
+  for (const r of list()) for (const e of (Array.isArray(r.tl) ? r.tl : Object.values(r.tl || {}))) {
+    if (!e || e.k !== "g" || !e.n) continue;
+    const team = e.s === "a" ? r.a : r.b, k = low(e.n) + "|" + low(team);
+    (t[k] = t[k] || { n: e.n, team, g: 0 }).g++;
+  }
+  return Object.values(t).sort((x, y) => y.g - x.g || x.n.localeCompare(y.n)).slice(0, 10);
 }
 
 function renderFind() {
@@ -169,12 +187,15 @@ function render() {
   } else {
     const tbl = standings(data);
     const gs = Object.keys(tbl).sort();
-    if (!gs.length) h += `<div class="empty">No group stage for this sport.</div>`;
+    const ts = topScorers();
+    if (!gs.length && !ts.length) h += `<div class="empty">No group stage for this sport.</div>`;
     for (const g of gs) {
       h += `<h2>Group ${esc(g)}</h2><table><tr><th class="t">Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>+/−</th><th>Pts</th></tr>` +
         tbl[g].map(t => `<tr class="${isMe(t.team) ? "me" : ""}"><td class="t">${isMe(t.team) ? "★ " : ""}${mark(t.team)}</td><td>${t.p}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.f - t.a > 0 ? "+" : ""}${t.f - t.a}</td><td><b>${t.pts}</b></td></tr>`).join("") + `</table>`;
     }
     if (gs.length) h += `<p class="empty">Win 3 · Draw 1 · Loss 0. Ties: head-to-head result first, then score difference.</p>`;
+    if (ts.length) h += `<h2>⚽ Top scorers</h2><table><tr><th class="t">Player</th><th class="t">Team</th><th>Goals</th></tr>` +
+      ts.map(x => `<tr class="${isMe(x.team) ? "me" : ""}"><td class="t"><b>${esc(x.n)}</b></td><td class="t">${esc(x.team)}</td><td><b>${x.g}</b></td></tr>`).join("") + `</table>`;
   }
   const champs = champions();
   if (champs.length) h = champs.map(c => `<div class="champ"><div class="k">🏆 ${esc(SPORTS[sport].name)}${c.ev ? " · " + esc(c.ev) : ""} · Champion</div>

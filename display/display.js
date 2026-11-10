@@ -12,7 +12,7 @@ if (!C.configured) { document.body.innerHTML = `<div class="setup">Paste your Fi
 let pub = {}, settings = {};
 let current = null, rotStart = 0, rotList = [];
 
-C.onValue(ref(C.db, "pub"), s => { pub = s.val() || {}; render(); });
+C.onValue(ref(C.db, "pub"), s => { pub = s.val() || {}; render(); checkGoals(); });
 C.onValue(ref(C.db, "settings"), s => { settings = s.val() || {}; rotStart = 0; render(); });
 // Warn on the screen itself when this computer loses the internet (scores would silently go stale).
 let offSince = 0;
@@ -87,6 +87,46 @@ function cardHTML(r) {
     ${v.hist ? `<div class="hist">${esc(v.hist)}</div>` : ""}</div>`;
 }
 
+// goal scorers and cards (when the scorer records them)
+const EV_ICON = { g: "⚽", og: "⚽", y: "🟨", r: "🟥" };
+const evList = r => (Array.isArray(r.tl) ? r.tl : Object.values(r.tl || {})).filter(e => e && e.k);
+const evText = e => (e.k === "og" ? "Own goal" + (e.n ? " (" + e.n + ")" : "") : e.n || (e.k === "r" ? "Red card" : e.k === "y" ? "Yellow card" : "")) ;
+function evHTML(r) {
+  const tl = evList(r).filter(e => e.n || e.k !== "g");
+  if (!tl.length) return "";
+  const col = s => tl.filter(e => e.s === s).slice(-4).map(e => `<span>${EV_ICON[e.k] || ""} ${esc(evText(e))}${e.m ? ` <i>${e.m}'</i>` : ""}</span>`).join("");
+  return `<div class="evs"><div>${col("a")}</div><div>${col("b")}</div></div>`;
+}
+// GOAL! banner: pops up for a few seconds when a live match gets a new goal
+const goalSeen = {}; let goalFlash = null, goalReady = false;
+function checkGoals() {
+  const d = disp();
+  for (const sp of Object.keys(SPORTS)) {
+    if (FORCE_SPORT ? sp !== FORCE_SPORT : (d.sports && d.sports[sp] === false)) continue;
+    for (const r of recs(sp)) {
+      const key = sp + "/" + r.id, n = (r.sc || [0, 0])[0] + (r.sc || [0, 0])[1];
+      if (goalReady && r.st === "live" && SPORTS[sp].engine === "goals" && goalSeen[key] != null && n > goalSeen[key]) goalFlash = { key, sp, until: Date.now() + 7000 };
+      goalSeen[key] = n;
+    }
+  }
+  goalReady = true;
+  renderGoal();
+}
+function renderGoal() {
+  const el = $("#goal"); if (!el) return;
+  if (!goalFlash || Date.now() > goalFlash.until) { el.hidden = true; goalFlash = null; return; }
+  const [sp, id] = goalFlash.key.split("/"), r = recs(sp).find(x => x.id === id);
+  if (!r) { el.hidden = true; return; }
+  const last = evList(r).filter(e => e.k === "g" || e.k === "og").slice(-1)[0];
+  const side = last ? last.s : null;
+  el.style.setProperty("--gc", SPORTS[sp].color);
+  el.innerHTML = `<div class="gk cond">⚽ GOAL!</div><div class="gs cond">${esc(r.a)} <b>${(r.sc || [])[0]} – ${(r.sc || [])[1]}</b> ${esc(r.b)}</div>` +
+    (last && (last.n || last.k === "og") ? `<div class="gn">${esc(evText(last))}${side ? " · " + esc(side === "a" ? r.a : r.b) : ""}${last.m ? ` · ${last.m}'` : ""}</div>` : "") +
+    `<div class="gp cond">${esc(SPORTS[sp].name)}</div>`;
+  el.hidden = false;
+}
+setInterval(renderGoal, 1000);
+
 function listHTML(arr, kind) {
   if (!arr.length) return `<div class="empty">${kind === "next" ? "No more matches scheduled" : "No results yet"}</div>`;
   return `<div class="list">` + arr.map(r => {
@@ -118,11 +158,12 @@ function render() {
     $("#dots").innerHTML = "";
     const r = f.rec, v = r.v || {};
     main.className = "solo";
-    main.innerHTML = `<div class="feat">
+    const hasEv = !!evHTML(r);
+    main.innerHTML = `<div class="feat ${hasEv ? "hasev" : ""}">
       <div class="meta">${[r.ct ? "Court " + esc(r.ct) : "", esc(r.rd), esc(r.ev)].filter(Boolean).join(" · ")}</div>
       ${rowHTML(r, "a")}${rowHTML(r, "b")}
       <div class="st">${r.st === "live" ? esc(v.stx || "Live") + clockSpan(v) : r.st === "done" ? "Final" : "Up next" + (r.tm ? " · " + esc(r.tm) : "")}</div>
-      ${v.hist ? `<div class="hist">${esc(v.hist)}</div>` : ""}</div>`;
+      ${v.hist ? `<div class="hist">${esc(v.hist)}</div>` : ""}${evHTML(r)}</div>`;
   } else {
     const sp = pickSport();
     const SP = SPORTS[sp];

@@ -185,3 +185,16 @@ table.paste tr.skip td{color:var(--mute);text-decoration:line-through}
 .kbhint{display:none;text-align:center;color:var(--mute);font-size:12.5px;margin:14px 0 0}
 .kbhint kbd{font:700 11px/1 Inter,system-ui,sans-serif;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:2px 6px;background:var(--card);color:var(--ink)}
 @media (hover:hover) and (pointer:fine){.kbhint{display:block}}
+
+/* match details: who scored / cards */
+.whobox{margin:12px 0;padding:12px;border-radius:14px;background:var(--card);border:2px solid var(--sport,var(--acc));box-shadow:var(--shadow)}
+.whobox .wt{font-weight:700;margin-bottom:8px}
+.whobox .wl{display:flex;flex-wrap:wrap;gap:8px}
+.whobox .wl button{padding:10px 12px;font-size:15px;min-height:44px}
+.gbtns.cards>div{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.gbtns.cards button{padding:10px 6px;font-size:14px;border:1px solid var(--line)}
+.tlist{margin-top:12px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
+.tlist .tl{display:flex;align-items:center;gap:8px;padding:7px 10px;border-top:1px solid var(--line);font-size:14px}
+.tlist .tl:first-child{border-top:0}
+.tlist .tm{width:30px;color:var(--mute);font-variant-numeric:tabular-nums;text-align:right}
+.tlist .tn{flex:1;min-width:0}
