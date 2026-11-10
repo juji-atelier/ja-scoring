@@ -1,8 +1,8 @@
 // Public live-score page. Uses plain HTTPS polling (no live connection),
 // so hundreds of spectators stay inside Firebase's free limits.
-import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261110h";
-import { applySportInfo } from "../js/sportinfo.js?v=20261110h";
-import { standings, clockMs, mmss } from "../js/engines.js?v=20261110h";
+import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261110i";
+import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261110i";
+import { standings, clockMs, mmss } from "../js/engines.js?v=20261110i";
 
 const POLL_MS = 12000;
 const BASE = String(firebaseConfig.databaseURL || "").replace(/\/$/, "");
@@ -32,7 +32,7 @@ function pickDefault() {
 
 function renderTabs() {
   $("#tabs").innerHTML = Object.entries(SPORTS).map(([id, s]) =>
-    `<a href="#${id}" class="${id === sport ? "on" : ""}" style="--c:${s.color}">${esc(s.name)}<small>${esc(s.day)}</small></a>`).join("") + `<a href="../bowling.html" style="--c:#8b5cf6">Bowling<small>Sabah Electricity Bowling</small></a><a href="../mlbb.html" style="--c:#f59e0b">Mobile Legends<small>E-Sport HQ Championship</small></a>`;
+    `<a href="#${id}" class="${id === sport ? "on" : ""}" style="--c:${s.color}">${esc(s.name)}<small>${esc(s.day)}</small></a>`).join("") + `<a href="../bowling.html" style="--c:#8b5cf6">${esc(boardTabName(settings.sportInfo, "bowling"))}<small>Sabah Electricity Bowling</small></a><a href="../mlbb.html" style="--c:#f59e0b">${esc(boardTabName(settings.sportInfo, "mlbb"))}<small>E-Sport HQ Championship</small></a>`;
   document.documentElement.style.setProperty("--sport", SPORTS[sport].color);
   const on = $("#tabs .on");
   if (on) on.scrollIntoView({ inline: "center", block: "nearest" });
@@ -66,7 +66,7 @@ async function poll() {
     if (Date.now() - settingsAt > 60000) {
       settings = (await getJSON("settings")) || {};
       settingsAt = Date.now();
-      if (applySportInfo(settings.sportInfo)) { renderTabs(); render(); }
+      const tabsWere = $("#tabs").textContent; applySportInfo(settings.sportInfo); renderTabs(); if ($("#tabs").textContent !== tabsWere) render();
       renderHeader();
     }
   } catch (e) {

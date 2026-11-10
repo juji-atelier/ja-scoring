@@ -7,8 +7,8 @@
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 <meta name="theme-color" content="#F6F4F2">
 <title>Mobile Legends · Live Standings</title>
-<link rel="stylesheet" href="css/theme.css?v=20261110h">
-<script src="js/theme.js?v=20261110h"></script>
+<link rel="stylesheet" href="css/theme.css?v=20261110i">
+<script src="js/theme.js?v=20261110i"></script>
 <style>
 :root{--sport:#f59e0b;--ga:#D23A3A;--gb:#2F6FE0}
 *{box-sizing:border-box}
@@ -87,7 +87,7 @@ tr.cut td{border-bottom:2px dashed var(--gold)}
 .champ .w{font-family:Rajdhani,Inter;font-size:30px;font-weight:700;line-height:1.05;text-transform:uppercase;margin:4px 0 8px}
 .champ .o{display:flex;gap:6px 16px;flex-wrap:wrap;font-size:14px;font-weight:600;opacity:.95}
 </style>
-<script src="js/splash.js?v=20261110h"></script>
+<script src="js/splash.js?v=20261110i"></script>
 </head>
 <body>
 <header class="hd"><div class="wrap">
@@ -115,7 +115,7 @@ tr.cut td{border-bottom:2px dashed var(--gold)}
 <script type="module">
 // Mobile Legends standings for the HQ Games live page.
 // Data: Firebase  mlbb/live  — written by the JA ESPORT console (Group Stage tab).
-import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "./config.js?v=20261110h";
+import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "./config.js?v=20261110i";
 const BASE = String(firebaseConfig.databaseURL || "").replace(/\/$/, "");
 const POLL_MS = 12000;
 const $ = s => document.querySelector(s);
@@ -124,8 +124,11 @@ const DEMO = new URLSearchParams(location.search).has("demo");
 let D = null, lastOk = 0, timer = null;
 let sub = (() => { try { return sessionStorage.getItem("mlbbSub") || "table"; } catch (e) { return "table"; } })();
 
+let boardNames = {};
+const bname = (id, d) => String((boardNames[id] || {}).name || "").trim() || d;
 const sportTabs = () => { $("#tabs").innerHTML = Object.entries(SPORTS).map(([id, s]) => `<a href="live/#${id}" style="--c:${s.color}">${esc(s.name)}</a>`).join("")
-  + `<a href="bowling.html" style="--c:#8b5cf6">Bowling</a><a href="mlbb.html" class="on" style="--c:#f59e0b">Mobile Legends</a>`; };
+  + `<a href="bowling.html" style="--c:#8b5cf6">${esc(bname("bowling", "Bowling"))}</a><a href="mlbb.html" class="on" style="--c:#f59e0b">${esc(bname("mlbb", "Mobile Legends"))}</a>`;
+  const t = document.getElementById("title"); if (t) t.textContent = bname("mlbb", "Mobile Legends"); };
 sportTabs();
 setTimeout(() => { const on = $("#tabs .on"); if (on) on.scrollIntoView({ inline: "center", block: "nearest" }); }, 50);
 
@@ -153,6 +156,7 @@ async function poll() {
       const s = (await getJSON("settings").catch(() => null)) || {};
       settingsAt = Date.now();
       for (const [id, o] of Object.entries(s.sportInfo || {})) if (SPORTS[id] && o && String(o.name || "").trim()) SPORTS[id].name = String(o.name).trim();
+      boardNames = s.sportInfo || {};
       sportTabs();
       $("#ev").textContent = s.event || EVENT_DEFAULTS.name;
       $("#venue").textContent = s.venue || EVENT_DEFAULTS.venue;

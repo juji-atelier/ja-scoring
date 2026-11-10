@@ -5,9 +5,14 @@
 //  Every page calls applySportInfo() when it gets the settings, so the
 //  scorer header, the public tabs, Admin and the big screen all agree.
 // =====================================================================
-import { SPORTS } from "../config.js?v=20261110h";
+import { SPORTS } from "../config.js?v=20261110i";
 
 export const SPORT_BASE = Object.fromEntries(Object.entries(SPORTS).map(([id, s]) => [id, { name: s.name, day: s.day, venue: s.venue || "" }]));
+
+// Bowling and Mobile Legends have their own pages; only their name can be changed in Admin.
+// (Short names used on the public pages' tabs when Admin has not set one.)
+export const BOARD_TAB = { bowling: "Bowling", mlbb: "Mobile Legends" };
+export const boardTabName = (info, id) => String(((info && info[id]) || {}).name || "").trim() || BOARD_TAB[id] || id;
 
 export function applySportInfo(info) {
   let changed = false;

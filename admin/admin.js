@@ -1,10 +1,10 @@
-import { SPORTS, ADMIN_EMAIL, EVENT_DEFAULTS } from "../config.js?v=20261110h";
-import { publicRecord, standings, FORMATS, ENGINE_OF } from "../js/engines.js?v=20261110h";
-import { bowlingStandings, BOWL_ROOT } from "../js/bowling-data.js?v=20261110h";
-import { BOARDS, mlbbMatches } from "../js/boards.js?v=20261110h";
-import { applySportInfo, SPORT_BASE } from "../js/sportinfo.js?v=20261110h";
-import { firebaseConfig } from "../config.js?v=20261110h";
-import * as C from "../js/common.js?v=20261110h";
+import { SPORTS, ADMIN_EMAIL, EVENT_DEFAULTS } from "../config.js?v=20261110i";
+import { publicRecord, standings, FORMATS, ENGINE_OF } from "../js/engines.js?v=20261110i";
+import { bowlingStandings, BOWL_ROOT } from "../js/bowling-data.js?v=20261110i";
+import { BOARDS, mlbbMatches, applyBoardInfo, boardBaseName } from "../js/boards.js?v=20261110i";
+import { applySportInfo, SPORT_BASE } from "../js/sportinfo.js?v=20261110i";
+import { firebaseConfig } from "../config.js?v=20261110i";
+import * as C from "../js/common.js?v=20261110i";
 const { $, $$, esc, toast, ref } = C;
 
 if (!C.configured) { C.notConfiguredScreen(); throw new Error("not configured"); }
@@ -51,7 +51,8 @@ function start() {
   C.onValue(ref(db, "settings"), s => {
     settings = s.val() || {};
     // sport names / dates / venues edited below are used everywhere on this page
-    if (applySportInfo(settings.sportInfo)) { fillSportSelects(); renderLinks(); renderOverview(); fillMatchSelect(); }
+    const sc = applySportInfo(settings.sportInfo), bc = applyBoardInfo(settings.sportInfo);
+    if (sc || bc) { fillSportSelects(); renderLinks(); renderOverview(); fillMatchSelect(); }
     fillScreenForm();
   });
   renderLinks();
@@ -177,7 +178,7 @@ function bowlingCard() {
   const top = (lbl, x, v) => x ? `<div class="mini"><span>${lbl}: <b>${esc(x.n || x.t)}</b>${x.t && x.n ? ` <span class="muted">${esc(x.t)}</span>` : ""}</span><b>${v}</b></div>` : "";
   const BW = BASE + "bowling.html";
   return `<div class="scard" style="--c:#8b5cf6">
-    <div class="row"><h4 style="flex:1">Tenpin Bowling</h4><span class="muted" style="font-size:12px">${bowl.updated ? "last update " + new Date(bowl.updated).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "no scores yet"}</span></div>
+    <div class="row"><h4 style="flex:1">${esc(BOARDS.bowling.name)}</h4><span class="muted" style="font-size:12px">${bowl.updated ? "last update " + new Date(bowl.updated).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "no scores yet"}</span></div>
     <div class="cnt"><span><b>${entered}</b>/${slots} scores</span><span><b>${verified}</b>/${bw.teams.length} verified</span><span>${R.games} games</span></div>
     <div class="pbar"><i style="width:${slots ? Math.round(entered / slots * 100) : 0}%"></i></div>
     ${bw.anyScore ? top("Top team", bw.teams[0], bw.teams[0].total) + top("Top man", bw.men[0], bw.men[0] ? bw.men[0].total : "") + top("Top woman", bw.women[0], bw.women[0] ? bw.women[0].total : "") : ""}
@@ -270,7 +271,9 @@ function fillSportInfo() {
   const cell = (id, k, ph, max) => `<td><input data-si="${id}" data-k="${k}" maxlength="${max}" value="${esc((info[id] || {})[k] || "")}" placeholder="${esc(ph)}"></td>`;
   $("#sportInfo").innerHTML = `<table class="sitab"><tr><th>Sport</th><th>Name shown</th><th>Date</th><th>Venue</th></tr>` +
     Object.keys(SPORTS).map(id => { const b = SPORT_BASE[id];
-      return `<tr><td><b style="color:${SPORTS[id].color}">●</b> ${esc(b.name)}</td>${cell(id, "name", b.name, 30)}${cell(id, "day", b.day, 24)}${cell(id, "venue", b.venue || main + " (main venue)", 90)}</tr>`; }).join("") + `</table>`;
+      return `<tr><td><b style="color:${SPORTS[id].color}">●</b> ${esc(b.name)}</td>${cell(id, "name", b.name, 30)}${cell(id, "day", b.day, 24)}${cell(id, "venue", b.venue || main + " (main venue)", 90)}</tr>`; }).join("") +
+    // bowling / Mobile Legends: name only – their date and venue are set on their own pages
+    Object.entries(BOARDS).map(([id, b]) => `<tr><td><b style="color:${b.color}">●</b> ${esc(boardBaseName(id))}</td>${cell(id, "name", boardBaseName(id), 30)}<td colspan="2" class="muted" style="font-size:12px">date and venue are set on its own page</td></tr>`).join("") + `</table>`;
 }
 $("#btnSaveSportInfo").onclick = async () => {
   const out = {};
@@ -382,24 +385,26 @@ $("#btnClear").onclick = () => clearSport(false);
 $("#btnClearMatches").onclick = () => clearSport(true);
 
 // ---------------- prize giving
-const AW_CATS = [
+// built fresh each time, so a sport renamed in Admin shows its new name here and on the big screen
+const awCats = () => [
   ...Object.entries(SPORTS).map(([id, s]) => ({ id, label: s.name, color: s.color })),
   ...Object.values(BOARDS).flatMap(b => (b.awards || []).map(([id, label]) => ({ id, label, color: b.color })))
 ];
 const PLACES = ["1st", "2nd", "3rd"];
 function awardsFromForm() {
-  return AW_CATS.map(c => ({ id: c.id, label: c.label, color: c.color,
+  return awCats().map(c => ({ id: c.id, label: c.label, color: c.color,
     p: PLACES.map((_, i) => (($(`#awardsForm input[data-c="${c.id}"][data-i="${i}"]`) || {}).value || "").trim()) }));
 }
 function fillAwards(saved) {
   const cur = {};
   (Array.isArray(saved) ? saved : Object.values(saved || {})).forEach(a => { if (a && a.id) cur[a.id] = a.p || []; });
+  for (const c of awCats()) { const el = $(`#awardsForm [data-awl="${c.id}"]`); if (el) el.textContent = c.label; }
   if (!$("#awardsForm table")) {
     $("#awardsForm").innerHTML = `<table class="aw"><tr><th>Category</th>${PLACES.map(p => `<th>${p}</th>`).join("")}</tr>` +
-      AW_CATS.map(c => `<tr><td style="--c:${c.color}"><i></i>${esc(c.label)}</td>${PLACES.map((_, i) =>
+      awCats().map(c => `<tr><td style="--c:${c.color}"><i></i><span data-awl="${c.id}">${esc(c.label)}</span></td>${PLACES.map((_, i) =>
         `<td><input data-c="${c.id}" data-i="${i}" placeholder="—"></td>`).join("")}</tr>`).join("") + `</table>`;
   }
-  AW_CATS.forEach(c => PLACES.forEach((_, i) => {
+  awCats().forEach(c => PLACES.forEach((_, i) => {
     const el = $(`#awardsForm input[data-c="${c.id}"][data-i="${i}"]`);
     if (el && document.activeElement !== el) el.value = (cur[c.id] || [])[i] || "";
   }));
@@ -440,7 +445,7 @@ $("#btnAutoAwards").onclick = async () => {
   const ml = ((boardData.mlbb || {}).playoffs) || {};
   if (ml.champion) auto.mlbb = [ml.champion, ml.runner || "", ml.third || ""];
   let filled = 0;
-  for (const c of AW_CATS) (auto[c.id] || []).forEach((v, i) => {
+  for (const c of awCats()) (auto[c.id] || []).forEach((v, i) => {
     const el = $(`#awardsForm input[data-c="${c.id}"][data-i="${i}"]`);
     if (el && v) { el.value = v; filled++; }
   });

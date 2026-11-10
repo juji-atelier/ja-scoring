@@ -10,7 +10,7 @@
 //  (SPORTS) and js/engines.js (FORMATS / ENGINE_OF) instead; Admin picks
 //  those up the same way.
 // =====================================================================
-import { BOWL_ROOT } from "./bowling-data.js?v=20261110h";
+import { BOWL_ROOT } from "./bowling-data.js?v=20261110i";
 
 // Mobile Legends: every match in the data published by the JA ESPORT console (mlbb/live)
 export function mlbbMatches(D) {
@@ -22,6 +22,19 @@ export function mlbbMatches(D) {
   if (p.final) out.push({ ...p.final, label: "Final" });
   return out;
 }
+
+// Names changed in Admin (settings/sportInfo/<id>/name); blank = the name written below.
+let BOARD_BASE = null;
+export function applyBoardInfo(info) {
+  BOARD_BASE = BOARD_BASE || Object.fromEntries(Object.entries(BOARDS).map(([id, b]) => [id, b.name]));
+  let changed = false;
+  for (const [id, b] of Object.entries(BOARDS)) {
+    const n = String(((info && info[id]) || {}).name || "").trim() || BOARD_BASE[id];
+    if (b.name !== n) { b.name = n; changed = true; }
+  }
+  return changed;
+}
+export const boardBaseName = id => (BOARD_BASE && BOARD_BASE[id]) || BOARDS[id].name;
 
 export const BOARDS = {
   bowling: {

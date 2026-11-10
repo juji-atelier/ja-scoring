@@ -1,10 +1,10 @@
-import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261110h";
-import { clockMs, mmss } from "../js/engines.js?v=20261110h";
-import * as C from "../js/common.js?v=20261110h";
-import { applySportInfo } from "../js/sportinfo.js?v=20261110h";
-import { BOARDS, mlbbMatches } from "../js/boards.js?v=20261110h";
-import { bowlingStandings } from "../js/bowling-data.js?v=20261110h";
-import { firebaseConfig } from "../config.js?v=20261110h";
+import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261110i";
+import { clockMs, mmss } from "../js/engines.js?v=20261110i";
+import * as C from "../js/common.js?v=20261110i";
+import { applySportInfo } from "../js/sportinfo.js?v=20261110i";
+import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261110i";
+import { bowlingStandings } from "../js/bowling-data.js?v=20261110i";
+import { firebaseConfig } from "../config.js?v=20261110i";
 const { $, esc, ref } = C;
 
 const P = new URLSearchParams(location.search);
@@ -18,7 +18,7 @@ let pub = {}, settings = {};
 let current = null, rotStart = 0, rotList = [];
 
 C.onValue(ref(C.db, "pub"), s => { pub = s.val() || {}; render(); checkGoals(); });
-C.onValue(ref(C.db, "settings"), s => { settings = s.val() || {}; applySportInfo(settings.sportInfo); rotStart = 0; render(); });
+C.onValue(ref(C.db, "settings"), s => { settings = s.val() || {}; applySportInfo(settings.sportInfo); applyBoardInfo(settings.sportInfo); rotStart = 0; render(); });
 // Boards with their own page (bowling, Mobile Legends) can be shown here too – see js/boards.js.
 // Their data is only loaded while Admin has them pinned or ticked for the rotation.
 const boardData = {}, boardOn = {};
@@ -60,7 +60,7 @@ function renderOffline() {
 setInterval(renderOffline, 2000);
 let bowlAnn = null;   // bowling has its own page; its announcement lives at bowling2026/ann
 C.onValue(ref(C.db, "bowling2026/ann"), s => { bowlAnn = s.val(); renderAnn(); }, () => {});
-const ANN_SRC = { bowling: { name: "Bowling", color: "#8b5cf6" } };
+const ANN_SRC = { bowling: BOARDS.bowling };   // name follows Admin
 
 const recs = sp => Object.entries((pub[sp] && pub[sp].m) || {}).map(([id, r]) => ({ id, ...r }));
 const byNo = (x, y) => (Number(x.no) || 9999) - (Number(y.no) || 9999);
@@ -284,15 +284,15 @@ function renderView() {
 // ---------------- bowling standings (teams on the left, top bowlers on the right)
 function bowlingHTML() {
   const D = boardData.bowling;
-  if (!D) return `<div class="col"><h2>Tenpin Bowling</h2><div class="empty">Loading…</div></div><div class="col"></div>`;
+  if (!D) return `<div class="col"><h2>${esc(BOARDS.bowling.name)}</h2><div class="empty">Loading…</div></div><div class="col"></div>`;
   const bw = bowlingStandings(D), N = bw.N;
-  if (!bw.anyScore) return `<div class="col"><h2>Tenpin Bowling</h2><div class="empty">Scores will appear here soon.</div></div><div class="col"></div>`;
+  if (!bw.anyScore) return `<div class="col"><h2>${esc(BOARDS.bowling.name)}</h2><div class="empty">Scores will appear here soon.</div></div><div class="col"></div>`;
   const teams = bw.teams, two = teams.length > 11;
   const trow = (t, i) => `<div class="bw-r ${t.done >= t.slots ? "fin" : ""}"><span class="bw-p cond">${bw.rankOf(teams, i)}</span><span class="bw-n cond">${esc(t.t)}</span>
     <span class="bw-g">${t.done >= t.slots ? "Final" : t.done ? "Game " + Math.min(N, Math.ceil(t.done / Math.max(1, t.mem.length))) + "/" + N : ""}</span><span class="bw-t cond" data-k="bw:${esc(t.t)}">${t.done ? t.total : "–"}</span></div>`;
   const plist = arr => arr.length ? `<div class="list">` + arr.slice(0, 5).map((p, i) => `<div class="it"><span class="n">${bw.rankOf(arr, i)}</span>
     <span class="t">${i === 0 ? `<b>${esc(p.n)}</b>` : esc(p.n)} <span style="color:var(--muted);font-weight:500">· ${esc(p.t)}</span></span><span class="s">${p.total}</span></div>`).join("") + `</div>` : `<div class="empty">No scores yet</div>`;
-  return `<div class="col"><h2>Team standings · Tenpin Bowling</h2><div class="bw ${two ? "two" : ""}" style="--rows:${two ? Math.ceil(teams.length / 2) : teams.length}">${teams.map(trow).join("")}</div></div>
+  return `<div class="col"><h2>Team standings · ${esc(BOARDS.bowling.name)}</h2><div class="bw ${two ? "two" : ""}" style="--rows:${two ? Math.ceil(teams.length / 2) : teams.length}">${teams.map(trow).join("")}</div></div>
     <div class="col"><h2>Top men</h2>${plist(bw.men)}<h2>Top women</h2>${plist(bw.women)}</div>`;
 }
 
