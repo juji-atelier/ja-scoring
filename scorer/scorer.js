@@ -1,8 +1,8 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261112c";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261112d";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS } from "../js/engines.js?v=20261112c";
-import * as C from "../js/common.js?v=20261112c";
-import { applySportInfo } from "../js/sportinfo.js?v=20261112c";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor } from "../js/engines.js?v=20261112d";
+import * as C from "../js/common.js?v=20261112d";
+import { applySportInfo } from "../js/sportinfo.js?v=20261112d";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -319,18 +319,25 @@ function scoreCells(m) {
 function matchCard(m, st) {
   const [sa, sb] = scoreCells(m);
   const lk = lockedByOther(m) ? `<span class="badge lock">🔒 ${esc(m.lock.name)}</span>` : "";
-  const live = st === "live" ? `<span class="badge live">LIVE</span>` : "";
   const v = st !== "scheduled" ? view(S, m, C.now()) : null;
-  return `<button class="mcard ${st}" data-open="${m.id}">
-    <div class="mtop">${m.event ? `<span class="badge cat">${esc(m.event)}</span>` : ""}<span>#${esc(m.no)}</span>${m.time ? `<span>${esc(m.time)}</span>` : ""}
-      ${m.court ? `<span>Court ${esc(m.court)}</span>` : ""}${m.round ? `<span>${esc(m.round)}</span>` : ""}
-      <span style="flex:1"></span>${live}${lk}</div>
-    <div class="mteams"><span class="${m.winner === "a" && st === "done" ? "win" : ""}">${esc(tn(m.teamA))}${tp(m.teamA) ? `<small class="mpl">${esc(tp(m.teamA))}</small>` : ""}</span><b>${sa}</b>
-      <span class="${m.winner === "b" && st === "done" ? "win" : ""}">${esc(tn(m.teamB))}${tp(m.teamB) ? `<small class="mpl">${esc(tp(m.teamB))}</small>` : ""}</span><b>${sb}</b></div>
+  const col = catColor(m.event || "", Object.values(matches).map(x => x.event || ""));
+  const round = m.round && !/^group stage$/i.test(m.round) ? m.round : "";
+  const lead = side => {
+    if (st === "done") return m.winner === side ? "win" : "";
+    if (st !== "live" || !v || !v.big) return "";
+    const [x, y] = v.big.map(Number); return (side === "a" ? x > y : y > x) ? "lead" : "";
+  };
+  const row = (side, id, sc) => `<div class="mrow ${lead(side)}"><div><div class="mnm">${esc(tn(id))}</div>${tp(id) ? `<div class="mpl">${esc(tp(id))}</div>` : ""}</div><b>${sc}</b></div>`;
+  return `<button class="mcard m2 ${st}" data-open="${m.id}" style="--c:${col}">
+    <div class="mtop">${st === "live" ? `<span class="badge live">LIVE</span>` : ""}${m.event ? `<span class="mcat">${esc(m.event)}</span>` : ""}
+      <span>#${esc(m.no)}${m.time ? " · " + esc(m.time) : ""}</span>${round ? `<span>${esc(round)}</span>` : ""}
+      <span style="flex:1"></span>${lk}${m.court ? `<span class="mct">C${esc(m.court)}</span>` : ""}</div>
+    ${row("a", m.teamA, sa)}${row("b", m.teamB, sb)}
     ${v && v.hist ? `<div class="muted" style="font-size:13px;margin-top:4px">${esc(v.hist)}</div>` : ""}
   </button>`;
 }
 function renderList() {
+  renderProgress($("#progress"), true);
   renderNextStep($("#nextStep"));
   const all = arrMatches();
   const mc = m => m.event || "";
@@ -785,6 +792,10 @@ function rallyBody(m, f, mine, order) {
       <span class="muted" style="font-weight:400"> or Undo if the last point was wrong.</span></div>`;
   else if (live && d.interval) h += `<div class="banner warn">Interval — ${d.rules.points === 21 || d.rules.points === 15 ? Math.ceil(d.rules.points / 2) : "half"} points reached${d.deciding ? ". Change ends." : "."}</div>`;
   else if (live) h += `<div class="ptitle">${UNIT} ${d.gameNo}${d.deciding ? " · decider" : ""} · to ${d.rules.points}${d.rules.cap ? " (max " + d.rules.cap + ")" : ""}</div>`;
+  if (live && !d.winner) {
+    const ps = ["a", "b"].filter(x => d.point[x]);
+    if (ps.length) h += `<div class="gpban ${d.point[ps[0]] === "MATCH POINT" ? "mp" : ""}">${esc(d.point[ps[0]])}<small>${esc(sideName(m, ps[0]))} · one more point wins the ${d.point[ps[0]] === "MATCH POINT" ? "match" : UNIT.toLowerCase()}</small></div>`;
+  }
   h += `<div class="court">` + order.map(s => sideBox(m, s, {
     button: true, disabled: !mine || !live || !!d.winner,
     big: d.winner ? d.won[s === "a" ? 0 : 1] : d.cur[s === "a" ? 0 : 1],
@@ -969,6 +980,8 @@ function nextNo() {
 
 let editingTeam = null;   // team being edited in Setup
 function renderSetup() {
+  renderProgress($("#progressSetup"), false);
+  renderTC();
   // form selects (keep current choices)
   refreshTeamSelects();
   fillCatList();
@@ -1234,8 +1247,103 @@ async function genRR(g, court, ask = true) {
 }
 $("#btnRR").onclick = async () => {
   const n = await genRR($("#rrGroup").value, $("#rrCourt").value);
-  if (n) toast(`${n} matches created`);
+  if (n) toast(`${n} match${n > 1 ? "es" : ""} created`);
 };
+
+// ---------------------------------------------------------------- setup progress (Teams → Matches → Times & courts → Ready)
+function setupState() {
+  const tl = Object.values(teams), ml = Object.values(matches);
+  const by = {}; tl.forEach(t => { const k = keyOf(t); if (k) by[k] = (by[k] || 0) + 1; });
+  const used = new Set(ml.map(m => String(m.group || "").toUpperCase()));
+  const noMatch = Object.entries(by).filter(([k, n]) => n >= 2 && !used.has(k)).length;
+  const missing = ml.filter(m => (m.status || "scheduled") === "scheduled" && (!String(m.time || "").trim() || !String(m.court || "").trim())).length;
+  const started = ml.some(m => m.status === "live" || m.status === "done");
+  const t1 = tl.length >= 2, t2 = t1 && ml.length > 0 && !noMatch, t3 = ml.length > 0 && !missing;
+  return { teams: tl.length, matches: ml.length, noMatch, missing, started, t1, t2, t3, ready: t1 && t2 && t3 };
+}
+function renderProgress(el, withTodo) {
+  if (!el) return;
+  const st = setupState();
+  if (st.started) { el.innerHTML = ""; return; }          // match day: get out of the way
+  const now = !st.t1 ? 1 : !st.t2 ? 2 : !st.t3 ? 3 : 4;
+  const step = (n, label, sub, done) => `<div class="step ${done ? "done" : n === now ? "now" : ""}"><i>${done ? "✓" : n}</i>${label}<small>${sub}</small></div>`;
+  let h = `<div class="steps">${step(1, "Teams", st.teams ? st.teams + " added" : "none yet", st.t1)}${step(2, "Matches", st.matches ? st.matches + " made" : "none yet", st.t2)}${step(3, "Times & courts", st.matches ? (st.missing ? st.missing + " left" : "all set") : "–", st.t3)}${step(4, "Ready", st.ready ? "let's go!" : "", st.ready)}</div>`;
+  if (withTodo && now === 1) h += `<div class="todo"><h4>Next: add your teams</h4><p>Add each team (or pair) under its category.</p><button class="primary small" data-go="teams">Go to Teams →</button></div>`;
+  else if (withTodo && now === 2 && !st.noMatch) h += `<div class="todo"><h4>Next: add matches</h4><p>Use Setup → Generate round-robin, Paste the schedule, or Add match.</p><button class="primary small" data-go="setup">Go to Setup →</button></div>`;
+  else if (withTodo && now === 3) h += `<div class="todo"><h4>Next: set time &amp; court for ${st.missing} match${st.missing > 1 ? "es" : ""}</h4><p>Fill them all on one screen – or let Quick fill do it.</p><button class="primary small" data-go="tc">Set times &amp; courts →</button></div>`;
+  el.innerHTML = h;
+  $$("[data-go]", el).forEach(b => b.onclick = () => {
+    const g = b.dataset.go;
+    goTab(g === "tc" ? "setup" : g);
+    if (g === "tc") setTimeout(() => $("#tcCard").scrollIntoView({ behavior: "smooth" }), 60);
+  });
+}
+
+// ---------------------------------------------------------------- times & courts (all matches on one screen)
+let tcCat = null;
+const parseT = t => {   // "10:30 AM", "10.30am", "14:30", "1030" → minutes after midnight
+  const x = String(t || "").trim().match(/^(\d{1,2})[:.]?(\d{2})?\s*([ap])?\.?m?\.?$/i);
+  if (!x) return null;
+  let h = +x[1]; const mi = +(x[2] || 0), ap = (x[3] || "").toLowerCase();
+  if (h > 23 || mi > 59) return null;
+  if (ap === "p" && h < 12) h += 12; if (ap === "a" && h === 12) h = 0;
+  return h * 60 + mi;
+};
+const fmtT = min => { min = ((min % 1440) + 1440) % 1440; const h = Math.floor(min / 60), m = min % 60; return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; };
+function renderTC() {
+  const el = $("#tcCard");
+  if (!el) return;
+  if (el.contains(document.activeElement) && document.activeElement.tagName === "INPUT") return;   // don't wipe what is being typed
+  const all = arrMatches();
+  if (!all.length) { el.classList.add("hide"); return; }
+  el.classList.remove("hide");
+  const catsM = [...new Set(all.map(m => m.event || "Other"))].sort((a, b) => a.localeCompare(b));
+  const miss = c => all.filter(m => (m.event || "Other") === c && (m.status || "scheduled") === "scheduled" && (!m.time || !m.court)).length;
+  if (!tcCat || !catsM.includes(tcCat)) tcCat = catsM.find(c => miss(c)) || catsM[0];
+  const list = all.filter(m => (m.event || "Other") === tcCat);
+  const sched = list.filter(m => (m.status || "scheduled") === "scheduled");
+  const firstT = sched.map(m => parseT(m.time)).find(x => x != null);
+  el.innerHTML = `<h3 style="margin:0 0 4px">Times &amp; courts</h3>
+    <p class="muted" style="margin:0;font-size:13px">Type straight into the boxes – each one saves when you leave it.</p>
+    ${catsM.length > 1 ? `<div class="chips" style="margin:10px 0 4px">${catsM.map(c => `<button data-tcc="${esc(c)}" class="${c === tcCat ? "on" : ""}">${esc(c)} ${miss(c) ? `· ${miss(c)} left` : "✓"}</button>`).join("")}</div>` : ""}
+    ${sched.length ? `<div class="qfill"><span class="full">⚡ Quick fill all ${sched.length} at once</span>
+      <label>Start</label><input id="qfStart" value="${firstT != null ? fmtT(firstT) : "9:00 AM"}">
+      <label>Every</label><input id="qfEvery" inputmode="numeric" value="${store("ja_qfevery_" + S) || 25}" placeholder="min">
+      <label>Court</label><input id="qfCourt" value="${esc((sched.find(m => m.court) || {}).court || "")}" placeholder="e.g. 1">
+      <span></span><button class="small primary" id="btnQF">Fill</button></div>` : ""}
+    <div class="qhead"><span>#</span><span>Match</span><span>Time</span><span>Court</span></div>
+    ${list.map(m => { const lock = (m.status || "scheduled") !== "scheduled";
+      return `<div class="qrow"><span class="n">${esc(m.no)}</span><span class="t">${esc(tn(m.teamA))}<small>vs ${esc(tn(m.teamB))}${lock ? " · " + esc(m.status) : ""}</small></span>
+        <input data-tid="${m.id}" data-f="time" class="${m.time ? "f" : ""}" value="${esc(m.time || "")}" placeholder="time" ${lock ? "disabled" : ""}>
+        <input data-tid="${m.id}" data-f="court" class="${m.court ? "f" : ""}" value="${esc(m.court || "")}" placeholder="–" ${lock ? "disabled" : ""}></div>`; }).join("")}`;
+  $$("[data-tcc]", el).forEach(b => b.onclick = () => { tcCat = b.dataset.tcc; renderTC(); });
+  $$("input[data-tid]", el).forEach(inp => {
+    inp.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } };
+    inp.onchange = async () => {
+      const id = inp.dataset.tid, f = inp.dataset.f, m = matches[id];
+      if (!m) return;
+      let val = inp.value.trim();
+      if (f === "time" && val) { const t = parseT(val); if (t == null) { toast("Time like 9:30 AM"); return; } val = fmtT(t); inp.value = val; }
+      try { await C.update(matchRef(id), { [f]: val, updatedAt: C.now() }); } catch (e) { toast("Couldn't save – check the connection"); return; }
+      inp.classList.toggle("f", !!val);
+      publish(id, { ...m, [f]: val });
+    };
+  });
+  const qf = $("#btnQF", el);
+  if (qf) qf.onclick = async () => {
+    const start = parseT($("#qfStart").value), every = Number($("#qfEvery").value), court = $("#qfCourt").value.trim();
+    if (start == null) return toast("Start time like 9:00 AM");
+    if (!(every > 0)) return toast("Minutes between matches, e.g. 25");
+    if (sched.some(m => m.time || m.court) && !confirm(`Fill time${court ? " and court" : ""} for all ${sched.length} ${tcCat} matches?\nTimes already typed will be replaced.`)) return;
+    store("ja_qfevery_" + S, String(every));
+    const upd = {};
+    sched.forEach((m, i) => { upd[`${m.id}/time`] = fmtT(start + i * every); if (court) upd[`${m.id}/court`] = court; upd[`${m.id}/updatedAt`] = C.now(); });
+    try { await C.update(ref(db, `sports/${S}/matches`), upd); } catch (e) { toast("Couldn't save – check the connection"); return; }
+    sched.forEach((m, i) => publish(m.id, { ...m, time: fmtT(start + i * every), ...(court ? { court } : {}) }));
+    log("", { no: "" }, `times filled for ${tcCat}`);
+    toast(`${sched.length} matches filled`);
+  };
+}
 
 // ---------------------------------------------------------------- next step card
 // A category (or pool) with teams but no matches yet → offer to create them in one tap.
@@ -1261,7 +1369,7 @@ function renderNextStep(el) {
   $$("[data-nsgo]", el).forEach(b => b.onclick = async () => {
     b.disabled = true;
     const n = await genRR(b.dataset.nsgo, "", false);
-    if (n) toast(`${n} matches created. Set each match's time and court in Setup → Edit.`, 5000);
+    if (n) toast(`${n} match${n > 1 ? "es" : ""} created. Next: set times & courts in Setup.`, 5000);
     else b.disabled = false;
   });
   $$("[data-nsskip]", el).forEach(b => b.onclick = () => {
@@ -1326,7 +1434,7 @@ function renderGuide() {
       <li><b>Teams tab:</b> pick the category, then add each team with its players (e.g. <i>VOLTRA – Irfan / Ali</i>). Use “Paste many teams” to add a whole category at once.</li>
       <li>When a category has its teams, a <b>“Create matches”</b> card appears on the Matches tab – one tap makes every match for that category.</li>
       <li>Or use <b>Setup tab → Generate round-robin:</b> pick a category to create all its matches in one go. Or paste the whole schedule from Excel with <b>Paste the schedule</b>, or add matches one by one with <b>Add match</b>.</li>
-      <li>Then <b>Edit</b> each match to set the <b>time</b>, <b>court</b> and, if needed, the <b>format</b>.</li>
+      <li>Then open <b>Setup → Times &amp; courts</b>: type each match's time and court, or use <b>⚡ Quick fill</b> (start time, minutes between matches, court) to fill a whole category at once. The progress bar on the Matches tab shows what's left.</li>
       <li>Standings are worked out automatically for each category from confirmed results.</li></ol>`)}
     ${sec("Tips", `<ul>
       <li>Charge the phone fully and keep the screen on. Turn the brightness up.</li>

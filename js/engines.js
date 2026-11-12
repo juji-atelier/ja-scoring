@@ -322,3 +322,13 @@ export function publicRecord(sport, m, teams) {
   }
   return JSON.parse(JSON.stringify(rec));
 }
+
+// Colour for each category, by its position in the sport's sorted category list.
+// Same order on the scorer phone and the big screen, so a category keeps its colour.
+const CAT_LIGHT = ["#2563eb", "#c026d3", "#16a34a", "#ea580c", "#0891b2", "#ca8a04", "#db2777", "#7c3aed"];
+const CAT_DARK  = ["#60a5fa", "#e879f9", "#4ade80", "#fb923c", "#22d3ee", "#facc15", "#f472b6", "#a78bfa"];
+export function catColor(cat, allCats, dark) {
+  const list = [...new Set((allCats || []).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const i = Math.max(0, list.indexOf(cat));
+  return (dark ? CAT_DARK : CAT_LIGHT)[i % CAT_LIGHT.length];
+}

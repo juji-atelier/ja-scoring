@@ -7,8 +7,8 @@
 <link rel="icon" type="image/png" sizes="192x192" href="../img/icon-192.png">
 <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
 <title>Big Screen · JA Scoring</title>
-<link rel="stylesheet" href="../css/theme.css?v=20261112c">
-<script src="../js/theme.js?v=20261112c"></script>
+<link rel="stylesheet" href="../css/theme.css?v=20261112d">
+<script src="../js/theme.js?v=20261112d"></script>
 <style>
 :root{--sport:#B3162D;--bg:#16181D;--card:#23262E;--line:#343844;--text:#F2F3F5;--muted:#9A9FAA;--gold:#D2AC70}
 *{box-sizing:border-box}
@@ -71,6 +71,17 @@ main.solo{grid-template-columns:1fr}
 .list .it .s{font-weight:900;font-variant-numeric:tabular-nums}
 .list + h2{margin-top:1.4vw}
 .empty{color:var(--muted);font-size:1.3vw;padding:1vw 0}
+.card[style*="--cc"]{border-left-color:var(--cc)}
+.card .meta{flex-wrap:wrap;row-gap:.35vw;align-items:center}
+.card .meta>span{white-space:nowrap}
+.card .meta .ctb{background:var(--text,#ECEDEF);color:var(--bg,#16181d);border-radius:.4vw;padding:0 .6vw;font-weight:900;letter-spacing:.06em}
+.card .meta .evc{color:var(--cc,var(--muted));font-weight:800}
+.card .meta .ptb{background:linear-gradient(120deg,#D2AC70,#9a7442);color:#16181d;border-radius:.4vw;padding:0 .6vw;font-weight:900;letter-spacing:.12em}
+.grid.courts{grid-auto-rows:1fr}
+.card.idle{display:flex;flex-direction:column;opacity:.85;border-left-color:var(--line)}
+.card.idle .idlebox{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4vw;text-align:center;color:var(--muted);font-size:1.2vw;font-weight:700;padding:1vw 0}
+.card.idle .idlebox b{color:var(--text,#ECEDEF);font-size:calc(var(--nm,2.2vw)*.9)}
+.card.idle .idlebox i{font-style:normal;color:var(--cc,var(--muted));font-size:1vw;letter-spacing:.08em}
 
 /* featured */
 .feat{display:flex;flex-direction:column;justify-content:center;height:100%;gap:1.5vw}
@@ -187,6 +198,6 @@ body.fx .aw-wrap{position:relative;z-index:1}
   <div class="ann" id="ann" hidden></div>
   <div class="tick"><div class="lbl cond">RESULTS</div><div class="mq"><span id="ticker"></span></div><div class="ja"><span class="jamark"></span>JUJI-ATELIER</div></div>
 </div>
-<script type="module" src="display.js?v=20261112c"></script>
+<script type="module" src="display.js?v=20261112d"></script>
 </body>
 </html>

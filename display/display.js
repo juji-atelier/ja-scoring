@@ -1,10 +1,10 @@
-import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261112c";
-import { clockMs, mmss } from "../js/engines.js?v=20261112c";
-import * as C from "../js/common.js?v=20261112c";
-import { applySportInfo } from "../js/sportinfo.js?v=20261112c";
-import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261112c";
-import { bowlingStandings } from "../js/bowling-data.js?v=20261112c";
-import { firebaseConfig } from "../config.js?v=20261112c";
+import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261112d";
+import { clockMs, mmss, catColor } from "../js/engines.js?v=20261112d";
+import * as C from "../js/common.js?v=20261112d";
+import { applySportInfo } from "../js/sportinfo.js?v=20261112d";
+import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261112d";
+import { bowlingStandings } from "../js/bowling-data.js?v=20261112d";
+import { firebaseConfig } from "../config.js?v=20261112d";
 const { $, esc, ref } = C;
 
 const P = new URLSearchParams(location.search);
@@ -98,13 +98,13 @@ function clockSpan(v) {
   return ` · <span class="clk" data-run="${c.run ? 1 : 0}" data-st="${c.st || 0}" data-el="${c.el || 0}" data-len="${c.len || 0}">--:--</span>`;
 }
 
-function rowHTML(r, s) {
+function rowHTML(r, s, tagOn = true) {
   const i = s === "a" ? 0 : 1;
   const v = r.v || {};
   const done = r.st === "done", sched = r.st === "scheduled";
   const big = sched ? "" : done ? (r.wo ? (r.w === s ? "W/O" : "") : (r.sc || [])[i]) : (v.big || [])[i];
   const small = !sched && !done && v.small ? v.small[i] : "";
-  const tag = r.st === "live" ? (s === "a" ? v.tagA : v.tagB) : "";
+  const tag = tagOn && r.st === "live" ? (s === "a" ? v.tagA : v.tagB) : "";
   return `<div class="trow ${done && r.w === s ? "win" : ""}">
     <span class="srv ${r.st === "live" && v.srv === s ? "on" : ""}"></span>
     <span class="nm cond">${esc(r[s])}${tag ? `<span class="tag">${esc(tag)}</span>` : ""}${r["p" + s] ? `<span class="pl">${esc(r["p" + s])}</span>` : ""}</span>
@@ -112,12 +112,15 @@ function rowHTML(r, s) {
     <span class="bg cond" data-k="${esc(r.id)}:${s}">${big ?? ""}</span></div>`;
 }
 
+let catList = [];   // categories of the sport on screen (for their colours)
 function cardHTML(r) {
   const v = r.v || {};
   const st = r.st === "live" ? (v.stx || "Live") + clockSpan(v) : r.st === "done" ? "Final" : (r.tm || "Up next");
-  return `<div class="card ${r.st === "live" ? "lv" : ""}">
-    <div class="meta">${r.ct ? `<span>Court ${esc(r.ct)}</span>` : ""}<span>${esc(r.rd || "")}</span>${r.ev ? `<span>${esc(r.ev)}</span>` : ""}<span class="st">${st}</span></div>
-    ${rowHTML(r, "a")}${rowHTML(r, "b")}
+  const pt = r.st === "live" ? (v.tagA || v.tagB || "") : "";
+  const rd = r.rd && !/^group stage$/i.test(r.rd) ? r.rd : "";
+  return `<div class="card ${r.st === "live" ? "lv" : ""}" ${r.ev ? `style="--cc:${catColor(r.ev, catList, true)}"` : ""}>
+    <div class="meta">${r.ct ? `<span class="ctb">Court ${esc(r.ct)}</span>` : ""}${r.ev ? `<span class="evc">${esc(r.ev)}</span>` : ""}${rd ? `<span>${esc(rd)}</span>` : ""}${pt ? `<span class="ptb">${esc(pt)}</span>` : ""}<span class="st">${st}</span></div>
+    ${rowHTML(r, "a", false)}${rowHTML(r, "b", false)}
     ${v.hist ? `<div class="hist">${esc(v.hist)}</div>` : ""}</div>`;
 }
 
@@ -261,7 +264,21 @@ function renderView() {
     const done = all.filter(r => r.st === "done").sort((x, y) => (y.t || 0) - (x.t || 0));
     main.className = "";
     let left;
-    if (live.length) {
+    catList = all.map(r => r.ev || "");
+    const courts = [...new Set(all.map(r => String(r.ct || "")).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    if (live.length && courts.length >= 2 && courts.length <= 6) {
+      // every court keeps its own spot: live match, or what is next on that court
+      const cols = courts.length <= 4 ? 2 : 3;
+      const sz = cols === 2 ? "--nm:2.2vw;--big:3.8vw" : "--nm:1.6vw;--big:2.7vw";
+      const tile = c => {
+        const lv = live.find(r => String(r.ct) === c);
+        if (lv) return cardHTML(lv);
+        const nx = next.find(r => String(r.ct) === c);
+        return `<div class="card idle" ${nx && nx.ev ? `style="--cc:${catColor(nx.ev, catList, true)}"` : ""}><div class="meta"><span class="ctb">Court ${esc(c)}</span></div>
+          <div class="idlebox">${nx ? `<span>Next${nx.tm ? " at " + esc(nx.tm) : ""}</span><b class="cond">${esc(nx.a)} vs ${esc(nx.b)}</b>${nx.ev ? `<i>${esc(nx.ev)}</i>` : ""}` : `<span>Court free</span>`}</div></div>`;
+      };
+      left = `<h2><span class="live">LIVE</span> ${esc(SP.name)}</h2><div class="grid courts" style="--cols:${cols};${sz}">${courts.map(tile).join("")}</div>`;
+    } else if (live.length) {
       const n = live.length, cols = n === 1 ? 1 : n <= 4 ? 2 : 3;
       const sz = cols === 1 ? "--nm:3.6vw;--big:7vw" : cols === 2 ? "--nm:2.2vw;--big:3.8vw" : "--nm:1.6vw;--big:2.7vw";
       left = `<h2><span class="live">LIVE</span> ${esc(SP.name)}</h2><div class="grid" style="--cols:${cols};${sz}">${live.map(cardHTML).join("")}</div>`;
