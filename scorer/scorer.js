@@ -1,8 +1,8 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261112e";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261112f";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor } from "../js/engines.js?v=20261112e";
-import * as C from "../js/common.js?v=20261112e";
-import { applySportInfo } from "../js/sportinfo.js?v=20261112e";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor } from "../js/engines.js?v=20261112f";
+import * as C from "../js/common.js?v=20261112f";
+import { applySportInfo } from "../js/sportinfo.js?v=20261112f";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -1416,7 +1416,8 @@ function renderGuide() {
       <li>Open the ${esc(SP.name)} scorer link from the organiser.</li>
       <li>Type <b>your name and court</b>, e.g. <i>Ali – Court 1</i>. This shows who is scoring which match.</li>
       <li>Enter the ${esc(SP.name)} password and tap <b>Log in</b>. Each court uses its own phone; everyone can use the same password.</li>
-      <li>The small dot at the top is <b>green</b> when online. If it turns <b>red</b>, keep scoring – it will sync when the signal is back.</li></ol>`, true)}
+      <li>The small dot at the top is <b>green</b> when online. If it turns <b>red</b>, keep scoring – it will sync when the signal is back.</li>
+      <li>Need another scorer? On the Matches tab tap <b>📲 Share this scorer page</b> – they can scan the QR or get the link on WhatsApp. Tell them the password yourself.</li></ol>`, true)}
     ${sec("2 · Find your match", `<ol>
       <li>Go to the <b>Matches</b> tab. Tap your <b>category</b> (e.g. MIX DOUBLE) and your <b>court</b> at the top to see only your matches. The phone remembers this.</li>
       <li>Matches are listed as <b>Live now</b>, <b>Up next</b> and <b>Finished</b>.</li>
@@ -1491,7 +1492,32 @@ function renderAnnBar() {
 // this sport's own big screen (the same page OBS shows, filtered to this sport)
 const BIG_URL = new URL(`../display/?sport=${S}`, location.href).href;
 $("#bigBar").innerHTML = `<a class="bigbtn" href="${BIG_URL}" target="_blank" rel="noopener">
-  <span>📺 Open the ${esc(SP.name)} big screen</span><small>Live scores of this sport, full screen · opens in a new tab</small></a>`;
+  <span>📺 Open the ${esc(SP.name)} big screen</span><small>Live scores of this sport, full screen · opens in a new tab</small></a>
+  <button class="bigbtn sharebtn" id="btnShare" type="button"><span>📲 Share this scorer page</span><small>QR code or WhatsApp link for another AJK / scorer</small></button>`;
+
+// ---------------------------------------------------------------- share this scorer page
+const SCORER_URL = new URL(`./?sport=${S}`, location.href).href;
+function openShare() {
+  $("#shTitle").textContent = `📲 Share the ${SP.name} scorer page`;
+  $("#shUrl").textContent = SCORER_URL;
+  const box = $("#shQR");
+  if (!box.dataset.ready) {
+    if (window.QRCode) { new QRCode(box, { text: SCORER_URL, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M }); box.dataset.ready = "1"; }
+    else box.innerHTML = `<p class="muted">QR code needs internet – use the link below.</p>`;
+  }
+  $("#shNative").classList.toggle("hide", !navigator.share);
+  $("#shareModal").classList.remove("hide");
+}
+const shareText = () => `${SP.name} scorer page – HQ Games 2026\n${SCORER_URL}\n(Ask the AJK lead for the password)`;
+$("#btnShare").onclick = openShare;
+$("#shClose").onclick = () => $("#shareModal").classList.add("hide");
+$("#shareModal").onclick = e => { if (e.target.id === "shareModal") $("#shareModal").classList.add("hide"); };
+$("#shWa").onclick = () => window.open("https://wa.me/?text=" + encodeURIComponent(shareText()), "_blank");
+$("#shCopy").onclick = async () => {
+  try { await navigator.clipboard.writeText(SCORER_URL); toast("Link copied"); }
+  catch (e) { prompt("Copy this link:", SCORER_URL); }
+};
+$("#shNative").onclick = () => navigator.share({ title: `${SP.name} scorer`, text: shareText() }).catch(() => {});
 
 $("#annBar").addEventListener("click", e => {
   const b = e.target.closest("[data-ann]");

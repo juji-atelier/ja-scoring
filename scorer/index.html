@@ -7,10 +7,10 @@
 <link rel="icon" type="image/png" sizes="192x192" href="../img/icon-192.png">
 <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
 <meta name="theme-color" content="#F6F4F2">
-<script src="../js/hints.js?v=20261112e"></script>
-<script src="../js/theme.js?v=20261112e"></script>
+<script src="../js/hints.js?v=20261112f"></script>
+<script src="../js/theme.js?v=20261112f"></script>
 <title>Scorer · JA Scoring</title>
-<link rel="stylesheet" href="../css/app.css?v=20261112e">
+<link rel="stylesheet" href="../css/app.css?v=20261112f">
 </head>
 <body>
 <header class="top">
@@ -172,6 +172,21 @@
 
 <!-- FEEDBACK -->
 <div class="fbwrap hide" id="fbWrap"><button class="fbbtn" id="fbOpen" type="button">💬 Send feedback</button></div>
+<div class="modal hide" id="shareModal" role="dialog" aria-modal="true" aria-labelledby="shTitle">
+  <div class="sheet" style="text-align:center">
+    <h3 id="shTitle">📲 Share this scorer page</h3>
+    <p class="muted" style="margin-top:0" id="shSub">Let a teammate scan this, or send them the link.</p>
+    <div id="shQR" class="shqr"></div>
+    <p class="shurl" id="shUrl"></p>
+    <div class="shbtns">
+      <button type="button" class="primary" id="shWa">WhatsApp</button>
+      <button type="button" id="shCopy">Copy link</button>
+      <button type="button" id="shNative" class="hide">Share…</button>
+    </div>
+    <p class="muted" style="font-size:12.5px;margin:12px 0 4px">🔒 The password is <b>not</b> in the link. Tell your teammate the password yourself.</p>
+    <button type="button" class="ghost" id="shClose" style="width:100%;margin-top:6px">Close</button>
+  </div>
+</div>
 <div class="modal hide" id="fbModal" role="dialog" aria-modal="true" aria-labelledby="fbTitle">
   <div class="sheet">
     <h3 id="fbTitle">💬 Feedback</h3>
@@ -212,7 +227,8 @@
 </div>
 <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
 <div id="toast"></div>
-<script type="module" src="scorer.js?v=20261112e"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script type="module" src="scorer.js?v=20261112f"></script>
 <script src="../js/feedback.js?v=20261111a"></script>
 </body>
 </html>
