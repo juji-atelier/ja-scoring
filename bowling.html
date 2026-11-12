@@ -340,7 +340,7 @@ html[data-theme="dark"] body::after{background:radial-gradient(closest-side, col
 @keyframes jaDriftB{0%{transform:translate3d(0,0,0) scale(1)}100%{transform:translate3d(-45vw,22vh,0) scale(1.25)}}
 @media (prefers-reduced-motion:reduce){body::before,body::after{animation:none}}
 /* ---------- big faded JA watermark on the right of the title card ---------- */
-.hero:before{content:"";position:absolute;right:-34px;top:50%;width:300px;height:170px;transform:translateY(-50%) rotate(-8deg);background:#fff;opacity:.09;pointer-events:none;-webkit-mask:url(img/ja.svg) center/contain no-repeat;mask:url(img/ja.svg) center/contain no-repeat}
+.hero:before{content:"";position:absolute;right:-2.5%;top:50%;height:104%;width:auto;aspect-ratio:140/79;transform:translateY(-50%) rotate(-6deg);background:#fff;opacity:.09;pointer-events:none;-webkit-mask:url(img/ja.svg) center/contain no-repeat;mask:url(img/ja.svg) center/contain no-repeat}
 @media(max-width:600px){.hero:before{width:200px;height:114px;right:-40px;opacity:.08}}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
