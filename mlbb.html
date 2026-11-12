@@ -91,6 +91,21 @@ tr.cut td{border-bottom:2px dashed var(--gold)}
 .champ .o{display:flex;gap:6px 16px;flex-wrap:wrap;font-size:14px;font-weight:600;opacity:.95}
 /* iPhone zooms into text boxes under 16px */
 @media (pointer:coarse){input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea{font-size:max(16px,1em)!important}}
+/* ---------- moving background glow ---------- */
+/* Two soft blobs on their own fixed layers, moved with transform only (GPU, no repaint). */
+html{background:var(--bg)}body{background:transparent}
+body::before,body::after{content:"";position:fixed;z-index:-1;pointer-events:none;will-change:transform}
+body::before{inset:-25% -25% auto -25%;height:90vh;
+  background:radial-gradient(closest-side, color-mix(in srgb, var(--gb) 20%, transparent), transparent);
+  animation:jaDriftA 26s ease-in-out infinite alternate}
+body::after{width:70vmax;height:70vmax;right:-30vmax;top:30vh;border-radius:50%;
+  background:radial-gradient(closest-side, color-mix(in srgb, var(--ga) 12%, transparent), transparent);
+  animation:jaDriftB 34s ease-in-out infinite alternate}
+html[data-theme="dark"] body::before{background:radial-gradient(closest-side, color-mix(in srgb, var(--gb) 32%, transparent), transparent)}
+html[data-theme="dark"] body::after{background:radial-gradient(closest-side, color-mix(in srgb, var(--ga) 20%, transparent), transparent)}
+@keyframes jaDriftA{0%{transform:translate3d(-12%,-6%,0) scale(1)}50%{transform:translate3d(8%,2%,0) scale(1.12)}100%{transform:translate3d(14%,-4%,0) scale(.95)}}
+@keyframes jaDriftB{0%{transform:translate3d(0,0,0) scale(1)}100%{transform:translate3d(-45vw,22vh,0) scale(1.25)}}
+@media (prefers-reduced-motion:reduce){body::before,body::after{animation:none}}
 </style>
 <script src="js/splash.js?v=20261112q"></script>
 </head>
