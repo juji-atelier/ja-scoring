@@ -17,8 +17,8 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#F6F4F2">
 <title>Live Scores</title>
-<link rel="stylesheet" href="../css/theme.css?v=20261112l">
-<script src="../js/theme.js?v=20261112l"></script>
+<link rel="stylesheet" href="../css/theme.css?v=20261112m">
+<script src="../js/theme.js?v=20261112m"></script>
 <style>
 :root{--sport:var(--acc);--text:var(--ink);--muted:var(--mute)}
 *{box-sizing:border-box}
@@ -115,6 +115,8 @@ tr.me td{background:color-mix(in srgb,var(--gold) 14%,var(--card))}
 @media(prefers-reduced-motion:reduce){.jasplash,.jasplash *{animation-duration:.01s!important;animation-delay:0s!important}.jasplash{animation-delay:1.2s!important}}
 .evs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:12.5px;color:var(--mute)}
 .evs span{display:block;line-height:1.5}.evs i{font-style:normal;opacity:.75}.evs>div:last-child{text-align:right}
+/* iPhone zooms into text boxes under 16px */
+@media (pointer:coarse){input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea{font-size:max(16px,1em)!important}}
 </style>
 <script>/* Splash plays on open and on refresh; skipped on Back/Forward and when hopping here from another page of this site */
 try{var n=performance.getEntriesByType("navigation")[0],t=n?n.type:"navigate",seen=sessionStorage.getItem("ja-splash"),own=document.referrer.indexOf(location.origin+"/")===0;sessionStorage.setItem("ja-splash","1");if(t==="back_forward"||(t==="navigate"&&own&&seen))document.documentElement.classList.add("nosplash")}catch(e){}</script>
@@ -146,6 +148,6 @@ try{var n=performance.getEntriesByType("navigation")[0],t=n?n.type:"navigate",se
   </main>
 </div>
 <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
-<script type="module" src="live.js?v=20261112l"></script>
+<script type="module" src="live.js?v=20261112m"></script>
 </body>
 </html>

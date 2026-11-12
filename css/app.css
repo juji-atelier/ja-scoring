@@ -296,3 +296,6 @@ details.guide li{margin:4px 0}
 .a2bar{flex-wrap:wrap} .a2tx{flex:1 1 calc(100% - 60px)} .a2btns{width:100%;padding-left:54px} .a2btns #a2Go{flex:1}
 .a2os{background:var(--bg2);border-radius:12px;padding:12px 14px;margin-top:8px} .a2os ol{padding-left:20px;margin:8px 0;line-height:1.6}
 .a2k{display:inline-block;min-width:22px;text-align:center;border:1px solid var(--line);border-radius:6px;background:var(--card);font-weight:800}
+
+/* ---------- iPhone zooms into text boxes under 16px – keep them at 16px+ on phones ---------- */
+@media (pointer:coarse){input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea{font-size:max(16px,1em)!important}}
