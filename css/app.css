@@ -285,3 +285,12 @@ details.guide li{margin:4px 0}
    Scrolling back to the top on a phone must not reload the page mid-match.
    (Android Chrome; iPhone Safari 16+. The public live page keeps its pull-to-refresh.) */
 html,body{overscroll-behavior-y:none}
+
+/* ---------- add to home screen ---------- */
+.a2bar{display:flex;align-items:center;gap:12px;margin:8px 0;padding:12px 14px;border-radius:14px;background:linear-gradient(120deg,color-mix(in srgb,var(--acc) 12%,var(--card)),var(--card));border:1px solid color-mix(in srgb,var(--acc) 35%,var(--line))}
+.a2ic img{width:42px;height:42px;border-radius:11px;display:block}
+.a2tx{flex:1;min-width:0} .a2tx b{display:block;font-size:15px} .a2tx small{display:block;color:var(--mute);font-size:12.5px;line-height:1.35}
+.a2btns{display:flex;gap:6px;flex:none}
+.a2bar{flex-wrap:wrap} .a2tx{flex:1 1 calc(100% - 60px)} .a2btns{width:100%;padding-left:54px} .a2btns #a2Go{flex:1}
+.a2os{background:var(--bg2);border-radius:12px;padding:12px 14px;margin-top:8px} .a2os ol{padding-left:20px;margin:8px 0;line-height:1.6}
+.a2k{display:inline-block;min-width:22px;text-align:center;border:1px solid var(--line);border-radius:6px;background:var(--card);font-weight:800}

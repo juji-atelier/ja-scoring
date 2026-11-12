@@ -6,11 +6,17 @@
 <link rel="icon" type="image/png" sizes="48x48" href="../img/favicon-48.png">
 <link rel="icon" type="image/png" sizes="192x192" href="../img/icon-192.png">
 <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+<!-- "Add to Home Screen" opens full screen like an app (no browser bar, no pull-to-refresh) -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="HQ Scorer" id="appTitle">
 <meta name="theme-color" content="#F6F4F2">
-<script src="../js/hints.js?v=20261112g"></script>
-<script src="../js/theme.js?v=20261112g"></script>
+<script src="../js/hints.js?v=20261112h"></script>
+<script src="../js/theme.js?v=20261112h"></script>
 <title>Scorer · JA Scoring</title>
-<link rel="stylesheet" href="../css/app.css?v=20261112g">
+<link rel="stylesheet" href="../css/app.css?v=20261112h">
 </head>
 <body>
 <header class="top">
@@ -66,6 +72,7 @@
 
   <!-- MATCH LIST -->
   <section id="vList" class="hide">
+    <div id="a2hsBar"></div>
     <div id="annBar"></div>
     <div id="bigBar"></div>
     <div id="progress"></div>
@@ -172,6 +179,14 @@
 
 <!-- FEEDBACK -->
 <div class="fbwrap hide" id="fbWrap"><button class="fbbtn" id="fbOpen" type="button">💬 Send feedback</button></div>
+<div class="modal hide" id="a2hsModal" role="dialog" aria-modal="true" aria-labelledby="a2Title">
+  <div class="sheet">
+    <h3 id="a2Title">📲 Add to your Home Screen</h3>
+    <p class="muted" style="margin-top:0">The scorer page then opens like an app: full screen, no browser bar, and it can't refresh by accident while scoring.</p>
+    <div id="a2Steps"></div>
+    <button type="button" class="ghost" id="a2Close" style="width:100%;margin-top:12px">Close</button>
+  </div>
+</div>
 <div class="modal hide" id="shareModal" role="dialog" aria-modal="true" aria-labelledby="shTitle">
   <div class="sheet" style="text-align:center">
     <h3 id="shTitle">📲 Share this scorer page</h3>
@@ -228,7 +243,7 @@
 <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
 <div id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script type="module" src="scorer.js?v=20261112g"></script>
+<script type="module" src="scorer.js?v=20261112h"></script>
 <script src="../js/feedback.js?v=20261111a"></script>
 </body>
 </html>

@@ -1,0 +1,13 @@
+{
+  "name": "HQ Games Scorer",
+  "short_name": "HQ Scorer",
+  "description": "Live scoring for HQ Games 2026 – JA Scoring System",
+  "display": "standalone",
+  "background_color": "#F6F4F2",
+  "theme_color": "#B3162D",
+  "icons": [
+    { "src": "../img/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "../img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "../img/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

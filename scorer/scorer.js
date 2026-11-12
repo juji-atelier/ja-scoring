@@ -1,8 +1,8 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261112g";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261112h";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor } from "../js/engines.js?v=20261112g";
-import * as C from "../js/common.js?v=20261112g";
-import { applySportInfo } from "../js/sportinfo.js?v=20261112g";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor } from "../js/engines.js?v=20261112h";
+import * as C from "../js/common.js?v=20261112h";
+import { applySportInfo } from "../js/sportinfo.js?v=20261112h";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -1440,9 +1440,11 @@ function renderGuide() {
       <li>Standings are worked out automatically for each category from confirmed results.</li></ol>`)}
     ${sec("Tips", `<ul>
       <li>Charge the phone fully and keep the screen on. Turn the brightness up.</li>
+      <li><b>Add the scorer page to your Home Screen</b> so it opens like an app – full screen and no accidental refresh. <a href="#" id="guideA2">Show me how</a></li>
       <li>Don't share the password outside your sport's AJK.</li>
       <li>Not sure? Don't guess – ask your AJK lead, then use Undo if needed.</li></ul>`)}`;
   $("#guideBody").dataset.ready = "1";
+  const ga = $("#guideA2"); if (ga) ga.onclick = e => { e.preventDefault(); openA2hs(); };
 }
 $("#btnGuideLogin").onclick = () => show("vGuide");
 $("#btnGuideBack").onclick = () => { if (auth.currentUser) goTab("list"); else show("vLogin"); };
@@ -1494,6 +1496,49 @@ const BIG_URL = new URL(`../display/?sport=${S}`, location.href).href;
 $("#bigBar").innerHTML = `<a class="bigbtn" href="${BIG_URL}" target="_blank" rel="noopener">
   <span>📺 Open the ${esc(SP.name)} big screen</span><small>Live scores of this sport, full screen · opens in a new tab</small></a>
   <button class="bigbtn sharebtn" id="btnShare" type="button"><span>📲 Share this scorer page</span><small>QR code or WhatsApp link for another AJK / scorer</small></button>`;
+
+// ---------------------------------------------------------------- add to home screen (invite card + steps)
+const A2_KEY = "ja_a2hs_hide";
+const isStandalone = () => (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+const UA = navigator.userAgent || "";
+const isIOS = /iPhone|iPad|iPod/.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1);
+const isAndroid = /Android/.test(UA);
+const isPhone = isIOS || isAndroid || (window.matchMedia && matchMedia("(pointer:coarse)").matches);
+let installEvt = null;
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; renderA2hs(); });
+window.addEventListener("appinstalled", () => { store(A2_KEY, "1"); renderA2hs(); toast("Added to your Home Screen 🎉"); });
+{ const t = document.getElementById("appTitle"); if (t) t.content = `${SP.name} Scorer`; }
+function renderA2hs() {
+  const el = $("#a2hsBar");
+  if (!el) return;
+  if (isStandalone() || !isPhone || store(A2_KEY)) { el.innerHTML = ""; return; }
+  el.innerHTML = `<div class="a2bar"><div class="a2ic"><img src="../img/icon-192.png" alt=""></div>
+    <div class="a2tx"><b>Use this like an app</b><small>Add it to your Home Screen: opens full screen, no accidental refresh.</small></div>
+    <div class="a2btns"><button class="small primary" id="a2Go">${installEvt ? "Install" : "Show me how"}</button><button class="small ghost" id="a2No" title="Hide">✕</button></div></div>`;
+  $("#a2Go").onclick = async () => {
+    if (installEvt) { installEvt.prompt(); try { await installEvt.userChoice; } catch (e) {} installEvt = null; renderA2hs(); return; }
+    openA2hs();
+  };
+  $("#a2No").onclick = () => { store(A2_KEY, "1"); renderA2hs(); toast("Hidden. The steps are in the Guide tab."); };
+}
+function a2hsSteps() {
+  const ios = `<div class="a2os"><b>iPhone / iPad (Safari)</b><ol>
+      <li>Tap the <b>Share</b> button <span class="a2k">⬆︎</span> at the bottom of Safari.</li>
+      <li>Scroll down and tap <b>Add to Home Screen</b> <span class="a2k">＋</span>.</li>
+      <li>Tap <b>Add</b>. Open <b>${esc(SP.name)} Scorer</b> from your Home Screen.</li>
+      <li>Log in once more inside the app (iPhone keeps it separate from Safari).</li></ol>
+      <p class="muted" style="font-size:12.5px;margin:0">Using Chrome on iPhone? Tap <b>⬆︎ Share</b> at the top right → <b>Add to Home Screen</b>.</p></div>`;
+  const and = `<div class="a2os"><b>Android (Chrome / Samsung Internet)</b><ol>
+      <li>Tap the <b>⋮ menu</b> (top right in Chrome, ☰ at the bottom in Samsung Internet).</li>
+      <li>Tap <b>Add to Home screen</b> or <b>Install app</b>.</li>
+      <li>Tap <b>Install</b> / <b>Add</b>. Open it from your Home Screen – you stay logged in.</li></ol></div>`;
+  return isIOS ? ios + `<details style="margin-top:8px"><summary class="muted">Android steps</summary>${and}</details>`
+       : isAndroid ? and + `<details style="margin-top:8px"><summary class="muted">iPhone steps</summary>${ios}</details>` : ios + and;
+}
+function openA2hs() { $("#a2Steps").innerHTML = a2hsSteps(); $("#a2hsModal").classList.remove("hide"); }
+$("#a2Close").onclick = () => $("#a2hsModal").classList.add("hide");
+$("#a2hsModal").onclick = e => { if (e.target.id === "a2hsModal") $("#a2hsModal").classList.add("hide"); };
+renderA2hs();
 
 // ---------------------------------------------------------------- share this scorer page
 const SCORER_URL = new URL(`./?sport=${S}`, location.href).href;
