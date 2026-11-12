@@ -158,6 +158,9 @@ html[data-theme="dark"] body::after{background:radial-gradient(closest-side, col
 @media (prefers-reduced-motion:reduce){.plus1,.fin,.ldot{animation:none}}
 /* iPhone zooms into text boxes under 16px */
 @media (pointer:coarse){input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea{font-size:max(16px,1em)!important}}
+/* ---------- big faded JA watermark on the right of the title card ---------- */
+.hero:before{content:"";position:absolute;right:-34px;top:50%;width:300px;height:170px;transform:translateY(-50%) rotate(-8deg);background:#fff;opacity:.09;pointer-events:none;-webkit-mask:url(../img/ja.svg) center/contain no-repeat;mask:url(../img/ja.svg) center/contain no-repeat}
+@media(max-width:600px){.hero:before{width:200px;height:114px;right:-40px;opacity:.08}}
 </style>
 <script>/* Splash plays on open and on refresh; skipped on Back/Forward and when hopping here from another page of this site */
 try{var n=performance.getEntriesByType("navigation")[0],t=n?n.type:"navigate",seen=sessionStorage.getItem("ja-splash"),own=document.referrer.indexOf(location.origin+"/")===0;sessionStorage.setItem("ja-splash","1");if(t==="back_forward"||(t==="navigate"&&own&&seen))document.documentElement.classList.add("nosplash")}catch(e){}</script>
