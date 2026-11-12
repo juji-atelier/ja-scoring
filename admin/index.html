@@ -8,11 +8,22 @@
 <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
 <title>Admin · JA Scoring</title>
 <meta name="theme-color" content="#F6F4F2">
-<script src="../js/hints.js?v=20261112b"></script>
-<script src="../js/theme.js?v=20261112b"></script>
-<link rel="stylesheet" href="../css/app.css?v=20261112b">
+<script src="../js/hints.js?v=20261112c"></script>
+<script src="../js/theme.js?v=20261112c"></script>
+<link rel="stylesheet" href="../css/app.css?v=20261112c">
 <style>
 :root{--sport:var(--acc)}
+.rsum{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.rsum span{padding:6px 12px;border-radius:999px;background:var(--bg2);border:1px solid var(--line);font-size:13px;font-weight:600}
+table.ready{width:100%;border-collapse:collapse;font-size:14px}
+table.ready th{text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.ready td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
+table.ready td.sp{border-left:4px solid var(--c);font-weight:800;white-space:nowrap}
+table.ready .st{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap}
+.st.s0{background:var(--bg2);color:var(--muted)} .st.s1{background:#f59e0b26;color:#b45309} .st.s2{background:#f9731626;color:#c2410c}
+.st.s3{background:#16a34a26;color:#15803d} .st.s4{background:#2563eb26;color:#1d4ed8}
+table.ready .notes{margin:4px 0 0;padding-left:16px;font-size:12.5px;color:var(--muted)}
+table.ready .big{font-size:18px;font-weight:800}
 .sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
 .scard{background:var(--card);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:16px;padding:16px;box-shadow:var(--shadow)}
 .scard h4{margin:0;font-size:17px}
@@ -92,6 +103,7 @@ table.aw th{white-space:nowrap}
   <section id="vMain" class="hide">
     <div class="tabs" id="tabs">
       <button data-t="ov" class="on">Overview</button>
+      <button data-t="ready">Setup check</button>
       <button data-t="screen">Big screen</button>
       <button data-t="links">Links &amp; QR</button>
       <button data-t="tools">Tools</button>
@@ -99,6 +111,15 @@ table.aw th{white-space:nowrap}
     </div>
 
     <div id="t-ov"><div class="sgrid" id="overview"></div></div>
+
+    <div id="t-ready" class="hide">
+      <div class="card">
+        <div class="row" style="align-items:center"><h3 style="flex:1;margin:0">Setup check · every sport at a glance</h3><span class="muted" style="font-size:12px">updates by itself</span></div>
+        <p class="muted" style="margin:6px 0 0">See which scorer pages already have teams and matches – no need to log in to each one.</p>
+        <div id="readySum" class="rsum"></div>
+        <div id="readyTbl" style="overflow-x:auto"></div>
+      </div>
+    </div>
 
     <div id="t-screen" class="hide">
       <div class="card">
@@ -221,6 +242,6 @@ table.aw th{white-space:nowrap}
 <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
 <div id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script type="module" src="admin.js?v=20261112b"></script>
+<script type="module" src="admin.js?v=20261112c"></script>
 </body>
 </html>

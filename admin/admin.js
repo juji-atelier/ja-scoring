@@ -1,10 +1,10 @@
-import { SPORTS, ADMIN_EMAIL, EVENT_DEFAULTS } from "../config.js?v=20261112b";
-import { publicRecord, standings, FORMATS, ENGINE_OF } from "../js/engines.js?v=20261112b";
-import { bowlingStandings, BOWL_ROOT } from "../js/bowling-data.js?v=20261112b";
-import { BOARDS, mlbbMatches, applyBoardInfo, boardBaseName } from "../js/boards.js?v=20261112b";
-import { applySportInfo, SPORT_BASE } from "../js/sportinfo.js?v=20261112b";
-import { firebaseConfig } from "../config.js?v=20261112b";
-import * as C from "../js/common.js?v=20261112b";
+import { SPORTS, ADMIN_EMAIL, EVENT_DEFAULTS } from "../config.js?v=20261112c";
+import { publicRecord, standings, FORMATS, ENGINE_OF, DETAILS } from "../js/engines.js?v=20261112c";
+import { bowlingStandings, BOWL_ROOT } from "../js/bowling-data.js?v=20261112c";
+import { BOARDS, mlbbMatches, applyBoardInfo, boardBaseName } from "../js/boards.js?v=20261112c";
+import { applySportInfo, SPORT_BASE } from "../js/sportinfo.js?v=20261112c";
+import { firebaseConfig } from "../config.js?v=20261112c";
+import * as C from "../js/common.js?v=20261112c";
 const { $, $$, esc, toast, ref } = C;
 
 if (!C.configured) { C.notConfiguredScreen(); throw new Error("not configured"); }
@@ -37,7 +37,7 @@ C.onValue(ref(db, ".info/connected"), s => $("#conn").classList.toggle("on", !!s
 // ---------------- tabs
 $$("#tabs button").forEach(b => b.onclick = () => {
   $$("#tabs button").forEach(x => x.classList.toggle("on", x === b));
-  for (const t of ["ov", "screen", "links", "tools", "fb"]) $("#t-" + t).classList.toggle("hide", t !== b.dataset.t);
+  for (const t of ["ov", "ready", "screen", "links", "tools", "fb"]) $("#t-" + t).classList.toggle("hide", t !== b.dataset.t);
 });
 
 function start() {
@@ -45,7 +45,12 @@ function start() {
   started = true;
   C.onValue(ref(db, "pub"), s => { pub = s.val() || {}; renderOverview(); fillMatchSelect(); });
   // raw scorer data (start/update times) for the health check, and bowling for its card
-  C.onValue(ref(db, "sports"), s => { raw = s.val() || {}; renderOverview(); }, () => {});
+  C.onValue(ref(db, "sports"), s => { raw = s.val() || {}; renderOverview(); renderReady(); }, () => {});
+  // last action logged by each sport's scorers (for the Setup check tab)
+  for (const sp of Object.keys(SPORTS)) C.onValue(C.query(ref(db, `logs/${sp}`), C.limitToLast(1)), snap => {
+    snap.forEach(c => { lastLog[sp] = c.val(); }); renderReady();
+  }, () => {});
+  setInterval(renderReady, 60000);
   for (const [id, b] of Object.entries(BOARDS)) watchBoard(id, b);
   setInterval(renderOverview, 30000);
   C.onValue(ref(db, "settings"), s => {
@@ -71,6 +76,67 @@ function fillSportSelects() {
   $("#clrSport").innerHTML = opts;
   $("#logSport").innerHTML = opts + bopt(b => b.log);
   back.forEach(f => f());
+}
+
+// ---------------- setup check (one row per sport, from the raw scorer data)
+const lastLog = {};
+const catOfT = t => (t.category != null ? t.category : (t.group && t.group.length > 2 ? t.group : "")) || "";
+const oldStyle = t => t.category == null && !!t.group && t.group.length > 2;
+const keyOfT = t => { const c = catOfT(t), p = t.category != null ? (t.group || "") : (oldStyle(t) ? "" : (t.group || "")); return (c ? c + (p ? " – POOL " + p : "") : p).toUpperCase(); };
+function fmtText(sp, f) {
+  f = { ...(FORMATS[sp] || {}), ...(f || {}) };
+  const k = ENGINE_OF[sp];
+  if (k === "rally") return `Best of ${f.bestOf} · ${f.points} pts${f.cap ? " (max " + f.cap + ")" : ""}`;
+  if (k === "goals") return `${f.periods} × ${f.minutes} min`;
+  return `${f.start} · best of ${f.bestOf}`;
+}
+function readyOf(sp) {
+  const d = raw[sp] || {}, T = d.teams || {}, M = Object.values(d.matches || {});
+  const tl = Object.values(T), roster = ENGINE_OF[sp] === "goals" && !!DETAILS[sp];
+  const cc = {}; tl.forEach(t => { const c = catOfT(t); if (c) cc[c] = (cc[c] || 0) + 1; });
+  const cats = Object.keys(cc).sort().map(c => `${c} (${cc[c]})`);
+  const noPlayers = tl.filter(t => !String(t.players || "").trim()).length;
+  const noTime = M.filter(m => !String(m.time || "").trim()).length, noCourt = M.filter(m => !String(m.court || "").trim()).length;
+  const cnt = st => M.filter(m => (m.status || "scheduled") === st).length;
+  const fmts = [...new Set(M.map(m => fmtText(sp, m.fmt)))];
+  // categories / pools with 2+ teams but no matches yet
+  const byKey = {}; tl.forEach(t => { const k = keyOfT(t); if (k) byKey[k] = (byKey[k] || 0) + 1; });
+  const used = new Set(M.map(m => String(m.group || "").toUpperCase()));
+  const noMatches = Object.entries(byKey).filter(([k, n]) => n >= 2 && !used.has(k)).map(([k]) => k);
+  let s = 0, label = "Empty";
+  if (tl.length) { s = 1; label = "Teams only"; }
+  if (M.length) { s = (noTime || noCourt) ? 2 : 3; label = s === 2 ? "Needs time / court" : "Ready"; }
+  if (cnt("live") || cnt("done")) { s = 4; label = cnt("live") ? "Playing now" : (cnt("scheduled") ? "In progress" : "Finished"); }
+  const notes = [];
+  if (tl.filter(oldStyle).length) notes.push(`${tl.filter(oldStyle).length} team(s) need “Fix now” in the Teams tab`);
+  if (noMatches.length) notes.push(`No matches yet: ${noMatches.map(esc).join(", ")}`);
+  if (noTime) notes.push(`${noTime} match(es) without a time`);
+  if (noCourt) notes.push(`${noCourt} match(es) without a court`);
+  if (tl.length && noPlayers) notes.push(`${noPlayers} of ${tl.length} team(s) without ${roster ? "a player list" : "player names"} (optional)`);
+  if (fmts.length > 1) notes.push(`Mixed formats: ${fmts.map(esc).join(" / ")}`);
+  const times = M.map(m => Math.max(m.updatedAt || 0, m.createdAt || 0));
+  const lg = lastLog[sp];
+  const last = Math.max(0, ...times, (lg && lg.at) || 0);
+  return { s, label, teams: tl.length, cats, matches: M.length, live: cnt("live"), done: cnt("done"), fmt: fmts[0] || "", notes, last, by: lg && lg.at === last ? lg.by : "" };
+}
+function renderReady() {
+  if (!started || !$("#readyTbl")) return;
+  const rows = Object.entries(SPORTS).map(([id, sp]) => ({ id, sp, r: readyOf(id) }));
+  const n = k => rows.filter(x => x.r.s === k).length;
+  $("#readySum").innerHTML = [[3, "🟢 Ready"], [4, "🔵 Started"], [2, "🟠 Needs time / court"], [1, "🟡 Teams only"], [0, "⚪ Empty"]]
+    .filter(([k]) => n(k)).map(([k, l]) => `<span>${l}: ${n(k)}</span>`).join("");
+  const when = t => !t ? "—" : (C.now() - t < 36e5 ? ago(Math.max(0, C.now() - t)) + " ago" : new Date(t).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }));
+  $("#readyTbl").innerHTML = `<table class="ready"><tr><th>Sport</th><th>Day</th><th>Status</th><th>Teams</th><th>Categories</th><th>Matches</th><th>Format</th><th>Last change</th><th></th></tr>` +
+    rows.map(({ id, sp, r }) => `<tr>
+      <td class="sp" style="--c:${sp.color}">${esc(sp.name)}</td>
+      <td style="white-space:nowrap">${esc(sp.day)}</td>
+      <td><span class="st s${r.s}">${esc(r.label)}</span>${r.notes.length ? `<ul class="notes">${r.notes.map(x => `<li>${x}</li>`).join("")}</ul>` : ""}</td>
+      <td class="big">${r.teams || "–"}</td>
+      <td style="font-size:13px;line-height:1.5">${r.cats.length ? r.cats.map(esc).join("<br>") : `<span class="muted">–</span>`}</td>
+      <td><span class="big">${r.matches || "–"}</span>${r.matches ? `<br><span class="muted" style="font-size:12px">${r.live ? r.live + " live · " : ""}${r.done} done</span>` : ""}</td>
+      <td style="font-size:13px">${esc(r.fmt) || `<span class="muted">–</span>`}</td>
+      <td style="font-size:13px;white-space:nowrap">${when(r.last)}${r.by ? `<br><span class="muted">${esc(r.by)}</span>` : ""}</td>
+      <td><a href="${BASE}scorer/?sport=${id}" target="_blank"><button class="small ghost" style="white-space:nowrap">Open ↗</button></a></td></tr>`).join("") + `</table>`;
 }
 
 // ---------------- overview

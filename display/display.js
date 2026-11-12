@@ -1,10 +1,10 @@
-import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261112b";
-import { clockMs, mmss } from "../js/engines.js?v=20261112b";
-import * as C from "../js/common.js?v=20261112b";
-import { applySportInfo } from "../js/sportinfo.js?v=20261112b";
-import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261112b";
-import { bowlingStandings } from "../js/bowling-data.js?v=20261112b";
-import { firebaseConfig } from "../config.js?v=20261112b";
+import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261112c";
+import { clockMs, mmss } from "../js/engines.js?v=20261112c";
+import * as C from "../js/common.js?v=20261112c";
+import { applySportInfo } from "../js/sportinfo.js?v=20261112c";
+import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261112c";
+import { bowlingStandings } from "../js/bowling-data.js?v=20261112c";
+import { firebaseConfig } from "../config.js?v=20261112c";
 const { $, esc, ref } = C;
 
 const P = new URLSearchParams(location.search);
