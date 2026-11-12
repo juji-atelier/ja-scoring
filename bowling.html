@@ -298,6 +298,7 @@ body.ov{background:transparent;overflow:hidden;width:1920px;height:1080px}
 .ovf .jamark{width:26px;height:16px;display:inline-block;vertical-align:-3px;margin-right:6px}
 @keyframes inr{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
 /* ---------- announcements & name editor ---------- */
+.donebar{margin:0 0 12px;padding:11px 15px;border-radius:16px;font-size:14px;background:color-mix(in srgb,#16a34a 16%,var(--card));border:1px solid color-mix(in srgb,#16a34a 45%,var(--line))}
 .annbtn{width:100%;margin-bottom:12px;padding:13px 16px;border:1px dashed var(--line);border-radius:16px;background:transparent;color:var(--mute);font:inherit;font-weight:700;text-align:left;cursor:pointer}
 .annbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:13px 15px;border-radius:16px;
   background:color-mix(in srgb,var(--warn) 14%,var(--card));border:1px solid color-mix(in srgb,var(--warn) 45%,var(--line))}
@@ -410,15 +411,25 @@ const Store = {
       // Public board: check for new scores every few seconds over plain HTTPS
       // instead of a live connection, so spectators don't use up the free plan's
       // ~100 connection limit (scorers + OBS keep their live connection).
-      const url = FIREBASE_CONFIG.databaseURL.replace(/\/$/, "") + "/" + DB_ROOT + ".json";
-      let timer = null, lastJSON = "";
+      const base = FIREBASE_CONFIG.databaseURL.replace(/\/$/, ""), url = base + "/" + DB_ROOT + ".json";
+      // Admin → Live score → Completed: show the kept final standings (pub/_keep/bowling) instead
+      const keptUrl = base + "/pub/_keep/bowling/d.json";
+      let timer = null, lastJSON = "", done = false, doneAt = 0;
       const poll = async () => {
         clearTimeout(timer);
         if (document.hidden) return;                       // pause while the phone screen is off / tab hidden
         try {
-          const r = await fetch(url, { cache: "no-store" });
-          if (!r.ok) throw new Error(r.status);
-          const txt = await r.text();
+          if (Date.now() - doneAt > 60000) {
+            doneAt = Date.now();
+            try { const c = await fetch(base + "/settings/live/done/bowling.json", { cache: "no-store" }); done = c.ok && (await c.json()) === true; } catch (e) {}
+          }
+          let txt = "null";
+          if (done) { const k = await fetch(keptUrl, { cache: "no-store" }); if (k.ok) txt = await k.text(); }
+          if (txt === "null") {
+            const r = await fetch(url, { cache: "no-store" });
+            if (!r.ok) throw new Error(r.status);
+            txt = await r.text();
+          }
           this.online = true; this.checked = Date.now();
           if (txt !== lastJSON) { lastJSON = txt; this.merge(JSON.parse(txt)); } else this.emit();
         } catch (e) { this.online = false; this.emit(); }
@@ -552,6 +563,7 @@ function viewBoard() {
       <section class="hero" id="hero"><h1 id="ttl"></h1>
         <div class="sub"><span class="dot" id="dot"></span><span id="st">Connecting…</span><span>·</span><span id="upd"></span><span class="pill" id="mode"></span></div></section>
       <nav class="sportnav" id="sportNav"></nav>
+      <div id="doneB"></div>
       <div id="annB"></div>
       <div id="evInfo"></div>
       <div id="podium"></div>
@@ -573,6 +585,9 @@ function viewBoard() {
     const lcfg = () => fetch(base + "/settings/live.json", { cache: "no-store" }).then(r => r.ok ? r.json() : null).then(v => {
       cfg = L.cfgOf({ live: v || {} });
       if (VIEW === "board" && !L.shown(cfg, "bowling")) { location.replace("live/"); return; }
+      // Completed (Admin → Live score): green banner on the public board
+      const dB = document.getElementById("doneB");
+      if (dB) dB.innerHTML = L.isDone(cfg, "bowling") ? `<div class="donebar">✅ <b>${esc((names.bowling || {}).name || "Bowling")} completed</b> · final results</div>` : "";
       draw(); lc();
     }).catch(() => {});
     lcfg(); setInterval(() => { if (!document.hidden) lcfg(); }, 60000);

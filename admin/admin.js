@@ -723,7 +723,11 @@ function renderLive() {
   const ids = [...Object.keys(SPORTS), ...Object.keys(BOARDS)];
   const info = id => {
     const k = K[id];
-    if (id === "bowling") return "Bowling keeps its own scores – nothing to keep here.";
+    if (id === "bowling") {
+      const k = (pub[KEEP] || {}).bowling, n = Object.keys((bowl || {}).scores || {}).length;
+      if (isDone(c, id)) return k ? `🔒 Final standings kept ${tmAt(k.at)} – score changes after this are not shown` : "⚠ No kept copy – press Update";
+      return n ? `${n} bowlers have scores` : "No scores yet";
+    }
     if (id === "mlbb") {
       const has = mlHas(boardData.mlbb);
       if (isDone(c, id)) return k ? `🔒 Final results kept ${tmAt(k.at)} – console changes are ignored` : "⚠ No kept copy – press Update";
@@ -734,12 +738,12 @@ function renderLive() {
     return all.length ? `${dn}/${all.length} finished${lv ? ` · ${lv} live now` : ""}` : "No matches yet";
   };
   $("#liveTbl").innerHTML = `<table class="lv"><tr><th>Sport</th><th>Public page</th><th>Status</th><th>Kept results</th><th></th></tr>` + ids.map(id => {
-    const sp = SPORTS[id] || BOARDS[id], on = shown(c, id), dn = isDone(c, id), canDone = id !== "bowling";
+    const sp = SPORTS[id] || BOARDS[id], on = shown(c, id), dn = isDone(c, id), canDone = true, keeps = true;
     return `<tr class="${on ? "" : "off"}"><td class="sp" style="--c:${sp.color}">${esc(nameOf(id))}${SPORTS[id] ? ` <span class="muted" style="font-weight:500;font-size:12px">${esc(sp.day || "")}</span>` : ""}</td>
       <td class="ck"><label class="ck"><input type="checkbox" data-lshow="${id}" ${on ? "checked" : ""}> Show</label></td>
       <td>${canDone ? `<label class="ck"><input type="checkbox" data-ldone="${id}" ${dn ? "checked" : ""}> Completed</label>` : `<span class="muted">—</span>`}</td>
       <td class="inf">${info(id)}</td>
-      <td>${canDone && dn ? `<button class="small ghost" data-lrecap="${id}" title="Copy the current results again">Update kept copy</button>` : ""}</td></tr>`;
+      <td>${keeps && dn ? `<button class="small ghost" data-lrecap="${id}" title="Copy the current results again">Update kept copy</button>` : ""}</td></tr>`;
   }).join("") + `</table>`;
   const vis = ids.filter(id => shown(c, id)).length;
   $("#liveErr").innerHTML = (vis ? "" : `<div class="hwarn">Every sport is hidden – the public page shows “No live scores at the moment”.</div>`) +
@@ -761,7 +765,13 @@ $("#btnShowAll").onclick = async () => { await C.set(ref(db, "settings/live/show
 // Completed (first = ticking the box) or "Update kept copy": copy the current results to pub/_keep/<id>
 async function keepResults(id, first) {
   const name = nameOf(id), upd = {}, at = Date.now();
-  if (id === "mlbb") {
+  if (id === "bowling") {   // the whole bowling data (scores, names, rules); the announcement is left out
+    let d = null;
+    try { d = (await C.get(ref(db, BOWL_ROOT))).val(); } catch (e) { d = bowl; }
+    if (!d || !d.scores || !Object.keys(d.scores).length) { toast("Bowling has no scores to keep"); return renderLive(); }
+    if (!first && !confirm(`Replace ${name}'s kept standings with the current scores?`)) return;
+    upd[`pub/${KEEP}/bowling`] = { d: { ...d, ann: null }, at, src: "done" };
+  } else if (id === "mlbb") {
     const live = boardData.mlbb, k = (pub[KEEP] || {}).mlbb;
     const d = mlHas(live) ? live : k && k.d;
     if (!mlHas(d)) { toast("Nothing to keep – the ML console has no results"); return renderLive(); }
@@ -782,7 +792,7 @@ async function keepResults(id, first) {
 }
 async function unDone(id) {
   const name = nameOf(id);
-  if (!confirm(`Un-complete ${name}? The public page goes back to the ${id === "mlbb" ? "ML console's" : "scorers'"} current data.`)) return renderLive();
+  if (!confirm(`Un-complete ${name}? The public page goes back to the ${id === "mlbb" ? "ML console's" : id === "bowling" ? "bowling scorers'" : "scorers'"} current data.`)) return renderLive();
   const upd = { [`settings/live/done/${id}`]: null };
   if (id !== "mlbb") upd[`pub/${KEEP}/${id}`] = null;      // Mobile Legends keeps its auto copy
   else if ((pub[KEEP] || {}).mlbb) upd[`pub/${KEEP}/mlbb/src`] = "auto";

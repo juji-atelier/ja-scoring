@@ -5,7 +5,7 @@ import { applySportInfo } from "../js/sportinfo.js?v=20261112r";
 import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261112r";
 import { bowlingStandings } from "../js/bowling-data.js?v=20261112r";
 import { firebaseConfig } from "../config.js?v=20261112r";
-import { cfgOf, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261112r";
+import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261112r";
 const { $, esc, ref } = C;
 
 const P = new URLSearchParams(location.search);
@@ -35,7 +35,12 @@ function watchBoard(id) {
 const boardWanted = id => FORCE_SPORT ? FORCE_SPORT === id : ((disp().mode === "sport" && disp().sport === id) || !!(disp().sports && disp().sports[id] === true));
 // matches of a board in the same shape as a sport's matches, so the same cards can draw them
 // Mobile Legends: the console's data, or the copy kept in Admin → Live score (completed / console cleared)
-const bdata = id => id === "mlbb" ? (mlEffective(boardData.mlbb, (pub[KEEP] || {}).mlbb, cfgOf(settings)).D || {}) : (boardData[id] || {});
+// Bowling marked Completed: its kept final standings
+const bdata = id => {
+  if (id === "mlbb") return mlEffective(boardData.mlbb, (pub[KEEP] || {}).mlbb, cfgOf(settings)).D || {};
+  const k = (pub[KEEP] || {})[id];
+  return isDone(cfgOf(settings), id) && k && k.d ? k.d : (boardData[id] || {});
+};
 function boardRecs(id) {
   if (id !== "mlbb") return [];
   const val = x => x.score ?? (x.kills != null ? x.kills + " K" : "");
@@ -307,7 +312,7 @@ function renderView() {
 
 // ---------------- bowling standings (teams on the left, top bowlers on the right)
 function bowlingHTML() {
-  const D = boardData.bowling;
+  const D = bdata("bowling");
   if (!D) return `<div class="col"><h2>${esc(BOARDS.bowling.name)}</h2><div class="empty">Loading…</div></div><div class="col"></div>`;
   const bw = bowlingStandings(D), N = bw.N;
   if (!bw.anyScore) return `<div class="col"><h2>${esc(BOARDS.bowling.name)}</h2><div class="empty">Scores will appear here soon.</div></div><div class="col"></div>`;
