@@ -7,8 +7,8 @@
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 <meta name="theme-color" content="#F6F4F2">
 <title>Mobile Legends · Live Standings</title>
-<link rel="stylesheet" href="css/theme.css?v=20261112m">
-<script src="js/theme.js?v=20261112m"></script>
+<link rel="stylesheet" href="css/theme.css?v=20261112n">
+<script src="js/theme.js?v=20261112n"></script>
 <style>
 :root{--sport:#f59e0b;--ga:#D23A3A;--gb:#2F6FE0}
 *{box-sizing:border-box}
@@ -89,7 +89,7 @@ tr.cut td{border-bottom:2px dashed var(--gold)}
 /* iPhone zooms into text boxes under 16px */
 @media (pointer:coarse){input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea{font-size:max(16px,1em)!important}}
 </style>
-<script src="js/splash.js?v=20261112m"></script>
+<script src="js/splash.js?v=20261112n"></script>
 </head>
 <body>
 <header class="hd"><div class="wrap">
@@ -117,7 +117,7 @@ tr.cut td{border-bottom:2px dashed var(--gold)}
 <script type="module">
 // Mobile Legends standings for the HQ Games live page.
 // Data: Firebase  mlbb/live  — written by the JA ESPORT console (Group Stage tab).
-import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "./config.js?v=20261112m";
+import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "./config.js?v=20261112n";
 const BASE = String(firebaseConfig.databaseURL || "").replace(/\/$/, "");
 const POLL_MS = 12000;
 const $ = s => document.querySelector(s);

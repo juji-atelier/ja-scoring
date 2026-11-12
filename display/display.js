@@ -1,10 +1,10 @@
-import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261112m";
-import { clockMs, mmss, catColor } from "../js/engines.js?v=20261112m";
-import * as C from "../js/common.js?v=20261112m";
-import { applySportInfo } from "../js/sportinfo.js?v=20261112m";
-import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261112m";
-import { bowlingStandings } from "../js/bowling-data.js?v=20261112m";
-import { firebaseConfig } from "../config.js?v=20261112m";
+import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261112n";
+import { clockMs, mmss, catColor } from "../js/engines.js?v=20261112n";
+import * as C from "../js/common.js?v=20261112n";
+import { applySportInfo } from "../js/sportinfo.js?v=20261112n";
+import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261112n";
+import { bowlingStandings } from "../js/bowling-data.js?v=20261112n";
+import { firebaseConfig } from "../config.js?v=20261112n";
 const { $, esc, ref } = C;
 
 const P = new URLSearchParams(location.search);
@@ -240,6 +240,7 @@ function renderView() {
   const f = featured();
   if (f) {
     const SP = SPORTS[f.sp];
+    $("#evVenue").textContent = SP.venue || settings.venue || EVENT_DEFAULTS.venue;
     document.documentElement.style.setProperty("--sport", SP.color);
     $("#sportChip").textContent = SP.name;
     $("#dots").innerHTML = "";
@@ -254,6 +255,7 @@ function renderView() {
   } else {
     const sp = pickSport();
     const SP = SPORTS[sp] || BOARDS[sp];
+    $("#evVenue").textContent = SP.venue || settings.venue || EVENT_DEFAULTS.venue;
     document.documentElement.style.setProperty("--sport", SP.color);
     $("#sportChip").textContent = SP.name;
     $("#dots").innerHTML = !FORCE_SPORT && rotList.length > 1 ? rotList.map(s => `<i class="${s === sp ? "on" : ""}"></i>`).join("") : "";

@@ -1,10 +1,10 @@
-import { SPORTS, ADMIN_EMAIL, EVENT_DEFAULTS } from "../config.js?v=20261112m";
-import { publicRecord, standings, FORMATS, ENGINE_OF, DETAILS } from "../js/engines.js?v=20261112m";
-import { bowlingStandings, BOWL_ROOT } from "../js/bowling-data.js?v=20261112m";
-import { BOARDS, mlbbMatches, applyBoardInfo, boardBaseName } from "../js/boards.js?v=20261112m";
-import { applySportInfo, SPORT_BASE } from "../js/sportinfo.js?v=20261112m";
-import { firebaseConfig } from "../config.js?v=20261112m";
-import * as C from "../js/common.js?v=20261112m";
+import { SPORTS, ADMIN_EMAIL, EVENT_DEFAULTS } from "../config.js?v=20261112n";
+import { publicRecord, standings, FORMATS, ENGINE_OF, DETAILS } from "../js/engines.js?v=20261112n";
+import { bowlingStandings, BOWL_ROOT } from "../js/bowling-data.js?v=20261112n";
+import { BOARDS, mlbbMatches, applyBoardInfo, boardBaseName } from "../js/boards.js?v=20261112n";
+import { applySportInfo, SPORT_BASE } from "../js/sportinfo.js?v=20261112n";
+import { firebaseConfig } from "../config.js?v=20261112n";
+import * as C from "../js/common.js?v=20261112n";
 const { $, $$, esc, toast, ref } = C;
 
 if (!C.configured) { C.notConfiguredScreen(); throw new Error("not configured"); }

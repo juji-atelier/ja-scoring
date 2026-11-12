@@ -1,8 +1,8 @@
 // Public live-score page. Uses plain HTTPS polling (no live connection),
 // so hundreds of spectators stay inside Firebase's free limits.
-import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261112m";
-import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261112m";
-import { standings, clockMs, mmss } from "../js/engines.js?v=20261112m";
+import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261112n";
+import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261112n";
+import { standings, clockMs, mmss } from "../js/engines.js?v=20261112n";
 
 const POLL_MS = 12000;
 const BASE = String(firebaseConfig.databaseURL || "").replace(/\/$/, "");
@@ -39,7 +39,7 @@ function renderTabs() {
 }
 
 window.addEventListener("hashchange", () => {
-  if (SPORTS[location.hash.slice(1)]) { sport = location.hash.slice(1); data = {}; ann = null; q = ""; $("#find").value = ""; renderTabs(); render(); poll(); }
+  if (SPORTS[location.hash.slice(1)]) { sport = location.hash.slice(1); data = {}; ann = null; q = ""; $("#find").value = ""; renderTabs(); renderHeader(); render(); poll(); }
 });
 document.querySelectorAll("#sub button").forEach(b => b.onclick = () => {
   sub = b.dataset.v;
@@ -79,7 +79,9 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) poll
 function renderHeader() {
   $("#ev").textContent = settings.event || EVENT_DEFAULTS.name;
   document.title = (settings.event || EVENT_DEFAULTS.name) + " · Live Scores";
-  $("#venue").textContent = settings.venue || EVENT_DEFAULTS.venue;
+  // the selected sport's own day and venue (set in Admin → Sport names, dates & venues)
+  const sp = SPORTS[sport] || {};
+  $("#venue").textContent = `📍 ${sp.venue || settings.venue || EVENT_DEFAULTS.venue}${sp.day ? " · " + sp.day : ""}`;
   const n = $("#note");
   n.hidden = !settings.ticker;
   n.textContent = settings.ticker || "";
