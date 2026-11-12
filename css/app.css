@@ -260,17 +260,19 @@ details.guide li{margin:4px 0}
 /* ---------- game / match point ---------- */
 .gpban{margin:10px 0;border-radius:16px;padding:12px;text-align:center;background:linear-gradient(120deg,#B8925A,#8a6a3a);color:#fff;font-family:Rajdhani,Inter,sans-serif;font-weight:700;font-size:28px;letter-spacing:.12em;box-shadow:0 8px 24px #b8925a55}
 .gpban.mp{background:linear-gradient(120deg,#D2AC70,#9a7442)} .gpban small{display:block;font-family:Inter,sans-serif;font-size:13px;letter-spacing:0;font-weight:600;opacity:.92}
-/* ---------- bottom tab bar on phones ---------- */
+/* ---------- bottom tab bar on phones ----------
+   Only when <html class="btabs"> (Android, or the Home Screen app). iPhone Safari's floating
+   address bar leaves a gap under fixed bars, so there the tabs stay at the top. */
 @media (max-width:760px){
-  #tabs.tabs{position:fixed;left:0;right:0;bottom:0;z-index:40;width:auto;max-width:none;margin:0;display:grid;grid-template-columns:repeat(5,1fr);gap:0;
+  html.btabs #tabs.tabs{position:fixed;left:0;right:0;bottom:0;z-index:40;width:auto;max-width:none;margin:0;display:grid;grid-template-columns:repeat(5,1fr);gap:0;
     background:var(--card);border:0;border-top:1px solid var(--line);border-radius:0;padding:6px 4px calc(6px + env(safe-area-inset-bottom));box-shadow:0 -6px 20px #0000001a}
-  #tabs.tabs button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0;font-size:11px;font-weight:700;color:var(--mute);background:none;box-shadow:none}
-  #tabs.tabs button:before{font-size:21px;line-height:1.1}
-  #tabs.tabs button[data-tab=list]:before{content:"🏟️"} #tabs.tabs button[data-tab=teams]:before{content:"👥"}
-  #tabs.tabs button[data-tab=setup]:before{content:"⚙️"} #tabs.tabs button[data-tab=log]:before{content:"🕘"} #tabs.tabs button[data-tab=guide]:before{content:"📖"}
-  #tabs.tabs button.on{color:var(--acc);background:none;box-shadow:none}
-  body:has(#tabs:not(.hide)){padding-bottom:78px}
-  body:has(#tabs:not(.hide)) #toast{bottom:92px}
+  html.btabs #tabs.tabs button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0;font-size:11px;font-weight:700;color:var(--mute);background:none;box-shadow:none}
+  html.btabs #tabs.tabs button:before{font-size:21px;line-height:1.1}
+  html.btabs #tabs.tabs button[data-tab=list]:before{content:"🏟️"} html.btabs #tabs.tabs button[data-tab=teams]:before{content:"👥"}
+  html.btabs #tabs.tabs button[data-tab=setup]:before{content:"⚙️"} html.btabs #tabs.tabs button[data-tab=log]:before{content:"🕘"} html.btabs #tabs.tabs button[data-tab=guide]:before{content:"📖"}
+  html.btabs #tabs.tabs button.on{color:var(--acc);background:none;box-shadow:none}
+  html.btabs body:has(#tabs:not(.hide)){padding-bottom:78px}
+  html.btabs body:has(#tabs:not(.hide)) #toast{bottom:92px}
 }
 
 /* ---------- share scorer page ---------- */

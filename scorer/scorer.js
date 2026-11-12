@@ -1,8 +1,8 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261112i";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261112j";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor } from "../js/engines.js?v=20261112i";
-import * as C from "../js/common.js?v=20261112i";
-import { applySportInfo } from "../js/sportinfo.js?v=20261112i";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor } from "../js/engines.js?v=20261112j";
+import * as C from "../js/common.js?v=20261112j";
+import { applySportInfo } from "../js/sportinfo.js?v=20261112j";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -1458,7 +1458,7 @@ function startLog() {
     rows.reverse();
     $("#logList").innerHTML = rows.length ? `<table><tr><th>Time</th><th>By</th><th>Match</th><th>Action</th></tr>` +
       rows.map(r => `<tr><td style="white-space:nowrap">${r.at ? new Date(r.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : ""}</td>
-        <td>${esc(r.by)}</td><td>${r.no !== "" && r.no != null ? "#" + esc(r.no) : "—"}</td><td>${esc(r.act)}</td></tr>`).join("") + `</table>` : `<p class="muted">Nothing yet.</p>`;
+        <td>${esc(r.by)}</td><td>${r.no !== "" && r.no != null ? "#" + esc(r.no) : "—"}</td><td>${esc(r.act)}</td></tr>`).join("") + `</table>` : `<p class="muted">Nothing yet. Every match start, point, result and change made by your scorers will appear here, newest first.</p>`;
   }, err => { $("#logList").innerHTML = `<p class="muted">Cannot read log: ${esc(err.message)}</p>`; });
 }
 
@@ -1504,6 +1504,8 @@ const UA = navigator.userAgent || "";
 const isIOS = /iPhone|iPad|iPod/.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1);
 const isAndroid = /Android/.test(UA);
 const isPhone = isIOS || isAndroid || (window.matchMedia && matchMedia("(pointer:coarse)").matches);
+// bottom tab bar on Android and in the Home Screen app; iPhone Safari keeps the tabs at the top
+document.documentElement.classList.toggle("btabs", !(isIOS && !isStandalone()));
 let installEvt = null;
 window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; renderA2hs(); });
 window.addEventListener("appinstalled", () => { store(A2_KEY, "1"); renderA2hs(); toast("Added to your Home Screen 🎉"); });
