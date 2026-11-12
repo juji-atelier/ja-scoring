@@ -1,8 +1,8 @@
 // Public live-score page. Uses plain HTTPS polling (no live connection),
 // so hundreds of spectators stay inside Firebase's free limits.
-import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261110i";
-import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261110i";
-import { standings, clockMs, mmss } from "../js/engines.js?v=20261110i";
+import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261112a";
+import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261112a";
+import { standings, clockMs, mmss } from "../js/engines.js?v=20261112a";
 
 const POLL_MS = 12000;
 const BASE = String(firebaseConfig.databaseURL || "").replace(/\/$/, "");
@@ -122,7 +122,7 @@ function row(r, s) {
   const small = !sched && !done && v.small ? v.small[i] : "";
   const tag = r.st === "live" ? (s === "a" ? v.tagA : v.tagB) : "";
   return `<div class="r ${done && r.w === s ? "win" : ""}"><span class="dot ${r.st === "live" && v.srv === s ? "on" : ""}"></span>
-    <span class="n ${isMe(r[s]) ? "me" : ""}">${mark(r[s])}${tag ? `<span class="tag">${esc(tag)}</span>` : ""}</span>
+    <span class="n ${isMe(r[s]) ? "me" : ""}">${mark(r[s])}${tag ? `<span class="tag">${esc(tag)}</span>` : ""}${r["p" + s] ? `<span class="pl">${esc(r["p" + s])}</span>` : ""}</span>
     <span class="s">${small ?? ""}</span><span class="b cond">${big ?? ""}</span></div>`;
 }
 function card(r) {
@@ -172,7 +172,7 @@ $("#find").addEventListener("input", e => { q = low(e.target.value.trim()); rend
 function render() {
   renderFind();
   // which matches to show: search first, then "only my team"
-  const keep = r => q ? (low(r.a).includes(q) || low(r.b).includes(q) || low(r.as).includes(q) || low(r.bs).includes(q)) : onlyMine() && followed() ? (isMe(r.a) || isMe(r.b)) : true;
+  const keep = r => q ? (low(r.a).includes(q) || low(r.b).includes(q) || low(r.as).includes(q) || low(r.bs).includes(q) || low(r.pa).includes(q) || low(r.pb).includes(q)) : onlyMine() && followed() ? (isMe(r.a) || isMe(r.b)) : true;
   const all = list().filter(keep);
   const live = all.filter(r => r.st === "live").sort((x, y) => String(x.ct).localeCompare(String(y.ct), undefined, { numeric: true }));
   const next = all.filter(r => r.st === "scheduled").sort(byNo);

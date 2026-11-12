@@ -1,10 +1,10 @@
-import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261110i";
-import { clockMs, mmss } from "../js/engines.js?v=20261110i";
-import * as C from "../js/common.js?v=20261110i";
-import { applySportInfo } from "../js/sportinfo.js?v=20261110i";
-import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261110i";
-import { bowlingStandings } from "../js/bowling-data.js?v=20261110i";
-import { firebaseConfig } from "../config.js?v=20261110i";
+import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261112a";
+import { clockMs, mmss } from "../js/engines.js?v=20261112a";
+import * as C from "../js/common.js?v=20261112a";
+import { applySportInfo } from "../js/sportinfo.js?v=20261112a";
+import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261112a";
+import { bowlingStandings } from "../js/bowling-data.js?v=20261112a";
+import { firebaseConfig } from "../config.js?v=20261112a";
 const { $, esc, ref } = C;
 
 const P = new URLSearchParams(location.search);
@@ -107,7 +107,7 @@ function rowHTML(r, s) {
   const tag = r.st === "live" ? (s === "a" ? v.tagA : v.tagB) : "";
   return `<div class="trow ${done && r.w === s ? "win" : ""}">
     <span class="srv ${r.st === "live" && v.srv === s ? "on" : ""}"></span>
-    <span class="nm cond">${esc(r[s])}${tag ? `<span class="tag">${esc(tag)}</span>` : ""}</span>
+    <span class="nm cond">${esc(r[s])}${tag ? `<span class="tag">${esc(tag)}</span>` : ""}${r["p" + s] ? `<span class="pl">${esc(r["p" + s])}</span>` : ""}</span>
     <span class="sm cond">${small !== "" && small != null ? small : ""}</span>
     <span class="bg cond" data-k="${esc(r.id)}:${s}">${big ?? ""}</span></div>`;
 }

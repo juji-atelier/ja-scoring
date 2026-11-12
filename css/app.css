@@ -205,3 +205,19 @@ table.paste tr.skip td{color:var(--mute);text-decoration:line-through}
 .bigbtn span{display:block;font-weight:700;color:var(--ink)}
 .bigbtn small{display:block;font-size:12px;margin-top:2px}
 .bigbtn:hover{border-color:color-mix(in srgb,var(--sport) 45%,var(--line));border-style:solid}
+
+/* ---------- players, categories, teams tab, guide ---------- */
+.side .splayers{font-size:clamp(13px,3vw,17px);opacity:.85;text-align:center;margin-top:2px}
+.mpl{display:block;font-size:12px;font-weight:400;color:var(--mute)}
+.cat-title{margin:14px 0 4px;font-size:15px;font-weight:800;color:var(--ink);border-left:4px solid var(--sport,var(--acc));padding-left:9px}
+.chips .cnt{display:inline-block;min-width:18px;padding:0 5px;margin-left:4px;border-radius:999px;font-size:11px;font-weight:800;background:var(--bg2);color:var(--ink)}
+.chips button.on .cnt{background:#ffffff40;color:inherit}
+.badge.cat{background:color-mix(in srgb,var(--sport,var(--acc)) 14%,var(--card));border-color:color-mix(in srgb,var(--sport,var(--acc)) 45%,var(--line));color:var(--ink)}
+details.guide>summary{cursor:pointer;list-style:none}
+details.guide>summary::-webkit-details-marker{display:none}
+details.guide>summary h3{display:inline;margin:0}
+details.guide>summary::after{content:"▾";float:right;color:var(--mute)}
+details.guide[open]>summary::after{content:"▴"}
+details.guide ol,details.guide ul{padding-left:20px;line-height:1.6;margin:10px 0 4px}
+details.guide li{margin:4px 0}
+@media (max-width:520px){.tabs{width:100%;display:grid;grid-template-columns:repeat(5,1fr);gap:2px}.tabs button{padding:9px 2px;font-size:13px}}

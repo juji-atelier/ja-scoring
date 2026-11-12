@@ -7,10 +7,10 @@
 <link rel="icon" type="image/png" sizes="192x192" href="../img/icon-192.png">
 <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
 <meta name="theme-color" content="#F6F4F2">
-<script src="../js/hints.js?v=20261110i"></script>
-<script src="../js/theme.js?v=20261110i"></script>
+<script src="../js/hints.js?v=20261112a"></script>
+<script src="../js/theme.js?v=20261112a"></script>
 <title>Scorer · JA Scoring</title>
-<link rel="stylesheet" href="../css/app.css?v=20261110i">
+<link rel="stylesheet" href="../css/app.css?v=20261112a">
 </head>
 <body>
 <header class="top">
@@ -44,7 +44,10 @@
         </div>
         <p class="muted" id="loginErr" style="color:var(--bad)"></p>
       </form>
-      <button class="small ghost" id="btnAdminMode" type="button">Admin login</button>
+      <div class="row" style="justify-content:space-between;margin-top:10px">
+        <button class="small ghost" id="btnGuideLogin" type="button">📖 How to score</button>
+        <button class="small ghost" id="btnAdminMode" type="button">Admin login</button>
+      </div>
     </div>
   </section>
 
@@ -55,28 +58,49 @@
   <!-- TABS -->
   <nav class="tabs hide" id="tabs">
     <button data-tab="list" class="on">Matches</button>
+    <button data-tab="teams">Teams</button>
     <button data-tab="setup">Setup</button>
-    <button data-tab="log">Activity log</button>
+    <button data-tab="log">Log</button>
+    <button data-tab="guide">Guide</button>
   </nav>
 
   <!-- MATCH LIST -->
   <section id="vList" class="hide">
     <div id="annBar"></div>
     <div id="bigBar"></div>
+    <div class="chips" id="catChips"></div>
     <div class="chips" id="courtChips"></div>
     <div id="matchList"></div>
   </section>
 
+  <!-- TEAMS -->
+  <section id="vTeams" class="hide">
+    <div id="teamFix"></div>
+    <div class="card" id="teamFormCard">
+      <h3>Add team</h3>
+      <p class="muted" id="tIntro">Choose or type the category first, then the team.</p>
+      <div class="grid2">
+        <div><label for="tCat">Category</label><input id="tCat" list="catList" placeholder="e.g. MIX DOUBLE"></div>
+        <div><label for="tName">Team name</label><input id="tName" placeholder="e.g. VOLTRA"></div>
+      </div>
+      <div id="tPlayersWrap"></div>
+      <div class="grid2">
+        <div><label for="tShort">Short name</label><input id="tShort" placeholder="optional"></div>
+        <div><label for="tPool">Pool</label><input id="tPool" placeholder="optional, A / B"></div>
+      </div>
+      <p class="muted" style="font-size:13px">Pool is only needed if one category is split into pools. Otherwise leave it empty.</p>
+      <div class="row" style="margin-top:10px"><button class="primary" id="btnAddTeam">Add team</button></div>
+      <details style="margin-top:16px"><summary><b>Paste many teams at once</b></summary>
+        <p class="muted" id="bulkHint">They go into the category above. One team per line: <b>Team name | Players | Short name</b> (players and short name are optional).</p>
+        <textarea id="teamBulk" placeholder="VOLTRA | Irfan / Ali&#10;TX | Safwan / Abu"></textarea>
+        <div class="row" style="margin-top:8px"><button id="btnAddTeams">Add all</button></div>
+      </details>
+    </div>
+    <div id="teamCats"></div>
+  </section>
+
   <!-- SETUP -->
   <section id="vSetup" class="hide">
-    <div class="card">
-      <h3 id="teamsTitle">Teams</h3>
-      <p class="muted">One team per line: <b>Name | Short name | Group</b>. Short name and group are optional. Group is used for the standings table.</p>
-      <textarea id="teamBulk" placeholder="Jabatan Kerja Raya | JKR | A&#10;Jabatan Pendidikan | JPN | A&#10;Jabatan Kesihatan | JKN | B"></textarea>
-      <div class="row" style="margin-top:8px"><button class="primary" id="btnAddTeams">Add teams</button></div>
-      <div id="teamList" style="margin-top:12px"></div>
-    </div>
-
     <div class="card" id="matchFormCard">
       <h3 id="mfTitle">Add match</h3>
       <div class="grid3">
@@ -84,8 +108,8 @@
         <div><label>Time</label><input id="fTime" placeholder="e.g. 9:00 AM"></div>
         <div><label>Court / table</label><input id="fCourt" placeholder="e.g. 1"></div>
         <div><label>Round</label><input id="fRound" placeholder="e.g. Group A, Semi Final"></div>
-        <div><label>Group (standings)</label><input id="fGroup" placeholder="e.g. A (blank = knockout)"></div>
-        <div><label>Event</label><input id="fEvent" placeholder="e.g. Men's Doubles"></div>
+        <div><label>Standings group</label><input id="fGroup" placeholder="auto from category (blank = knockout)"></div>
+        <div><label>Category</label><input id="fEvent" list="catList" placeholder="pick a category"></div>
       </div>
       <div class="grid2">
         <div><label>Team A</label><select id="fA"></select></div>
@@ -110,11 +134,10 @@
     </div>
     <div class="card">
       <h3>Generate round-robin</h3>
-      <p class="muted">Creates every pairing for one group (everyone plays everyone once).</p>
+      <p class="muted">Creates every pairing for one category (everyone plays everyone once). Set each match's time and court afterwards with Edit.</p>
       <div class="grid3">
-        <div><label>Group</label><select id="rrGroup"></select></div>
+        <div><label>Category / pool</label><select id="rrGroup"></select></div>
         <div><label>Court / table</label><input id="rrCourt" placeholder="e.g. 1"></div>
-        <div><label>Event</label><input id="rrEvent" placeholder="optional"></div>
       </div>
       <div class="row" style="margin-top:12px"><button id="btnRR">Generate matches</button></div>
     </div>
@@ -131,9 +154,16 @@
     <div class="card"><h3>Last 150 actions</h3><div id="logList" style="overflow-x:auto"></div></div>
   </section>
 
+  <!-- GUIDE -->
+  <section id="vGuide" class="hide">
+    <button class="ghost small" id="btnGuideBack" style="margin:8px 0">← Back to login</button>
+    <div id="guideBody"></div>
+  </section>
+
   <!-- SCORING -->
   <section id="vScore" class="hide"></section>
 </main>
+<datalist id="catList"></datalist>
 
 <!-- FEEDBACK -->
 <div class="fbwrap hide" id="fbWrap"><button class="fbbtn" id="fbOpen" type="button">💬 Send feedback</button></div>
@@ -177,7 +207,7 @@
 </div>
 <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
 <div id="toast"></div>
-<script type="module" src="scorer.js?v=20261110i"></script>
+<script type="module" src="scorer.js?v=20261112a"></script>
 <script src="../js/feedback.js?v=20261111a"></script>
 </body>
 </html>

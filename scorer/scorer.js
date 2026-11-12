@@ -1,8 +1,8 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261110i";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261112a";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS } from "../js/engines.js?v=20261110i";
-import * as C from "../js/common.js?v=20261110i";
-import { applySportInfo } from "../js/sportinfo.js?v=20261110i";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS } from "../js/engines.js?v=20261112a";
+import * as C from "../js/common.js?v=20261112a";
+import { applySportInfo } from "../js/sportinfo.js?v=20261112a";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -44,12 +44,24 @@ let adminMode = false, isAdmin = false;
 let teams = {}, matches = {};
 let tab = "list", curId = null, editingId = null;
 let courtFilter = store("ja_court_" + S) || "";
+let catFilter = store("ja_cat_" + S) || "";
 let dataStarted = false, logUnsub = null, heartbeat = null, ticker = null;
 let entry = ""; // darts keypad entry
 let lastTap = 0;
 
 // ---------------------------------------------------------------- helpers
 const tn = id => (teams[id] && teams[id].name) || "TBC";
+// pair / player names shown under the team (sports without a numbered roster, e.g. badminton "Ali / Abu")
+const tp = id => (KIND === "goals" && DETAILS[S]) ? "" : String((teams[id] && teams[id].players) || "").split(/\r?\n/).filter(Boolean).join(" / ");
+// Category = e.g. "MIX DOUBLE". Older teams had the category typed into "group".
+const isOld = t => !!t && t.category == null && !!t.group && t.group.length > 2;
+const catOf = t => (t ? (t.category != null ? t.category : (isOld(t) ? t.group : "")) : "") || "";
+const poolOf = t => (t ? (t.category != null ? (t.group || "") : (isOld(t) ? "" : (t.group || ""))) : "");
+const keyOf = t => { const c = catOf(t), p = poolOf(t); return (c ? c + (p ? " – POOL " + p : "") : p).toUpperCase(); };
+const cats = () => [...new Set([...Object.values(teams).map(catOf), ...Object.values(matches).map(m => m.event || "")]
+  .filter(Boolean))].sort((a, b) => a.localeCompare(b));
+const normCat = c => { c = (c || "").trim(); return cats().find(x => x.toLowerCase() === c.toLowerCase()) || c; };
+const sameCat = (a, b) => (a || "").trim().toLowerCase() === (b || "").trim().toLowerCase();
 const sideName = (m, s) => tn(s === "a" ? m.teamA : m.teamB);
 const matchRef = id => ref(db, `sports/${S}/matches/${id}`);
 const arrMatches = () => Object.entries(matches).map(([id, m]) => ({ id, ...m })).sort(C.byNo);
@@ -57,9 +69,10 @@ const lockFresh = m => m.lock && (C.now() - (m.lock.at || 0) < LOCK_STALE);
 const lockedByOther = m => lockFresh(m) && m.lock.dev !== DEV;
 
 function show(v) {
-  for (const id of ["vLogin", "vList", "vSetup", "vLog", "vScore"]) $("#" + id).classList.add("hide");
+  for (const id of ["vLogin", "vList", "vTeams", "vSetup", "vLog", "vGuide", "vScore"]) $("#" + id).classList.add("hide");
   $("#" + v).classList.remove("hide");
-  $("#tabs").classList.toggle("hide", v === "vLogin" || v === "vScore");
+  $("#tabs").classList.toggle("hide", v === "vLogin" || v === "vScore" || (v === "vGuide" && !auth.currentUser));
+  if (v === "vGuide") { renderGuide(); $("#btnGuideBack").classList.toggle("hide", !!auth.currentUser); }
   $$("#tabs button").forEach(b => b.classList.toggle("on", "v" + cap(b.dataset.tab) === v));
 }
 const cap = s => s[0].toUpperCase() + s.slice(1);
@@ -279,13 +292,16 @@ function goTab(t) {
   if (logUnsub && t !== "log") { logUnsub(); logUnsub = null; }
   if (t === "score" && curId) { show("vScore"); renderScore(); return; }
   if (t === "list") { show("vList"); renderList(); }
+  if (t === "teams") { show("vTeams"); renderTeams(); }
   if (t === "setup") { show("vSetup"); renderSetup(); }
+  if (t === "guide") { show("vGuide"); }
   if (t === "log") { show("vLog"); startLog(); }
 }
 function render() {
   if (curId) return renderScore();
   if (tab === "list") renderList();
   if (tab === "setup") renderSetup();
+  if (tab === "teams") renderTeams();
 }
 
 // ---------------------------------------------------------------- list
@@ -300,9 +316,35 @@ function scoreCells(m) {
   return v.big;
 }
 
+function matchCard(m, st) {
+  const [sa, sb] = scoreCells(m);
+  const lk = lockedByOther(m) ? `<span class="badge lock">🔒 ${esc(m.lock.name)}</span>` : "";
+  const live = st === "live" ? `<span class="badge live">LIVE</span>` : "";
+  const v = st !== "scheduled" ? view(S, m, C.now()) : null;
+  return `<button class="mcard ${st}" data-open="${m.id}">
+    <div class="mtop">${m.event ? `<span class="badge cat">${esc(m.event)}</span>` : ""}<span>#${esc(m.no)}</span>${m.time ? `<span>${esc(m.time)}</span>` : ""}
+      ${m.court ? `<span>Court ${esc(m.court)}</span>` : ""}${m.round ? `<span>${esc(m.round)}</span>` : ""}
+      <span style="flex:1"></span>${live}${lk}</div>
+    <div class="mteams"><span class="${m.winner === "a" && st === "done" ? "win" : ""}">${esc(tn(m.teamA))}${tp(m.teamA) ? `<small class="mpl">${esc(tp(m.teamA))}</small>` : ""}</span><b>${sa}</b>
+      <span class="${m.winner === "b" && st === "done" ? "win" : ""}">${esc(tn(m.teamB))}${tp(m.teamB) ? `<small class="mpl">${esc(tp(m.teamB))}</small>` : ""}</span><b>${sb}</b></div>
+    ${v && v.hist ? `<div class="muted" style="font-size:13px;margin-top:4px">${esc(v.hist)}</div>` : ""}
+  </button>`;
+}
 function renderList() {
   const all = arrMatches();
-  const courts = [...new Set(all.map(m => String(m.court ?? "")).filter(Boolean))]
+  const mc = m => m.event || "";
+  const catList = [...new Set(all.map(mc).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  if (catFilter && !catList.includes(catFilter)) catFilter = "";
+  const left = c => all.filter(m => (!c || mc(m) === c) && m.status !== "done").length;
+  $("#catChips").innerHTML = catList.length > 1
+    ? [["", "All categories"], ...catList.map(c => [c, c])].map(([c, l]) =>
+        `<button data-cat="${esc(c)}" class="${c === catFilter ? "on" : ""}">${esc(l)}${left(c) ? ` <span class="cnt">${left(c)}</span>` : ""}</button>`).join("")
+    : "";
+  $$("#catChips button").forEach(b => b.onclick = () => {
+    catFilter = b.dataset.cat; store("ja_cat_" + S, catFilter || null); renderList();
+  });
+  const inCat = all.filter(m => !catFilter || mc(m) === catFilter);
+  const courts = [...new Set(inCat.map(m => String(m.court ?? "")).filter(Boolean))]
     .sort((a, b) => (Number(a) || 0) - (Number(b) || 0) || a.localeCompare(b));
   if (courtFilter && !courts.includes(courtFilter)) courtFilter = "";
   $("#courtChips").innerHTML = (courts.length > 1 ? [["", "All courts"], ...courts.map(c => [c, "Court " + c])] : [])
@@ -310,34 +352,27 @@ function renderList() {
   $$("#courtChips button").forEach(b => b.onclick = () => {
     courtFilter = b.dataset.court; store("ja_court_" + S, courtFilter || null); renderList();
   });
-
-  const list = all.filter(m => !courtFilter || String(m.court) === courtFilter);
+  const list = inCat.filter(m => !courtFilter || String(m.court) === courtFilter);
   if (!list.length) {
-    $("#matchList").innerHTML = `<div class="card muted">No matches yet. ${Object.keys(teams).length ? "Add them in the Setup tab." : "Start by adding teams in the Setup tab."}</div>`;
+    $("#matchList").innerHTML = `<div class="card muted">No matches yet. ${Object.keys(teams).length ? "Add them in the Setup tab." : "Start by adding teams in the Teams tab."}</div>`;
     return;
   }
+  const split = !catFilter && catList.length > 1;
   const groups = [["live", "Live now"], ["scheduled", "Up next"], ["done", "Finished"]];
   $("#matchList").innerHTML = groups.map(([st, title]) => {
     const g = list.filter(m => (m.status || "scheduled") === st);
     if (!g.length) return "";
-    return `<div class="group-title">${title} (${g.length})</div>` + g.map(m => {
-      const [sa, sb] = scoreCells(m);
-      const lk = lockedByOther(m) ? `<span class="badge lock">🔒 ${esc(m.lock.name)}</span>` : "";
-      const live = st === "live" ? `<span class="badge live">LIVE</span>` : "";
-      const v = st !== "scheduled" ? view(S, m, C.now()) : null;
-      return `<button class="mcard ${st}" data-open="${m.id}">
-        <div class="mtop"><span>#${esc(m.no)}</span>${m.time ? `<span>${esc(m.time)}</span>` : ""}
-          ${m.court ? `<span>Court ${esc(m.court)}</span>` : ""}${m.round ? `<span>${esc(m.round)}</span>` : ""}
-          ${m.event ? `<span>${esc(m.event)}</span>` : ""}<span style="flex:1"></span>${live}${lk}</div>
-        <div class="mteams"><span class="${m.winner === "a" && st === "done" ? "win" : ""}">${esc(tn(m.teamA))}</span><b>${sa}</b>
-          <span class="${m.winner === "b" && st === "done" ? "win" : ""}">${esc(tn(m.teamB))}</span><b>${sb}</b></div>
-        ${v && v.hist ? `<div class="muted" style="font-size:13px;margin-top:4px">${esc(v.hist)}</div>` : ""}
-      </button>`;
-    }).join("");
+    let body;
+    if (split && st !== "live") {
+      const byCat = {};
+      g.forEach(m => (byCat[mc(m) || "Other"] = byCat[mc(m) || "Other"] || []).push(m));
+      body = Object.keys(byCat).sort((a, b) => a.localeCompare(b)).map(c =>
+        `<div class="cat-title">${esc(c)} <span class="muted">(${byCat[c].length})</span></div>` + byCat[c].map(m => matchCard(m, st)).join("")).join("");
+    } else body = g.map(m => matchCard(m, st)).join("");
+    return `<div class="group-title">${title} (${g.length})</div>` + body;
   }).join("");
   $$("#matchList [data-open]").forEach(b => b.onclick = () => openMatch(b.dataset.open));
 }
-
 // ---------------------------------------------------------------- locks
 async function takeLock(id, force) {
   let blocked = null;
@@ -686,7 +721,7 @@ function sideBox(m, s, opts) {
   const cls = s === "a" ? "A" : "B";
   const tag = opts.tag ? `<span class="stag">${esc(opts.tag)}</span>` : "";
   const srv = opts.serving ? `<span class="sserve">● ${KIND === "darts" ? "THROWING" : "SERVING"}</span>` : "";
-  const inner = `${srv}${tag}<div class="sname">${esc(sideName(m, s))}</div>
+  const inner = `${srv}${tag}<div class="sname">${esc(sideName(m, s))}</div>${tp(s === "a" ? m.teamA : m.teamB) ? `<div class="splayers">${esc(tp(s === "a" ? m.teamA : m.teamB))}</div>` : ""}
     <div class="sscore">${opts.big}</div><div class="ssmall">${opts.small || ""}</div>${opts.hint ? `<div class="hint">${opts.hint}</div>` : ""}`;
   return opts.button
     ? `<button class="side ${cls} ${opts.serving ? "serving" : ""}" data-pt="${s}" ${opts.disabled ? "disabled" : ""}>${inner}</button>`
@@ -884,11 +919,28 @@ function onScoreClick(e) {
 }
 
 // ---------------------------------------------------------------- setup
-function teamOptions(sel) {
-  const arr = Object.entries(teams).sort((a, b) => a[1].name.localeCompare(b[1].name));
+function teamOptions(sel, cat) {
+  let arr = Object.entries(teams);
+  if (cat) { const f = arr.filter(([, t]) => sameCat(catOf(t), cat)); if (f.length) arr = f; }
+  if (sel && teams[sel] && !arr.some(([id]) => id === sel)) arr.push([sel, teams[sel]]);
+  arr.sort((a, b) => a[1].name.localeCompare(b[1].name));
   return `<option value="">— choose —</option>` + arr.map(([id, t]) =>
-    `<option value="${id}" ${id === sel ? "selected" : ""}>${esc(t.name)}${t.group ? " (" + esc(t.group) + ")" : ""}</option>`).join("");
+    `<option value="${id}" ${id === sel ? "selected" : ""}>${esc(t.name)}${t.players ? " – " + esc(t.players) : ""}${!cat && catOf(t) ? " (" + esc(catOf(t)) + ")" : ""}</option>`).join("");
 }
+function refreshTeamSelects() {
+  const cat = $("#fEvent").value.trim();
+  const ca = $("#fA").value, cb = $("#fB").value;
+  $("#fA").innerHTML = teamOptions(ca, cat);
+  $("#fB").innerHTML = teamOptions(cb, cat);
+}
+function fillCatList() {
+  $("#catList").innerHTML = cats().map(c => `<option value="${esc(c)}">`).join("");
+}
+$("#fEvent").addEventListener("input", () => {
+  refreshTeamSelects();
+  const g = $("#fGroup"), c = normCat($("#fEvent").value).toUpperCase();
+  if (!g.value || g.value === g.dataset.auto) { g.value = c; g.dataset.auto = c; }
+});
 
 function fmtFields(f) {
   const n = (id, label, val, ph = "") => `<div><label>${label}</label><input id="${id}" inputmode="numeric" value="${val ?? ""}" placeholder="${ph}"></div>`;
@@ -916,51 +968,15 @@ function nextNo() {
 
 let editingTeam = null;   // team being edited in Setup
 function renderSetup() {
-  // teams
-  const tarr = Object.entries(teams).sort((a, b) => (a[1].group || "").localeCompare(b[1].group || "") || a[1].name.localeCompare(b[1].name));
-  // keep whatever is being typed if the list refreshes while editing
-  const draft = editingTeam && $("#teName") ? { name: $("#teName").value, short: $("#teShort").value, group: $("#teGroup").value, players: $("#tePlayers") ? $("#tePlayers").value : "" } : null;
-  if (editingTeam && !teams[editingTeam]) editingTeam = null;
-  $("#teamList").innerHTML = tarr.length ? `<table class="teams"><tr><th>Team</th><th></th></tr>` +
-    tarr.map(([id, t]) => {
-      if (id === editingTeam) {
-        const d = draft || t;
-        return `<tr class="tedit"><td colspan="2">
-          <div class="tegrid">
-            <div><label>Team name</label><input id="teName" value="${esc(d.name)}"></div>
-            <div><label>Short name</label><input id="teShort" value="${esc(d.short || "")}" placeholder="optional"></div>
-            <div><label>Group</label><input id="teGroup" value="${esc(d.group || "")}" placeholder="e.g. A"></div>
-          </div>
-          ${DET ? `<label style="margin-top:10px">Players <span class="muted" style="text-transform:none;letter-spacing:0">– optional. One per line: number then name. With a list, the scorer can tap who scored${DET.cards ? " or got a card" : ""}.</span></label>
-          <textarea id="tePlayers" rows="6" placeholder="1 Ali bin Abu&#10;7 Siti Aminah&#10;10 John Lee">${esc(d.players || "")}</textarea>` : ""}
-          <div class="row" style="margin-top:10px"><button class="small primary" data-tsave="${id}">Save</button><button class="small ghost" data-tcancel>Cancel</button></div>
-        </td></tr>`;
-      }
-      const np = DET ? parsePlayers(t.players).length : 0;
-      const sub = [t.short, t.group ? "Group " + t.group : "", np ? np + " players" : ""].filter(Boolean).join(" · ");
-      return `<tr><td><b>${esc(t.name)}</b>${sub ? `<br><span class="muted" style="font-size:12px">${esc(sub)}</span>` : ""}</td>
-        <td style="text-align:right;white-space:nowrap"><button class="small" data-te="${id}">Edit</button> <button class="small danger" data-td="${id}">Delete</button></td></tr>`;
-    }).join("") + `</table>`
-    : `<p class="muted">No teams yet.</p>`;
-  $$("[data-te]").forEach(b => b.onclick = () => { editingTeam = b.dataset.te; renderSetup(); const i = $("#teName"); if (i) { i.focus(); i.select(); } });
-  $$("[data-td]").forEach(b => b.onclick = () => deleteTeam(b.dataset.td));
-  $$("[data-tsave]").forEach(b => b.onclick = () => saveTeam(b.dataset.tsave));
-  $$("[data-tcancel]").forEach(b => b.onclick = () => { editingTeam = null; renderSetup(); });
-  $$("#teamList .tedit input").forEach(i => i.onkeydown = e => {
-    if (e.key === "Enter") { e.preventDefault(); saveTeam(editingTeam); }
-    if (e.key === "Escape") { editingTeam = null; renderSetup(); }
-  });
-
   // form selects (keep current choices)
-  const ca = $("#fA").value, cb = $("#fB").value;
-  $("#fA").innerHTML = teamOptions(ca);
-  $("#fB").innerHTML = teamOptions(cb);
+  refreshTeamSelects();
+  fillCatList();
   if (!$("#fFmt").dataset.ready) { $("#fFmt").innerHTML = fmtFields(FORMATS[S]); $("#fFmt").dataset.ready = "1"; }
   if (!$("#fNo").value && !editingId) $("#fNo").value = nextNo();
 
-  const groups = [...new Set(Object.values(teams).map(t => t.group).filter(Boolean))].sort();
+  const groups = [...new Set(Object.values(teams).map(keyOf).filter(Boolean))].sort();
   const cg = $("#rrGroup").value;
-  $("#rrGroup").innerHTML = groups.length ? groups.map(g => `<option ${g === cg ? "selected" : ""}>${esc(g)}</option>`).join("") : `<option value="">(give teams a group first)</option>`;
+  $("#rrGroup").innerHTML = groups.length ? groups.map(g => `<option ${g === cg ? "selected" : ""}>${esc(g)}</option>`).join("") : `<option value="">(add teams with a category first)</option>`;
 
   // matches table
   const arr = arrMatches();
@@ -973,41 +989,137 @@ function renderSetup() {
   $$("[data-md]").forEach(b => b.onclick = () => deleteMatch(b.dataset.md));
 }
 
+// ---------------------------------------------------------------- teams tab
+const ROSTER = KIND === "goals" && !!DETAILS[S];   // futsal etc.: numbered player list per team
+const readPlayers = v => ROSTER ? parsePlayers(v).map(p => p.label).join("\n") : String(v || "").trim();
+function playersField(id, val) {
+  return ROSTER
+    ? `<label for="${id}">Players <span class="muted" style="text-transform:none;letter-spacing:0">– optional. One per line: number then name.</span></label>
+       <textarea id="${id}" rows="5" placeholder="1 Ali bin Abu&#10;7 Siti Aminah">${esc(val || "")}</textarea>`
+    : `<label for="${id}">Players</label><input id="${id}" value="${esc(val || "")}" placeholder="e.g. Irfan / Ali">`;
+}
+function renderTeams() {
+  fillCatList();
+  if (!$("#tPlayersWrap").dataset.ready) {
+    $("#tPlayersWrap").innerHTML = playersField("tPlayers", "");
+    $("#tPlayersWrap").dataset.ready = "1";
+    if (ROSTER) { $("#bulkHint").innerHTML = "They go into the category above. One team per line: <b>Team name | | Short name</b>. Add each team's players afterwards with Edit."; $("#tIntro").textContent = "Category is optional. Add the players list now or later with Edit."; }
+    else if (KIND === "rally") $("#tIntro").textContent = "Choose or type the category first, then the team. For doubles, each pair is one team.";
+  }
+  if (!$("#tCat").value) $("#tCat").value = store("ja_tcat_" + S) || "";
+  const old = Object.entries(teams).filter(([, t]) => isOld(t));
+  $("#teamFix").innerHTML = old.length ? `<div class="banner warn">${old.length} team(s) were added with the category in the old “Group” box.
+    <div style="font-weight:400;margin-top:4px">“Fix now” moves it into Category, and copies the Short name into Players (if Players is empty). Nothing else changes.</div>
+    <button class="small primary" id="btnFixTeams" style="margin-top:8px">Fix now</button></div>` : "";
+  if (old.length) $("#btnFixTeams").onclick = fixOldTeams;
+
+  const draft = editingTeam && $("#teName") ? { name: $("#teName").value, category: $("#teCat").value, players: $("#tePlayers").value,
+    short: $("#teShort").value, group: $("#tePool").value } : null;
+  if (editingTeam && !teams[editingTeam]) editingTeam = null;
+  const by = {};
+  Object.entries(teams).forEach(([id, t]) => (by[catOf(t) || "No category"] = by[catOf(t) || "No category"] || []).push([id, t]));
+  const keys = Object.keys(by).sort((a, b) => (a === "No category") - (b === "No category") || a.localeCompare(b));
+  $("#teamCats").innerHTML = keys.length ? keys.map(c => {
+    const rows = by[c].sort((a, b) => poolOf(a[1]).localeCompare(poolOf(b[1])) || a[1].name.localeCompare(b[1].name)).map(([id, t]) => {
+      if (id === editingTeam) {
+        const d = draft || { ...t, category: catOf(t), group: poolOf(t) };
+        return `<tr class="tedit"><td colspan="2"><div class="tegrid">
+            <div><label>Category</label><input id="teCat" list="catList" value="${esc(d.category || "")}"></div>
+            <div><label>Team name</label><input id="teName" value="${esc(d.name)}"></div>
+            <div><label>Short name</label><input id="teShort" value="${esc(d.short || "")}" placeholder="optional"></div>
+            <div><label>Pool</label><input id="tePool" value="${esc(d.group || "")}" placeholder="optional"></div>
+          </div>
+          <div style="margin-top:8px">${playersField("tePlayers", d.players)}</div>
+          <div class="row" style="margin-top:10px"><button class="small primary" data-tsave="${id}">Save</button><button class="small ghost" data-tcancel>Cancel</button></div>
+        </td></tr>`;
+      }
+      const pool = poolOf(t) ? ` <span class="badge">Pool ${esc(poolOf(t))}</span>` : "";
+      const np = ROSTER ? parsePlayers(t.players).length : 0;
+      const pl = ROSTER ? (np ? np + " players" : "") : (tp(id) || (isOld(t) ? t.short : ""));
+      return `<tr><td><b>${esc(t.name)}</b>${pool}${pl ? `<br><span class="muted" style="font-size:13px">${esc(pl)}</span>` : ""}</td>
+        <td style="text-align:right;white-space:nowrap"><button class="small" data-te="${id}">Edit</button> <button class="small danger" data-td="${id}">Delete</button></td></tr>`;
+    }).join("");
+    return `<div class="card"><div class="row" style="align-items:center"><h3 style="flex:1;margin:0">${esc(c)}</h3>
+      <span class="muted" style="font-size:13px">${by[c].length} team${by[c].length > 1 ? "s" : ""}</span>
+      ${c !== "No category" ? `<button class="small ghost" data-addcat="${esc(c)}">+ Add here</button>` : ""}</div>
+      <table class="teams" style="margin-top:8px">${rows}</table></div>`;
+  }).join("") : `<div class="card muted">No teams yet. Add the first one above.</div>`;
+
+  $$("[data-te]").forEach(b => b.onclick = () => { editingTeam = b.dataset.te; renderTeams(); const i = $("#teName"); if (i) { i.focus(); i.select(); } });
+  $$("[data-td]").forEach(b => b.onclick = () => deleteTeam(b.dataset.td));
+  $$("[data-tsave]").forEach(b => b.onclick = () => saveTeam(b.dataset.tsave));
+  $$("[data-tcancel]").forEach(b => b.onclick = () => { editingTeam = null; renderTeams(); });
+  $$("[data-addcat]").forEach(b => b.onclick = () => {
+    $("#tCat").value = b.dataset.addcat; $("#teamFormCard").scrollIntoView({ behavior: "smooth" }); $("#tName").focus();
+  });
+  $$("#teamCats .tedit input").forEach(i => i.onkeydown = e => {
+    if (e.key === "Enter") { e.preventDefault(); saveTeam(editingTeam); }
+    if (e.key === "Escape") { editingTeam = null; renderTeams(); }
+  });
+}
+const nameTaken = (name, cat, exceptId) => Object.entries(teams).some(([k, t]) =>
+  k !== exceptId && t.name.toLowerCase() === name.toLowerCase() && sameCat(catOf(t), cat));
+
+async function addTeam() {
+  const category = normCat($("#tCat").value), name = $("#tName").value.trim();
+  if (!name) { toast("Type the team name"); $("#tName").focus(); return; }
+  if (nameTaken(name, category)) { toast("That team is already in this category"); return; }
+  const val = { name, category, players: readPlayers($("#tPlayers").value), short: $("#tShort").value.trim(), group: $("#tPool").value.trim().toUpperCase() };
+  try { await C.set(C.push(ref(db, `sports/${S}/teams`)), val); } catch (e) { toast("Couldn't save – check the connection"); return; }
+  store("ja_tcat_" + S, category || null);
+  $("#tName").value = ""; $("#tPlayers").value = ""; $("#tShort").value = "";
+  $("#tName").focus();
+  toast(`${name} added${category ? " to " + category : ""}`);
+}
+$("#btnAddTeam").onclick = addTeam;
+["#tName", "#tShort", "#tPool"].forEach(sel => $(sel).onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); addTeam(); } });
+
 $("#btnAddTeams").onclick = async () => {
+  const category = normCat($("#tCat").value);
   const lines = $("#teamBulk").value.split("\n").map(l => l.trim()).filter(Boolean);
-  if (!lines.length) return toast("Type at least one team");
-  const existing = new Set(Object.values(teams).map(t => t.name.toLowerCase()));
+  if (!lines.length) return toast("Paste at least one team");
+  if (!category && !confirm("No category chosen above. Add these teams without a category?")) return;
+  const upd = {}, seen = new Set();
   let added = 0;
-  const upd = {};
   for (const l of lines) {
-    const [name, short, group] = l.split("|").map(x => (x || "").trim());
-    if (!name || existing.has(name.toLowerCase())) continue;
-    existing.add(name.toLowerCase());
-    const id = C.push(ref(db, `sports/${S}/teams`)).key;
-    upd[id] = { name, short: short || "", group: (group || "").toUpperCase() };
+    const [name, players, short] = l.split("|").map(x => (x || "").trim());
+    if (!name || seen.has(name.toLowerCase()) || nameTaken(name, category)) continue;
+    seen.add(name.toLowerCase());
+    upd[C.push(ref(db, `sports/${S}/teams`)).key] = { name, category, players: ROSTER ? "" : (players || ""), short: short || "", group: $("#tPool").value.trim().toUpperCase() };
     added++;
   }
   if (!added) return toast("Those teams already exist");
   await C.update(ref(db, `sports/${S}/teams`), upd);
+  store("ja_tcat_" + S, category || null);
   $("#teamBulk").value = "";
-  toast(`${added} team(s) added`);
+  toast(`${added} team(s) added${category ? " to " + category : ""}`);
 };
+
+async function fixOldTeams() {
+  const upd = {};
+  for (const [id, t] of Object.entries(teams)) {
+    if (!isOld(t)) continue;
+    upd[`${id}/category`] = t.group;
+    upd[`${id}/group`] = "";
+    if (!ROSTER && !t.players && t.short) upd[`${id}/players`] = t.short;
+  }
+  try { await C.update(ref(db, `sports/${S}/teams`), upd); } catch (e) { toast("Couldn't save – check the connection"); return; }
+  toast("Teams fixed");
+  republishAll().catch(() => {});
+}
 
 async function saveTeam(id) {
   if (!id || !teams[id]) return;
-  const name = $("#teName").value.trim(), short = $("#teShort").value.trim(), group = $("#teGroup").value.trim().toUpperCase();
+  const name = $("#teName").value.trim(), category = normCat($("#teCat").value);
   if (!name) { toast("Team name can't be empty"); $("#teName").focus(); return; }
-  const clash = Object.entries(teams).some(([k, t]) => k !== id && t.name.toLowerCase() === name.toLowerCase());
-  if (clash) { toast("Another team already has that name"); $("#teName").focus(); return; }
-  const val = { name, short, group };
-  if ($("#tePlayers")) val.players = parsePlayers($("#tePlayers").value).map(p => p.label).join("\n");
-  else if (teams[id].players) val.players = teams[id].players;
+  if (nameTaken(name, category, id)) { toast("Another team in this category has that name"); $("#teName").focus(); return; }
+  const val = { name, category, players: readPlayers($("#tePlayers").value), short: $("#teShort").value.trim(), group: $("#tePool").value.trim().toUpperCase() };
   try {
     await C.update(ref(db, `sports/${S}/teams/${id}`), val);
   } catch (e) { toast("Couldn't save – check the connection"); return; }
   teams[id] = val;
   editingTeam = null;
-  renderSetup();
+  renderTeams();
   await republishAll();   // update names on the public page and big screen
   toast("Team updated");
 }
@@ -1028,7 +1140,9 @@ function clearForm(keep = true) {
   if (!keep) {
     $("#fCourt").value = ""; $("#fRound").value = ""; $("#fGroup").value = ""; $("#fEvent").value = "";
     $("#fFmt").innerHTML = fmtFields(FORMATS[S]);
+    $("#fGroup").dataset.auto = "";
   }
+  refreshTeamSelects();
 }
 $("#btnCancelEdit").onclick = () => clearForm(false);
 
@@ -1040,6 +1154,8 @@ function editMatch(id) {
   $("#btnCancelEdit").classList.remove("hide");
   $("#fNo").value = m.no ?? ""; $("#fTime").value = m.time || ""; $("#fCourt").value = m.court || "";
   $("#fRound").value = m.round || ""; $("#fGroup").value = m.group || ""; $("#fEvent").value = m.event || "";
+  $("#fGroup").dataset.auto = "";
+  $("#fA").innerHTML = teamOptions(m.teamA, m.event || ""); $("#fB").innerHTML = teamOptions(m.teamB, m.event || "");
   $("#fA").value = m.teamA || ""; $("#fB").value = m.teamB || "";
   $("#fFmt").innerHTML = fmtFields(fmtOf(S, m));
   $("#matchFormCard").scrollIntoView({ behavior: "smooth" });
@@ -1048,7 +1164,7 @@ function editMatch(id) {
 $("#btnSaveMatch").onclick = async () => {
   const fields = {
     no: $("#fNo").value.trim(), time: $("#fTime").value.trim(), court: $("#fCourt").value.trim(),
-    round: $("#fRound").value.trim(), group: $("#fGroup").value.trim().toUpperCase(), event: $("#fEvent").value.trim(),
+    round: $("#fRound").value.trim(), group: $("#fGroup").value.trim().toUpperCase(), event: normCat($("#fEvent").value),
     teamA: $("#fA").value, teamB: $("#fB").value, fmt: readFmt()
   };
   if (!fields.teamA || !fields.teamB) return toast("Choose both teams");
@@ -1083,7 +1199,8 @@ async function deleteMatch(id) {
 $("#btnRR").onclick = async () => {
   const g = $("#rrGroup").value;
   if (!g) return toast("Give teams a group first");
-  const ids = Object.entries(teams).filter(([, t]) => t.group === g).map(([id]) => id);
+  const ids = Object.entries(teams).filter(([, t]) => keyOf(t) === g).map(([id]) => id);
+  const t0 = teams[ids[0]] || {};
   if (ids.length < 2) return toast("Need at least 2 teams in the group");
   // circle method so teams rest between matches
   const list = ids.length % 2 ? [...ids, null] : [...ids];
@@ -1095,24 +1212,87 @@ $("#btnRR").onclick = async () => {
     }
     list.splice(1, 0, list.pop());
   }
-  if (!confirm(`Create ${pairs.length} matches for Group ${g}?`)) return;
+  if (!confirm(`Create ${pairs.length} matches for ${g}?`)) return;
   let no = nextNo();
   const upd = {}, pubs = {};
   for (const [x, y] of pairs) {
     const id = C.push(ref(db, `sports/${S}/matches`)).key;
-    const m = { no: String(no++), time: "", court: $("#rrCourt").value.trim(), round: "Group " + g, group: g,
-      event: $("#rrEvent").value.trim(), teamA: x, teamB: y, fmt: FORMATS[S], status: "scheduled", createdAt: C.now(), updatedAt: C.now() };
+    const m = { no: String(no++), time: "", court: $("#rrCourt").value.trim(), round: poolOf(t0) ? "Pool " + poolOf(t0) : (catOf(t0) ? "Group stage" : "Group " + g), group: g,
+      event: catOf(t0), teamA: x, teamB: y, fmt: FORMATS[S], status: "scheduled", createdAt: C.now(), updatedAt: C.now() };
     upd[id] = m;
     pubs[id] = publicRecord(S, m, teams);
   }
   await C.update(ref(db, `sports/${S}/matches`), upd);
   await C.update(ref(db, `pub/${S}/m`), pubs);
+  if (!editingId) $("#fNo").value = no;
   toast(`${pairs.length} matches created`);
 };
 
 $("#btnRepublish").onclick = async () => {
   try { await republishAll(); toast("Public data refreshed"); } catch (e) { toast("Error: " + e.message); }
 };
+
+// ---------------------------------------------------------------- guide
+function renderGuide() {
+  if ($("#guideBody").dataset.ready) return;
+  const sec = (title, body, open) => `<details class="card guide" ${open ? "open" : ""}><summary><h3>${title}</h3></summary>${body}</details>`;
+  const u = UNIT.toLowerCase();
+  const scoring = {
+    rally: `<ol>
+      <li>Open your match. Tap the pair/team that <b>serves first</b>.</li>
+      <li>After every rally, tap the <b>big box of the side that won the rally</b>. That's it – one tap per point.</li>
+      <li>The <b>● SERVING</b> marker, the interval at mid-game, deuce, the max points and the next ${u} are all handled automatically.</li>
+      <li>When someone wins, a green banner appears. Check the score, then tap <b>Confirm result</b>.</li>
+    </ol>
+    <p class="muted">Format for this match is shown before you start (e.g. best of 3, 21 points, max 30). If it's wrong, ask your lead to fix it in Setup → Edit before starting.</p>`,
+    goals: `<ol>
+      <li>Open your match and tap <b>Start match</b>. Tap <b>▶ Start clock</b> when play starts and <b>⏸ Pause clock</b> when the referee stops time.</li>
+      <li>Tap <b>+ Goal</b> for the team that scored (then tap who scored, if a player list was added)${FORMATS[S].fouls ? ", and <b>Foul</b> when a foul is given" : ""}.</li>
+      <li>At the end of each ${u}, tap <b>End ${u}</b>. The clock resets for the next one.</li>
+      <li>When the match is over, tap <b>Confirm result</b>.</li>
+    </ol>`,
+    darts: `<ol>
+      <li>Open your match and tap who <b>throws first</b>.</li>
+      <li>After each turn of 3 darts, type the score on the keypad and tap <b>Enter</b>. The remaining score and whose turn it is update automatically.</li>
+      <li>A checkout must finish on a double – the page will ask you to confirm.</li>
+      <li>When the match is won, tap <b>Confirm result</b>.</li>
+    </ol>`
+  }[KIND];
+  $("#guideBody").innerHTML = `
+    <div class="card"><h3>Scorer guide · ${esc(SP.name)}</h3>
+      <p>Every tap you make goes <b>straight to the big screen and the public QR page</b>. Take your time – mistakes can always be undone.</p></div>
+    ${sec("1 · Log in", `<ol>
+      <li>Open the ${esc(SP.name)} scorer link from the organiser.</li>
+      <li>Type <b>your name and court</b>, e.g. <i>Ali – Court 1</i>. This shows who is scoring which match.</li>
+      <li>Enter the ${esc(SP.name)} password and tap <b>Log in</b>. Each court uses its own phone; everyone can use the same password.</li>
+      <li>The small dot at the top is <b>green</b> when online. If it turns <b>red</b>, keep scoring – it will sync when the signal is back.</li></ol>`, true)}
+    ${sec("2 · Find your match", `<ol>
+      <li>Go to the <b>Matches</b> tab. Tap your <b>category</b> (e.g. MIX DOUBLE) and your <b>court</b> at the top to see only your matches. The phone remembers this.</li>
+      <li>Matches are listed as <b>Live now</b>, <b>Up next</b> and <b>Finished</b>.</li>
+      <li>Tap the match to open it. It is now <b>locked to your phone</b> 🔒 so nobody else can change it by accident.</li></ol>`)}
+    ${sec("3 · Score the match", scoring, true)}
+    ${sec("4 · Fixing mistakes", `<ul>
+      <li><b>Wrong point/goal?</b> Tap <b>↶ Undo</b>. You can undo many times.</li>
+      <li><b>Wrong result after confirming?</b> More ▾ → <b>Reopen match</b>, fix it, then confirm again.</li>
+      <li><b>Tapped Start by mistake?</b> More ▾ → <b>Back to "not started"</b> (only before the first point).</li>
+      <li><b>Phone died / changing scorer?</b> On the other phone open the match and tap <b>Take control</b>. The score is kept.</li></ul>`)}
+    ${sec("5 · Special situations", `<ul>
+      <li><b>A team doesn't show up:</b> More ▾ → <b>Walkover</b> → pick the winner.</li>
+      <li><b>Players change ends:</b> More ▾ → <b>Swap sides on this screen</b>, so the boxes match where they stand.</li>
+      <li><b>Finished with the match:</b> tap <b>← Matches</b> to go back. This releases the lock automatically.</li></ul>`)}
+    ${sec("6 · For the AJK lead (before the event)", `<ol>
+      <li><b>Teams tab:</b> pick the category, then add each team with its players (e.g. <i>VOLTRA – Irfan / Ali</i>). Use “Paste many teams” to add a whole category at once.</li>
+      <li><b>Setup tab → Generate round-robin:</b> pick a category to create all its matches in one go. Or paste the whole schedule from Excel with <b>Paste the schedule</b>, or add matches one by one with <b>Add match</b>.</li>
+      <li>Then <b>Edit</b> each match to set the <b>time</b>, <b>court</b> and, if needed, the <b>format</b>.</li>
+      <li>Standings are worked out automatically for each category from confirmed results.</li></ol>`)}
+    ${sec("Tips", `<ul>
+      <li>Charge the phone fully and keep the screen on. Turn the brightness up.</li>
+      <li>Don't share the password outside your sport's AJK.</li>
+      <li>Not sure? Don't guess – ask your AJK lead, then use Undo if needed.</li></ul>`)}`;
+  $("#guideBody").dataset.ready = "1";
+}
+$("#btnGuideLogin").onclick = () => show("vGuide");
+$("#btnGuideBack").onclick = () => { if (auth.currentUser) goTab("list"); else show("vLogin"); };
 
 // ---------------------------------------------------------------- log
 function startLog() {
