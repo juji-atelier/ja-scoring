@@ -1,10 +1,10 @@
-import { SPORTS, ADMIN_EMAIL, EVENT_DEFAULTS } from "../config.js?v=20261112n";
-import { publicRecord, standings, FORMATS, ENGINE_OF, DETAILS } from "../js/engines.js?v=20261112n";
-import { bowlingStandings, BOWL_ROOT } from "../js/bowling-data.js?v=20261112n";
-import { BOARDS, mlbbMatches, applyBoardInfo, boardBaseName } from "../js/boards.js?v=20261112n";
-import { applySportInfo, SPORT_BASE } from "../js/sportinfo.js?v=20261112n";
-import { firebaseConfig } from "../config.js?v=20261112n";
-import * as C from "../js/common.js?v=20261112n";
+import { SPORTS, ADMIN_EMAIL, EVENT_DEFAULTS } from "../config.js?v=20261112o";
+import { publicRecord, standings, FORMATS, ENGINE_OF, DETAILS } from "../js/engines.js?v=20261112o";
+import { bowlingStandings, BOWL_ROOT } from "../js/bowling-data.js?v=20261112o";
+import { BOARDS, mlbbMatches, applyBoardInfo, boardBaseName } from "../js/boards.js?v=20261112o";
+import { applySportInfo, SPORT_BASE } from "../js/sportinfo.js?v=20261112o";
+import { firebaseConfig } from "../config.js?v=20261112o";
+import * as C from "../js/common.js?v=20261112o";
 const { $, $$, esc, toast, ref } = C;
 
 if (!C.configured) { C.notConfiguredScreen(); throw new Error("not configured"); }
@@ -338,8 +338,11 @@ function fillSportInfo() {
   $("#sportInfo").innerHTML = `<table class="sitab"><tr><th>Sport</th><th>Name shown</th><th>Date</th><th>Venue</th></tr>` +
     Object.keys(SPORTS).map(id => { const b = SPORT_BASE[id];
       return `<tr><td><b style="color:${SPORTS[id].color}">●</b> ${esc(b.name)}</td>${cell(id, "name", b.name, 30)}${cell(id, "day", b.day, 24)}${cell(id, "venue", b.venue || main + " (main venue)", 90)}</tr>`; }).join("") +
-    // bowling / Mobile Legends: name only – their date and venue are set on their own pages
-    Object.entries(BOARDS).map(([id, b]) => `<tr><td><b style="color:${b.color}">●</b> ${esc(boardBaseName(id))}</td>${cell(id, "name", boardBaseName(id), 30)}<td colspan="2" class="muted" style="font-size:12px">date and venue are set on its own page</td></tr>`).join("") + `</table>`;
+    // bowling: name only – its date and venue are set on the bowling page (Tournament rules).
+    // Mobile Legends has no settings page of its own, so its date and venue are set here.
+    Object.entries(BOARDS).map(([id, b]) => `<tr><td><b style="color:${b.color}">●</b> ${esc(boardBaseName(id))}</td>${cell(id, "name", boardBaseName(id), 30)}${id === "mlbb"
+      ? cell(id, "day", "e.g. Sat 7 Nov", 24) + cell(id, "venue", "e.g. Dewan Utama, Wisma SESB", 90)
+      : `<td colspan="2" class="muted" style="font-size:12px">date and venue are set on its own page</td>`}</tr>`).join("") + `</table>`;
 }
 $("#btnSaveSportInfo").onclick = async () => {
   const out = {};

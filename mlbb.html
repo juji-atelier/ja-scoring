@@ -7,8 +7,8 @@
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 <meta name="theme-color" content="#F6F4F2">
 <title>Mobile Legends · Live Standings</title>
-<link rel="stylesheet" href="css/theme.css?v=20261112n">
-<script src="js/theme.js?v=20261112n"></script>
+<link rel="stylesheet" href="css/theme.css?v=20261112o">
+<script src="js/theme.js?v=20261112o"></script>
 <style>
 :root{--sport:#f59e0b;--ga:#D23A3A;--gb:#2F6FE0}
 *{box-sizing:border-box}
@@ -89,12 +89,12 @@ tr.cut td{border-bottom:2px dashed var(--gold)}
 /* iPhone zooms into text boxes under 16px */
 @media (pointer:coarse){input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea{font-size:max(16px,1em)!important}}
 </style>
-<script src="js/splash.js?v=20261112n"></script>
+<script src="js/splash.js?v=20261112o"></script>
 </head>
 <body>
 <header class="hd"><div class="wrap">
   <img class="logo-dragon" src="img/dragon.jpg" alt="HQ Dragon">
-  <div class="brand"><b id="ev">HQ Games 2026</b><small id="venue"></small></div>
+  <div class="brand"><b id="ev">HQ Games 2026</b><small id="venue">Mobile Legends · E-Sport</small></div>
   <div class="sp"></div>
   <div data-clock></div>
   <img class="logo-org" src="img/sabah-electricity.png" alt="Sabah Electricity">
@@ -117,7 +117,7 @@ tr.cut td{border-bottom:2px dashed var(--gold)}
 <script type="module">
 // Mobile Legends standings for the HQ Games live page.
 // Data: Firebase  mlbb/live  — written by the JA ESPORT console (Group Stage tab).
-import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "./config.js?v=20261112n";
+import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "./config.js?v=20261112o";
 const BASE = String(firebaseConfig.databaseURL || "").replace(/\/$/, "");
 const POLL_MS = 12000;
 const $ = s => document.querySelector(s);
@@ -161,7 +161,9 @@ async function poll() {
       boardNames = s.sportInfo || {};
       sportTabs();
       $("#ev").textContent = s.event || EVENT_DEFAULTS.name;
-      $("#venue").textContent = s.venue || EVENT_DEFAULTS.venue;
+      // Mobile Legends' own date / venue (Admin → Sport names, dates & venues); not the main venue
+      const mi = (s.sportInfo || {}).mlbb || {}, mv = String(mi.venue || "").trim(), md = String(mi.day || "").trim();
+      $("#venue").textContent = mv ? `📍 ${mv}${md ? " · " + md : ""}` : `Mobile Legends · E-Sport${md ? " · " + md : ""}`;
     }
   } catch (e) { $("#upd").textContent = "Connection problem – retrying…"; }
   timer = setTimeout(poll, POLL_MS);
