@@ -7,8 +7,8 @@
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 <meta name="theme-color" content="#F6F4F2">
 <title>Mobile Legends · Live Standings</title>
-<link rel="stylesheet" href="css/theme.css?v=20261112o">
-<script src="js/theme.js?v=20261112o"></script>
+<link rel="stylesheet" href="css/theme.css?v=20261112p">
+<script src="js/theme.js?v=20261112p"></script>
 <style>
 :root{--sport:#f59e0b;--ga:#D23A3A;--gb:#2F6FE0}
 *{box-sizing:border-box}
@@ -89,12 +89,12 @@ tr.cut td{border-bottom:2px dashed var(--gold)}
 /* iPhone zooms into text boxes under 16px */
 @media (pointer:coarse){input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea{font-size:max(16px,1em)!important}}
 </style>
-<script src="js/splash.js?v=20261112o"></script>
+<script src="js/splash.js?v=20261112p"></script>
 </head>
 <body>
 <header class="hd"><div class="wrap">
   <img class="logo-dragon" src="img/dragon.jpg" alt="HQ Dragon">
-  <div class="brand"><b id="ev">HQ Games 2026</b><small id="venue">Mobile Legends · E-Sport</small></div>
+  <div class="brand"><b id="ev">HQ Games 2026</b><small id="venue">📍 Centralized Meeting Room, Block E, Tingkat 1, Bangunan KWSP</small></div>
   <div class="sp"></div>
   <div data-clock></div>
   <img class="logo-org" src="img/sabah-electricity.png" alt="Sabah Electricity">
@@ -115,9 +115,10 @@ tr.cut td{border-bottom:2px dashed var(--gold)}
 </div>
 <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
 <script type="module">
+const ML_VENUE = "Centralized Meeting Room, Block E, Tingkat 1, Bangunan KWSP";
 // Mobile Legends standings for the HQ Games live page.
 // Data: Firebase  mlbb/live  — written by the JA ESPORT console (Group Stage tab).
-import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "./config.js?v=20261112o";
+import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "./config.js?v=20261112p";
 const BASE = String(firebaseConfig.databaseURL || "").replace(/\/$/, "");
 const POLL_MS = 12000;
 const $ = s => document.querySelector(s);
@@ -162,7 +163,8 @@ async function poll() {
       sportTabs();
       $("#ev").textContent = s.event || EVENT_DEFAULTS.name;
       // Mobile Legends' own date / venue (Admin → Sport names, dates & venues); not the main venue
-      const mi = (s.sportInfo || {}).mlbb || {}, mv = String(mi.venue || "").trim(), md = String(mi.day || "").trim();
+      // default: same room as Karom (where the ML games were played)
+      const mi = (s.sportInfo || {}).mlbb || {}, mv = String(mi.venue || "").trim() || ML_VENUE, md = String(mi.day || "").trim();
       $("#venue").textContent = mv ? `📍 ${mv}${md ? " · " + md : ""}` : `Mobile Legends · E-Sport${md ? " · " + md : ""}`;
     }
   } catch (e) { $("#upd").textContent = "Connection problem – retrying…"; }
