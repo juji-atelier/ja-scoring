@@ -7,8 +7,8 @@
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 <meta name="theme-color" content="#F6F4F2">
 <title>Mobile Legends · Live Standings</title>
-<link rel="stylesheet" href="css/theme.css?v=20261112q">
-<script src="js/theme.js?v=20261112q"></script>
+<link rel="stylesheet" href="css/theme.css?v=20261112r">
+<script src="js/theme.js?v=20261112r"></script>
 <style>
 :root{--sport:#f59e0b;--ga:#D23A3A;--gb:#2F6FE0}
 *{box-sizing:border-box}
@@ -40,6 +40,7 @@ nav a.on:before{background:#fff}
 h2{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin:22px 2px 10px;display:flex;align-items:center;gap:10px;font-weight:700}
 h2 .gtag{color:#fff;border-radius:6px;padding:3px 8px;letter-spacing:.1em}
 .empty{color:var(--mute);padding:12px 2px;font-size:14px}
+.donebar{margin:4px 0 10px;padding:10px 14px;border-radius:12px;font-size:14px;background:color-mix(in srgb,#16a34a 16%,var(--card));border:1px solid color-mix(in srgb,#16a34a 45%,var(--line))}
 .upd{font-size:12px;color:var(--mute);text-align:right;margin-top:6px}
 /* table */
 .tw{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
@@ -110,7 +111,7 @@ html[data-theme="dark"] body::after{background:radial-gradient(closest-side, col
 .hero:before{content:"";position:absolute;right:-2.5%;top:50%;height:104%;width:auto;aspect-ratio:140/79;transform:translateY(-50%) rotate(-6deg);background:#fff;opacity:.09;pointer-events:none;-webkit-mask:url(img/ja.svg) center/contain no-repeat;mask:url(img/ja.svg) center/contain no-repeat}
 @media(max-width:600px){.hero:before{width:200px;height:114px;right:-40px;opacity:.08}}
 </style>
-<script src="js/splash.js?v=20261112q"></script>
+<script src="js/splash.js?v=20261112r"></script>
 </head>
 <body>
 <header class="hd"><div class="wrap">
@@ -139,14 +140,16 @@ html[data-theme="dark"] body::after{background:radial-gradient(closest-side, col
 const ML_VENUE = "Centralized Meeting Room, Block E, Tingkat 1, Bangunan KWSP";
 // Mobile Legends standings for the HQ Games live page.
 // Data: Firebase  mlbb/live  — written by the JA ESPORT console (Group Stage tab).
-import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "./config.js?v=20261112q";
-import { renderSportGrid, sportItems, fetchLiveCounts } from "./js/sportnav.js?v=20261112q";
+import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "./config.js?v=20261112r";
+import { renderSportGrid, sportItems, fetchLiveCounts } from "./js/sportnav.js?v=20261112r";
+import { cfgOf, shown, isDone, mlHas, mlEffective, KEEP } from "./js/livecfg.js?v=20261112r";
 const BASE = String(firebaseConfig.databaseURL || "").replace(/\/$/, "");
 const POLL_MS = 12000;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const DEMO = new URLSearchParams(location.search).has("demo");
 let D = null, lastOk = 0, timer = null;
+let cfg = { show: {}, done: {} }, kept = false;   // Admin → Live score settings; kept = showing the saved copy
 let sub = (() => { try { return sessionStorage.getItem("mlbbSub") || "table"; } catch (e) { return "table"; } })();
 
 let boardNames = {};
@@ -154,12 +157,12 @@ const bname = (id, d) => String((boardNames[id] || {}).name || "").trim() || d;
 let liveCounts = {};
 const sportTabs = () => {
   renderSportGrid($("#tabs"), sportItems(SPORTS, id => id === "bowling" ? "bowling.html" : id === "mlbb" ? "mlbb.html" : "live/#" + id,
-    { bowling: bname("bowling", "Bowling"), mlbb: bname("mlbb", "Mobile Legends") }, liveCounts), "mlbb");
+    { bowling: bname("bowling", "Bowling"), mlbb: bname("mlbb", "Mobile Legends") }, liveCounts, cfg), "mlbb");
   const t = document.getElementById("title"); if (t) t.textContent = bname("mlbb", "Mobile Legends"); };
 sportTabs();
 { const base = String(firebaseConfig.databaseURL || "").replace(/\/$/, "");
-  const lc = () => fetchLiveCounts(base, Object.keys(SPORTS)).then(c => { liveCounts = c; sportTabs(); }).catch(() => {});
-  lc(); setInterval(() => { if (!document.hidden) lc(); }, 60000); }
+  const lc = () => fetchLiveCounts(base, Object.keys(SPORTS), cfg).then(c => { liveCounts = c; sportTabs(); }).catch(() => {});
+  setTimeout(lc, 1500); setInterval(() => { if (!document.hidden) lc(); }, 60000); }
 
 function setSub(v) {
   sub = v; try { sessionStorage.setItem("mlbbSub", v); } catch (e) {}
@@ -179,11 +182,12 @@ async function poll() {
   clearTimeout(timer);
   if (document.hidden) return;
   try {
-    D = DEMO ? demo() : await getJSON("mlbb/live");
-    lastOk = Date.now(); render();
     if (Date.now() - settingsAt > 60000) {
       const s = (await getJSON("settings").catch(() => null)) || {};
       settingsAt = Date.now();
+      cfg = cfgOf(s);
+      // switched off in Admin → Live score: send people to the main live-score page
+      if (!DEMO && !shown(cfg, "mlbb")) { location.replace("live/"); return; }
       for (const [id, o] of Object.entries(s.sportInfo || {})) if (SPORTS[id] && o && String(o.name || "").trim()) SPORTS[id].name = String(o.name).trim();
       boardNames = s.sportInfo || {};
       sportTabs();
@@ -193,6 +197,18 @@ async function poll() {
       const mi = (s.sportInfo || {}).mlbb || {}, mv = String(mi.venue || "").trim() || ML_VENUE, md = String(mi.day || "").trim();
       $("#venue").textContent = mv ? `📍 ${mv}${md ? " · " + md : ""}` : `Mobile Legends · E-Sport${md ? " · " + md : ""}`;
     }
+    if (DEMO) { D = demo(); kept = false; }
+    else {
+      // Completed → the kept copy only. Otherwise the console's data; if the console was
+      // cleared, the copy Admin kept (only "Reset live score system" removes it).
+      const done = isDone(cfg, "mlbb");
+      const live = done ? null : await getJSON("mlbb/live");
+      const keep = done || !mlHas(live) ? await getJSON(`pub/${KEEP}/mlbb`).catch(() => null) : null;
+      const e = mlEffective(live, keep, cfg);
+      D = done && !e.D ? await getJSON("mlbb/live") : e.D;
+      kept = e.kept;
+    }
+    lastOk = Date.now(); render();
   } catch (e) { $("#upd").textContent = "Connection problem – retrying…"; }
   timer = setTimeout(poll, POLL_MS);
 }
@@ -271,6 +287,7 @@ function render() {
     h = `<div class="live-ann"><span class="ai">📺</span><div><b>${esc(list)} — live on stream</b>` +
       (url ? `<small>Watch the livestream:</small><a href="${esc(url)}" target="_blank" rel="noopener">▶ ${esc(L.replace(/^https?:\/\/(www\.)?/i, ""))}</a>` : `<small>The organiser will announce the livestream link.</small>`) + `</div></div>` + h;
   }
+  if (isDone(cfg, "mlbb")) h = `<div class="donebar">✅ <b>${esc(bname("mlbb", "Mobile Legends"))} completed</b> · final results</div>` + h;
   $("#body").innerHTML = h;
   tick();
 }

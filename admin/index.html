@@ -8,9 +8,9 @@
 <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
 <title>Admin · JA Scoring</title>
 <meta name="theme-color" content="#F6F4F2">
-<script src="../js/hints.js?v=20261112q"></script>
-<script src="../js/theme.js?v=20261112q"></script>
-<link rel="stylesheet" href="../css/app.css?v=20261112q">
+<script src="../js/hints.js?v=20261112r"></script>
+<script src="../js/theme.js?v=20261112r"></script>
+<link rel="stylesheet" href="../css/app.css?v=20261112r">
 <style>
 :root{--sport:var(--acc)}
 .rsum{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
@@ -73,6 +73,16 @@ table.aw th{white-space:nowrap}
 .fbi .ty{font-size:11px;font-weight:800;padding:1px 7px;border-radius:99px;background:var(--bg2);margin-right:6px}
 .filebtn{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-weight:600;font-size:14px;cursor:pointer;text-transform:none;letter-spacing:0;color:var(--text);margin:0;background:var(--card)}
 #restoreBox .checks label{align-items:flex-start}
+table.lv{width:100%;border-collapse:collapse;font-size:14px;min-width:640px}
+table.lv th{text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--line)}
+table.lv td{padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}
+table.lv td.sp{border-left:4px solid var(--c);font-weight:800;white-space:nowrap}
+table.lv tr.off td{opacity:.5} table.lv tr.off td.ck{opacity:1}
+table.lv label.ck{display:flex;align-items:center;gap:6px;margin:0;text-transform:none;letter-spacing:0;font-size:14px;color:var(--text);white-space:nowrap;cursor:pointer}
+table.lv label.ck input{width:auto;margin:0}
+table.lv .inf{font-size:12.5px;color:var(--muted)}
+.lvtag{display:inline-block;font-size:11px;font-weight:800;padding:2px 8px;border-radius:99px;margin-left:6px;vertical-align:middle}
+.lvtag.dn{background:#16a34a26;color:#15803d} .lvtag.hd{background:var(--bg2);color:var(--muted)}
 .sitab{width:100%;border-collapse:collapse;min-width:640px}.sitab th{text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:4px 6px}
 .sitab td{padding:4px 6px;white-space:nowrap}.sitab td input{width:100%;min-width:130px}.sitab td:first-child{font-weight:600}
 </style>
@@ -103,6 +113,7 @@ table.aw th{white-space:nowrap}
   <section id="vMain" class="hide">
     <div class="tabs" id="tabs">
       <button data-t="ov" class="on">Overview</button>
+      <button data-t="live">Live score</button>
       <button data-t="ready">Setup check</button>
       <button data-t="screen">Big screen</button>
       <button data-t="links">Links &amp; QR</button>
@@ -111,6 +122,29 @@ table.aw th{white-space:nowrap}
     </div>
 
     <div id="t-ov"><div class="sgrid" id="overview"></div></div>
+
+    <div id="t-live" class="hide">
+      <div class="card">
+        <div class="row" style="align-items:center"><h3 style="flex:1;margin:0">Live score page · which sports show</h3>
+          <button class="small ghost" id="btnShowAll">Show all</button>
+          <a id="liveOpen" target="_blank"><button class="small ghost" type="button">Open live score ↗</button></a></div>
+        <p class="muted" style="margin:6px 0 0">Untick <b>Show</b> to take a sport off the public live-score page (its tile disappears; anyone on it is moved to another sport).
+          Tick <b>Completed</b> when a sport has finished: its final results are <b>kept</b> and shown from then on, even if the scorer page or the ML console is cleared.
+          Changes reach phones within about a minute.</p>
+        <div id="liveTbl" style="overflow-x:auto;margin-top:10px"></div>
+        <div id="liveErr"></div>
+      </div>
+      <div class="card">
+        <h3>Mobile Legends · kept results</h3>
+        <p class="muted">While this Admin page is open, the latest results from the JA ESPORT console are copied automatically. If you clear the ML console, the public page and big screen keep showing that copy. Tick <b>Completed</b> above to lock it so a new game in the console does not replace it.</p>
+        <div id="liveML" class="muted"></div>
+      </div>
+      <div class="card">
+        <h3>Reset live score system</h3>
+        <p class="muted">Deletes every kept copy and un-ticks every <b>Completed</b>, so the live-score page goes back to showing the scorers' and the ML console's current data. Show / hide choices stay. Scorer data, bowling and the ML console are <b>not</b> touched.</p>
+        <button class="danger" id="btnLiveReset">Reset live score system</button>
+      </div>
+    </div>
 
     <div id="t-ready" class="hide">
       <div class="card">
@@ -242,6 +276,6 @@ table.aw th{white-space:nowrap}
 <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
 <div id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script type="module" src="admin.js?v=20261112q"></script>
+<script type="module" src="admin.js?v=20261112r"></script>
 </body>
 </html>

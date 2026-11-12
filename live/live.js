@@ -1,9 +1,10 @@
 // Public live-score page. Uses plain HTTPS polling (no live connection),
 // so hundreds of spectators stay inside Firebase's free limits.
-import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261112q";
-import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261112q";
-import { standings, clockMs, mmss, catColor } from "../js/engines.js?v=20261112q";
-import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261112q";
+import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261112r";
+import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261112r";
+import { standings, clockMs, mmss, catColor } from "../js/engines.js?v=20261112r";
+import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261112r";
+import { cfgOf, shown, isDone, KEEP } from "../js/livecfg.js?v=20261112r";
 
 const FAST_MS = 5000;     // live matches: small live-only list (pub/<sport>/live)
 const QUIET_MS = 8000;    // nothing live: the live list is empty, so this costs almost nothing
@@ -12,12 +13,14 @@ const BASE = String(firebaseConfig.databaseURL || "").replace(/\/$/, "");
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-let sport = pickDefault();
+let sport = Object.keys(SPORTS)[0];   // chosen once the live-score settings are read (see the end of this file)
 let sub = "live";
 let data = {};          // records for current sport
 let settings = {};
 let lastOk = 0, timer = null, clockSkew = 0;
 let ann = null;   // scorer announcement for the current sport
+let cfg = { show: {}, done: {} };   // Admin → Live score: which sports are shown / completed
+let kept = false;                   // showing the kept (completed) copy of this sport
 // find / follow a team (follow is remembered on this phone, per sport)
 let q = "";
 const lsGet = k => { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } };
@@ -25,24 +28,37 @@ const lsSet = (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.re
 const followed = () => lsGet("ja_follow_" + sport);
 const onlyMine = () => lsGet("ja_only_" + sport) === "1";
 
+// sports Admin has switched on for the live-score page
+const visible = () => Object.keys(SPORTS).filter(id => shown(cfg, id));
 function pickDefault() {
+  const vis = visible();
   const h = location.hash.slice(1);
-  if (SPORTS[h]) return h;
+  if (SPORTS[h] && vis.includes(h)) return h;
   const today = String(new Date().getDate());
-  const s = Object.entries(SPORTS).find(([, v]) => v.day.split(" ").includes(today));
-  return s ? s[0] : Object.keys(SPORTS)[0];
+  const s = vis.find(id => SPORTS[id].day.split(" ").includes(today));
+  return s || vis[0] || Object.keys(SPORTS)[0];
 }
+// no normal sport switched on: go to bowling / Mobile Legends if one of those is on
+function noSportsLeft() {
+  if (visible().length) return false;
+  if (shown(cfg, "mlbb")) location.replace("../mlbb.html");
+  else if (shown(cfg, "bowling")) location.replace("../bowling.html");
+  else { $("#tabs").innerHTML = ""; $("#body").innerHTML = `<div class="empty">No live scores at the moment. Please check again later.</div>`; setTimeout(() => location.reload(), 60000); }
+  return true;
+}
+function switchSport(id) { sport = id; data = {}; ann = null; kept = false; q = ""; $("#find").value = ""; fullAt = 0; seenBig = {}; renderTabs(); renderHeader(); render(); poll(); }
 
 let liveCounts = {};
 function renderTabs() {
   const counts = { ...liveCounts, [sport]: list().filter(r => r.st === "live").length };
   renderSportGrid($("#tabs"), sportItems(SPORTS, id => id === "bowling" ? "../bowling.html" : id === "mlbb" ? "../mlbb.html" : "#" + id,
-    { bowling: boardTabName(settings.sportInfo, "bowling"), mlbb: boardTabName(settings.sportInfo, "mlbb") }, counts), sport);
+    { bowling: boardTabName(settings.sportInfo, "bowling"), mlbb: boardTabName(settings.sportInfo, "mlbb") }, counts, cfg), sport);
   document.documentElement.style.setProperty("--sport", SPORTS[sport].color);
 }
 
 window.addEventListener("hashchange", () => {
-  if (SPORTS[location.hash.slice(1)]) { sport = location.hash.slice(1); data = {}; ann = null; q = ""; $("#find").value = ""; fullAt = 0; seenBig = {}; renderTabs(); renderHeader(); render(); poll(); }
+  const h = location.hash.slice(1);
+  if (SPORTS[h] && shown(cfg, h)) switchSport(h);
 });
 document.querySelectorAll("#sub button").forEach(b => b.onclick = () => {
   sub = b.dataset.v;
@@ -65,9 +81,16 @@ async function poll() {
   const want = sport;
   try {
     const liveBefore = list().filter(r => r.st === "live").map(r => r.id);
-    if (Date.now() - fullAt > FULL_MS) {
+    if (isDone(cfg, want)) {
+      // completed in Admin: show the kept final results (nothing live to follow)
+      if (Date.now() - fullAt > FULL_MS) {
+        const k = await getJSON(`pub/${KEEP}/${want}`);
+        const p = k && k.d ? null : ((await getJSON(`pub/${want}`)) || {});   // no kept copy yet → the normal results
+        if (want === sport) { data = (k && k.d ? k.d.m : p.m) || {}; ann = null; kept = !!(k && k.d); fullAt = Date.now(); }
+      }
+    } else if (Date.now() - fullAt > FULL_MS) {
       const p = (await getJSON(`pub/${want}`)) || {};
-      if (want === sport) { data = p.m || {}; ann = p.ann || null; fullAt = Date.now(); }
+      if (want === sport) { data = p.m || {}; ann = p.ann || null; kept = false; fullAt = Date.now(); }
     } else {
       // only the matches being played right now (a few hundred bytes each)
       const lv = (await getJSON(`pub/${want}/live`)) || {};
@@ -79,12 +102,11 @@ async function poll() {
     }
     if (want === sport) { lastOk = Date.now(); render(); }
     if (Date.now() - settingsAt > 60000) {
-      settings = (await getJSON("settings")) || {};
-      settingsAt = Date.now();
-      applySportInfo(settings.sportInfo);
-      renderHeader();
+      await loadSettings();
+      if (noSportsLeft()) return;
+      if (!shown(cfg, sport)) { location.hash = ""; switchSport(pickDefault()); return; }
     }
-    if (Date.now() - countsAt > 60000) { countsAt = Date.now(); liveCounts = await fetchLiveCounts(BASE, Object.keys(SPORTS)); }
+    if (Date.now() - countsAt > 60000) { countsAt = Date.now(); liveCounts = await fetchLiveCounts(BASE, Object.keys(SPORTS), cfg); }
     renderTabs();
   } catch (e) {
     $("#upd").textContent = "Connection problem – retrying…";
@@ -92,6 +114,16 @@ async function poll() {
   timer = setTimeout(poll, list().some(r => r.st === "live") ? FAST_MS : QUIET_MS);
 }
 document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
+
+async function loadSettings() {
+  settings = (await getJSON("settings")) || {};
+  settingsAt = Date.now();
+  applySportInfo(settings.sportInfo);
+  const was = JSON.stringify(cfg);
+  cfg = cfgOf(settings);
+  if (JSON.stringify(cfg) !== was) { fullAt = 0; countsAt = 0; }   // completed / shown changed: reload this sport
+  renderHeader();
+}
 
 function renderHeader() {
   $("#ev").textContent = settings.event || EVENT_DEFAULTS.name;
@@ -226,7 +258,9 @@ function render() {
   let h = "";
   if (!all.length) h = q || (onlyMine() && followed()) ? `<div class="empty">No matches for ${q ? "“" + esc(q) + "”" : esc(followed())}.</div>`
     : `<div class="empty">No matches published yet for ${esc(SPORTS[sport].name)}.</div>`;
-  else if (sub === "live") {
+  else if (sub === "live" && isDone(cfg, sport)) {
+    h += `<h2>Final results</h2>` + (done.length ? done.map(card).join("") : `<div class="empty">No results.</div>`);
+  } else if (sub === "live") {
     h += `<h2>${live.length ? '<span class="lv">LIVE</span>' : ""} Now playing</h2>` + (live.length ? live.map(card).join("") : `<div class="empty">No match in progress.</div>`);
     const nowS = Date.now() + clockSkew;
     const fresh = done.filter(r => r.t && nowS - r.t < 10 * 60000).slice(0, 3);
@@ -248,6 +282,7 @@ function render() {
     if (ts.length) h += `<h2>⚽ Top scorers</h2><table><tr><th class="t">Player</th><th class="t">Team</th><th>Goals</th></tr>` +
       ts.map(x => `<tr class="${isMe(x.team) ? "me" : ""}"><td class="t"><b>${esc(x.n)}</b></td><td class="t">${esc(x.team)}</td><td><b>${x.g}</b></td></tr>`).join("") + `</table>`;
   }
+  if (isDone(cfg, sport)) h = `<div class="donebar">✅ <b>${esc(SPORTS[sport].name)} completed</b> · final results</div>` + h;
   const champs = champions();
   if (champs.length) h = champs.map(c => `<div class="champ"><div class="k">🏆 ${esc(SPORTS[sport].name)}${c.ev ? " · " + esc(c.ev) : ""} · Champion</div>
     <div class="w">${esc(c.champ)}</div><div class="o"><span>🥈 Runner-up: ${esc(c.runner)}</span>${c.third ? `<span>🥉 3rd: ${esc(c.third)}</span>` : ""}</div></div>`).join("") + h;
@@ -282,5 +317,11 @@ setInterval(tick, 1000);
 if (!BASE || BASE.includes("PASTE")) {
   $("#body").innerHTML = `<div class="empty">Setup needed: paste the Firebase config into config.js.</div>`;
 } else {
-  renderTabs(); renderHeader(); poll();
+  // read Admin's live-score settings first, so hidden sports never flash up
+  (async () => {
+    try { await loadSettings(); } catch (e) { /* page still works with everything shown */ }
+    if (noSportsLeft()) return;
+    sport = pickDefault();
+    renderTabs(); renderHeader(); poll();
+  })();
 }

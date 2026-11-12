@@ -1,10 +1,11 @@
-import { SPORTS, ADMIN_EMAIL, EVENT_DEFAULTS } from "../config.js?v=20261112q";
-import { publicRecord, standings, FORMATS, ENGINE_OF, DETAILS } from "../js/engines.js?v=20261112q";
-import { bowlingStandings, BOWL_ROOT } from "../js/bowling-data.js?v=20261112q";
-import { BOARDS, mlbbMatches, applyBoardInfo, boardBaseName } from "../js/boards.js?v=20261112q";
-import { applySportInfo, SPORT_BASE } from "../js/sportinfo.js?v=20261112q";
-import { firebaseConfig } from "../config.js?v=20261112q";
-import * as C from "../js/common.js?v=20261112q";
+import { SPORTS, ADMIN_EMAIL, EVENT_DEFAULTS } from "../config.js?v=20261112r";
+import { publicRecord, standings, FORMATS, ENGINE_OF, DETAILS } from "../js/engines.js?v=20261112r";
+import { bowlingStandings, BOWL_ROOT } from "../js/bowling-data.js?v=20261112r";
+import { BOARDS, mlbbMatches, applyBoardInfo, boardBaseName } from "../js/boards.js?v=20261112r";
+import { applySportInfo, SPORT_BASE } from "../js/sportinfo.js?v=20261112r";
+import { firebaseConfig } from "../config.js?v=20261112r";
+import * as C from "../js/common.js?v=20261112r";
+import { cfgOf, shown, isDone, mlHas, mlEffective, KEEP } from "../js/livecfg.js?v=20261112r";
 const { $, $$, esc, toast, ref } = C;
 
 if (!C.configured) { C.notConfiguredScreen(); throw new Error("not configured"); }
@@ -13,6 +14,7 @@ const BASE = new URL("../", location.href).href;
 const PUBLIC_URL = BASE + "live/";
 
 let pub = {}, settings = {}, started = false, logUnsub = null, raw = {}, bowl = null;
+let pubLoaded = false, settingsLoaded = false;   // both needed before Mobile Legends is auto-kept
 const boardData = {};   // board id → its data (see js/boards.js)
 const nameOf = id => (SPORTS[id] || BOARDS[id] || {}).name || id;
 
@@ -37,13 +39,13 @@ C.onValue(ref(db, ".info/connected"), s => $("#conn").classList.toggle("on", !!s
 // ---------------- tabs
 $$("#tabs button").forEach(b => b.onclick = () => {
   $$("#tabs button").forEach(x => x.classList.toggle("on", x === b));
-  for (const t of ["ov", "ready", "screen", "links", "tools", "fb"]) $("#t-" + t).classList.toggle("hide", t !== b.dataset.t);
+  for (const t of ["ov", "live", "ready", "screen", "links", "tools", "fb"]) $("#t-" + t).classList.toggle("hide", t !== b.dataset.t);
 });
 
 function start() {
   if (started) return;
   started = true;
-  C.onValue(ref(db, "pub"), s => { pub = s.val() || {}; renderOverview(); fillMatchSelect(); });
+  C.onValue(ref(db, "pub"), s => { pub = s.val() || {}; pubLoaded = true; renderOverview(); fillMatchSelect(); renderLive(); autoKeepML(); });
   // raw scorer data (start/update times) for the health check, and bowling for its card
   C.onValue(ref(db, "sports"), s => { raw = s.val() || {}; renderOverview(); renderReady(); }, () => {});
   // last action logged by each sport's scorers (for the Setup check tab)
@@ -55,10 +57,12 @@ function start() {
   setInterval(renderOverview, 30000);
   C.onValue(ref(db, "settings"), s => {
     settings = s.val() || {};
+    settingsLoaded = true;
     // sport names / dates / venues edited below are used everywhere on this page
     const sc = applySportInfo(settings.sportInfo), bc = applyBoardInfo(settings.sportInfo);
     if (sc || bc) { fillSportSelects(); renderLinks(); renderOverview(); fillMatchSelect(); }
     fillScreenForm();
+    renderLive(); renderOverview(); autoKeepML();
   });
   renderLinks();
   fillSportSelects();
@@ -183,7 +187,8 @@ const fbOpen = sp => Object.values(fbData || {}).filter(f => !f.done && (f.sport
 // Live data for one board. If this login can't open a live connection to it, fall back to
 // reading the public copy every 15 s (the same way the public pages do).
 function watchBoard(id, b) {
-  const got = v => { boardData[id] = v || {}; if (id === "bowling") bowl = boardData[id]; renderOverview(); };
+  const got = v => { boardData[id] = v || {}; if (id === "bowling") bowl = boardData[id]; renderOverview();
+    if (id === "mlbb") { renderLive(); autoKeepML(); } };
   C.onValue(ref(db, b.path), s => got(s.val()), () => {
     const url = String(firebaseConfig.databaseURL || "").replace(/\/$/, "") + "/" + b.path + ".json";
     const poll = () => fetch(url, { cache: "no-store" }).then(r => r.ok ? r.json() : null).then(got).catch(() => {});
@@ -195,8 +200,8 @@ const boardButtons = (id, b) => `<div class="row" style="margin-top:8px">${(b.li
   `<a href="${BASE + u}" target="_blank"><button class="small ${i ? "ghost" : ""}">${esc(l.replace(/\s*\(.*\)/, ""))} ↗</button></a>`).join("")}<button class="small ghost" data-pin="${id}">Pin on big screen</button></div>`;
 
 function mlbbCard(id, b) {
-  const D = boardData[id];
-  if (!D) return "";
+  if (!boardData[id]) return "";
+  const E = mlEffective(boardData[id], (pub[KEEP] || {}).mlbb, cfgOf(settings)), D = E.D || boardData[id];
   const has = D.groups || D.rounds || D.playoffs;
   const all = has ? mlbbMatches(D) : [], cnt = st => all.filter(m => (m.st || "scheduled") === st).length;
   const rd = D.round || {}, p = D.playoffs || {}, g = D.groups || {}, rv = D.review || {};
@@ -214,6 +219,7 @@ function mlbbCard(id, b) {
     ${all.filter(m => m.st === "live").map(m => mini(`${esc(m.label)} · ${esc((m.a || {}).name || "TBC")} vs ${esc((m.b || {}).name || "TBC")}`, 0, `${val(m.a || {})}–${val(m.b || {})}`)).join("")}
     ${p.champion ? mini(`🏆 Champion: <b>${esc(p.champion)}</b>`, 0, "") + (p.runner ? mini(`🥈 ${esc(p.runner)}`, 0, "") : "")
       : Object.keys(g).sort().map(G => (g[G] || [])[0] ? mini(`Group ${esc(G)} leader: <b>${esc(g[G][0].name)}</b>`, 0, (g[G][0].pts | 0) + " pts") : "").join("")}
+    ${E.kept ? `<div class="mini"><span>📦 Public page shows the kept copy${isDone(cfgOf(settings), id) ? " (completed)" : " – console is empty"}</span></div>` : ""}
     ${warn.map(w => `<div class="hwarn">${w}</div>`).join("")}
     ${boardButtons(id, b)}</div>`;
 }
@@ -264,7 +270,7 @@ function renderOverview() {
     const h = healthOf(id), fb = fbOpen(id);
     const warn = [...h.warn.slice(0, 5), ...(h.warn.length > 5 ? [`+ ${h.warn.length - 5} more`] : []), ...(fb ? [`💬 ${fb} unread feedback`] : [])];
     return `<div class="scard" style="--c:${s.color}">
-      <div class="row"><h4 style="flex:1">${esc(s.name)}</h4><span class="muted" style="font-size:12px">${esc(s.day)}</span></div>
+      <div class="row"><h4 style="flex:1">${esc(s.name)}${liveTags(id)}</h4><span class="muted" style="font-size:12px">${esc(s.day)}</span></div>
       <div class="cnt"><span><b>${live.length}</b> live</span><span><b>${cnt("scheduled")}</b> upcoming</span><span><b>${cnt("done")}</b> finished</span>${h.total ? `<span>${h.done}/${h.total} done</span>` : ""}</div>
       ${h.total ? `<div class="pbar"><i style="width:${Math.round(h.done / h.total * 100)}%"></i></div>` : ""}
       ${live.map(r => {
@@ -513,7 +519,7 @@ $("#btnAutoAwards").onclick = async () => {
     auto.bowl_men = bw.men.slice(0, 3).map(p => p.n);
     auto.bowl_women = bw.women.slice(0, 3).map(p => p.n);
   }
-  const ml = ((boardData.mlbb || {}).playoffs) || {};
+  const ml = ((mlNow() || {}).playoffs) || {};
   if (ml.champion) auto.mlbb = [ml.champion, ml.runner || "", ml.third || ""];
   let filled = 0;
   for (const c of awCats()) (auto[c.id] || []).forEach((v, i) => {
@@ -566,7 +572,7 @@ $("#btnExport").onclick = async () => {
       bw.series.slice(0, 10).forEach((p, i) => rows.push([bw.rankOf(bw.series, i, "ser"), p.n, p.t, p.ser]));
     }
   } catch (e) { rows.push(["Bowling data could not be loaded"]); }
-  const ML = boardData.mlbb;
+  const ML = mlNow();
   if (ML && (ML.groups || ML.playoffs)) {
     rows.push([]); rows.push(["MOBILE LEGENDS"]);
     for (const G of Object.keys(ML.groups || {}).sort()) {
@@ -687,3 +693,105 @@ async function doRestore() {
     $("#inRestore").value = ""; $("#restoreBox").innerHTML = ""; restoreFile = null;
   } catch (e) { toast("Restore failed: " + e.message, 5000); }
 }
+
+// ---------------- Live score settings (settings/live) and kept results (pub/_keep) – see js/livecfg.js
+const mlNow = () => mlEffective(boardData.mlbb, (pub[KEEP] || {}).mlbb, cfgOf(settings)).D;
+const liveTags = id => { const c = cfgOf(settings);
+  return (isDone(c, id) ? `<span class="lvtag dn">✓ Completed</span>` : "") + (!shown(c, id) ? `<span class="lvtag hd">Hidden</span>` : ""); };
+const tmAt = t => t ? new Date(t).toLocaleString([], { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "";
+
+// Mobile Legends: copy the console's data to pub/_keep/mlbb whenever it changes (not after Completed),
+// so clearing the console does not empty the public page.
+let keepT = null, keepErr = "";
+function autoKeepML() {
+  if (!started || !pubLoaded || !settingsLoaded) return;
+  clearTimeout(keepT);
+  keepT = setTimeout(async () => {
+    const live = boardData.mlbb, k = (pub[KEEP] || {}).mlbb;
+    if (isDone(cfgOf(settings), "mlbb") || !mlHas(live)) return;
+    if (k && JSON.stringify(k.d) === JSON.stringify(live)) return;
+    try { await C.set(ref(db, `pub/${KEEP}/mlbb`), { d: live, at: Date.now(), src: "auto" }); keepErr = ""; }
+    catch (e) { keepErr = e.message || String(e); }
+    renderLive();
+  }, 2500);
+}
+
+function renderLive() {
+  if (!started || !$("#liveTbl")) return;
+  const c = cfgOf(settings), K = pub[KEEP] || {};
+  $("#liveOpen").href = PUBLIC_URL;
+  const ids = [...Object.keys(SPORTS), ...Object.keys(BOARDS)];
+  const info = id => {
+    const k = K[id];
+    if (id === "bowling") return "Bowling keeps its own scores – nothing to keep here.";
+    if (id === "mlbb") {
+      const has = mlHas(boardData.mlbb);
+      if (isDone(c, id)) return k ? `🔒 Final results kept ${tmAt(k.at)} – console changes are ignored` : "⚠ No kept copy – press Update";
+      return k ? `📦 Auto-kept ${tmAt(k.at)} · console ${has ? "has data" : "is empty → public shows the kept copy"}` : has ? "Saving a copy…" : "Nothing from the console yet";
+    }
+    const all = Object.values((pub[id] || {}).m || {}), dn = all.filter(r => r.st === "done").length, lv = all.filter(r => r.st === "live").length;
+    if (isDone(c, id)) return k ? `🔒 Final results kept ${tmAt(k.at)} · ${Object.keys((k.d || {}).m || {}).length} matches` : "⚠ No kept copy – press Update";
+    return all.length ? `${dn}/${all.length} finished${lv ? ` · ${lv} live now` : ""}` : "No matches yet";
+  };
+  $("#liveTbl").innerHTML = `<table class="lv"><tr><th>Sport</th><th>Public page</th><th>Status</th><th>Kept results</th><th></th></tr>` + ids.map(id => {
+    const sp = SPORTS[id] || BOARDS[id], on = shown(c, id), dn = isDone(c, id), canDone = id !== "bowling";
+    return `<tr class="${on ? "" : "off"}"><td class="sp" style="--c:${sp.color}">${esc(nameOf(id))}${SPORTS[id] ? ` <span class="muted" style="font-weight:500;font-size:12px">${esc(sp.day || "")}</span>` : ""}</td>
+      <td class="ck"><label class="ck"><input type="checkbox" data-lshow="${id}" ${on ? "checked" : ""}> Show</label></td>
+      <td>${canDone ? `<label class="ck"><input type="checkbox" data-ldone="${id}" ${dn ? "checked" : ""}> Completed</label>` : `<span class="muted">—</span>`}</td>
+      <td class="inf">${info(id)}</td>
+      <td>${canDone && dn ? `<button class="small ghost" data-lrecap="${id}" title="Copy the current results again">Update kept copy</button>` : ""}</td></tr>`;
+  }).join("") + `</table>`;
+  const vis = ids.filter(id => shown(c, id)).length;
+  $("#liveErr").innerHTML = (vis ? "" : `<div class="hwarn">Every sport is hidden – the public page shows “No live scores at the moment”.</div>`) +
+    (keepErr ? `<div class="hwarn">⚠ Could not save the Mobile Legends copy: ${esc(keepErr)}</div>` : "");
+  const k = K.mlbb, D = k && k.d;
+  $("#liveML").innerHTML = D ? `Kept copy from ${tmAt(k.at)} (${k.src === "done" ? "locked – Completed" : "auto"}): ${Object.values(D.groups || {}).reduce((a, g) => a + Object.keys(g || {}).length, 0)} teams, ${mlbbMatches(D).filter(m => m.st === "done").length} finished matches${(D.playoffs || {}).champion ? `, champion <b>${esc(D.playoffs.champion)}</b>` : ""}.`
+    : "No copy kept yet. It is made as soon as the ML console publishes results while this page is open.";
+  $$("[data-lshow]").forEach(i => i.onchange = () => setShow(i.dataset.lshow, i.checked));
+  $$("[data-ldone]").forEach(i => i.onchange = () => (i.checked ? keepResults(i.dataset.ldone, true) : unDone(i.dataset.ldone)));
+  $$("[data-lrecap]").forEach(b => b.onclick = () => keepResults(b.dataset.lrecap, false));
+}
+
+async function setShow(id, on) {
+  try { await C.set(ref(db, `settings/live/show/${id}`), on ? null : false); toast(`${nameOf(id)} ${on ? "shown on" : "hidden from"} the live score`); }
+  catch (e) { toast("Not saved: " + e.message, 4000); renderLive(); }
+}
+$("#btnShowAll").onclick = async () => { await C.set(ref(db, "settings/live/show"), null); toast("All sports shown"); };
+
+// Completed (first = ticking the box) or "Update kept copy": copy the current results to pub/_keep/<id>
+async function keepResults(id, first) {
+  const name = nameOf(id), upd = {}, at = Date.now();
+  if (id === "mlbb") {
+    const live = boardData.mlbb, k = (pub[KEEP] || {}).mlbb;
+    const d = mlHas(live) ? live : k && k.d;
+    if (!mlHas(d)) { toast("Nothing to keep – the ML console has no results"); return renderLive(); }
+    if (!mlHas(live) && !confirm("The ML console is empty. Keep the copy saved " + tmAt(k.at) + " as the final results?")) return renderLive();
+    upd[`pub/${KEEP}/mlbb`] = { d, at, src: "done" };
+  } else {
+    const m = (pub[id] || {}).m;
+    if (!m || !Object.keys(m).length) { toast(`${name} has no matches to keep`); return renderLive(); }
+    const lv = Object.values(m).filter(r => r.st === "live").length, sc = Object.values(m).filter(r => r.st === "scheduled").length;
+    const msg = [lv && `${lv} match${lv > 1 ? "es are" : " is"} still LIVE`, sc && `${sc} not played yet`].filter(Boolean).join(" and ");
+    if (msg && !confirm(`${name}: ${msg}.\n\nKeep the results as they are now anyway?`)) return renderLive();
+    if (!first && !msg && !confirm(`Replace ${name}'s kept results with the scorers' current results?`)) return;
+    upd[`pub/${KEEP}/${id}`] = { d: { m }, at, src: "done" };
+  }
+  if (first) upd[`settings/live/done/${id}`] = true;
+  try { await C.update(ref(db), upd); toast(first ? `${name} completed – final results kept` : `${name} kept copy updated`); }
+  catch (e) { toast("Not saved: " + e.message, 5000); renderLive(); }
+}
+async function unDone(id) {
+  const name = nameOf(id);
+  if (!confirm(`Un-complete ${name}? The public page goes back to the ${id === "mlbb" ? "ML console's" : "scorers'"} current data.`)) return renderLive();
+  const upd = { [`settings/live/done/${id}`]: null };
+  if (id !== "mlbb") upd[`pub/${KEEP}/${id}`] = null;      // Mobile Legends keeps its auto copy
+  else if ((pub[KEEP] || {}).mlbb) upd[`pub/${KEEP}/mlbb/src`] = "auto";
+  try { await C.update(ref(db), upd); toast(`${name} is live again`); } catch (e) { toast("Not saved: " + e.message, 5000); renderLive(); }
+}
+$("#btnLiveReset").onclick = async () => {
+  if (prompt("This deletes every kept result (including Mobile Legends) and un-ticks every Completed.\n\nType RESET to confirm") !== "RESET") return toast("Cancelled");
+  try {
+    await C.update(ref(db), { [`pub/${KEEP}`]: null, "settings/live/done": null });
+    toast("Live score system reset" + (mlHas(boardData.mlbb) ? " – ML console data kept again automatically" : ""), 4000);
+  } catch (e) { toast("Reset failed: " + e.message, 5000); }
+};

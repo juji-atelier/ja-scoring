@@ -1,10 +1,11 @@
-import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261112q";
-import { clockMs, mmss, catColor } from "../js/engines.js?v=20261112q";
-import * as C from "../js/common.js?v=20261112q";
-import { applySportInfo } from "../js/sportinfo.js?v=20261112q";
-import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261112q";
-import { bowlingStandings } from "../js/bowling-data.js?v=20261112q";
-import { firebaseConfig } from "../config.js?v=20261112q";
+import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261112r";
+import { clockMs, mmss, catColor } from "../js/engines.js?v=20261112r";
+import * as C from "../js/common.js?v=20261112r";
+import { applySportInfo } from "../js/sportinfo.js?v=20261112r";
+import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261112r";
+import { bowlingStandings } from "../js/bowling-data.js?v=20261112r";
+import { firebaseConfig } from "../config.js?v=20261112r";
+import { cfgOf, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261112r";
 const { $, esc, ref } = C;
 
 const P = new URLSearchParams(location.search);
@@ -33,17 +34,19 @@ function watchBoard(id) {
 }
 const boardWanted = id => FORCE_SPORT ? FORCE_SPORT === id : ((disp().mode === "sport" && disp().sport === id) || !!(disp().sports && disp().sports[id] === true));
 // matches of a board in the same shape as a sport's matches, so the same cards can draw them
+// Mobile Legends: the console's data, or the copy kept in Admin → Live score (completed / console cleared)
+const bdata = id => id === "mlbb" ? (mlEffective(boardData.mlbb, (pub[KEEP] || {}).mlbb, cfgOf(settings)).D || {}) : (boardData[id] || {});
 function boardRecs(id) {
   if (id !== "mlbb") return [];
   const val = x => x.score ?? (x.kills != null ? x.kills + " K" : "");
-  return mlbbMatches(boardData[id] || {}).map((m, i) => {
+  return mlbbMatches(bdata(id)).map((m, i) => {
     const a = m.a || {}, b = m.b || {}, st = m.st === "live" || m.st === "done" ? m.st : "scheduled";
     return { id: "m" + i, no: i + 1, a: a.name || "TBC", b: b.name || "TBC", st, w: m.w, rd: m.label, lb: m.label, t: i,
       sc: [val(a), val(b)], v: { big: [val(a), val(b)] } };
   });
 }
 function boardState(id) {   // has anything to show? is it going on right now?
-  const D = boardData[id] || {};
+  const D = bdata(id);
   if (id === "bowling") { const any = !!(D.scores && Object.keys(D.scores).length); return { data: any, live: any && Date.now() - (D.updated || 0) < 15 * 60000 }; }
   const r = boardRecs(id); return { data: r.length > 0, live: r.some(x => x.st === "live") };
 }
@@ -62,7 +65,9 @@ let bowlAnn = null;   // bowling has its own page; its announcement lives at bow
 C.onValue(ref(C.db, "bowling2026/ann"), s => { bowlAnn = s.val(); renderAnn(); }, () => {});
 const ANN_SRC = { bowling: BOARDS.bowling };   // name follows Admin
 
-const recs = sp => Object.entries((pub[sp] && pub[sp].m) || {}).map(([id, r]) => ({ id, ...r }));
+// a sport marked Completed in Admin → Live score shows its kept final results
+const pubOf = sp => sportEffective(pub[sp], (pub[KEEP] || {})[sp], cfgOf(settings), sp).P;
+const recs = sp => Object.entries(pubOf(sp).m || {}).map(([id, r]) => ({ id, ...r }));
 const byNo = (x, y) => (Number(x.no) || 9999) - (Number(y.no) || 9999);
 const disp = () => settings.display || {};
 
@@ -88,7 +93,7 @@ function featured() {
   const key = FORCE_MATCH || (disp().mode === "match" ? disp().match : null);
   if (!key) return null;
   const [sp, id] = key.split("/");
-  const r = pub[sp] && pub[sp].m && pub[sp].m[id];
+  const r = pubOf(sp).m && pubOf(sp).m[id];
   return r ? { sp, rec: { id, ...r } } : null;
 }
 

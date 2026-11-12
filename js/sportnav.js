@@ -1,6 +1,7 @@
 // Sport picker grid used on the public live page, bowling page and Mobile Legends page.
 // One tile per sport: drawn icon (in the sport's colour), name, date, and a red "LIVE" count.
 // No horizontal scrolling on phones: 4 tiles per row (6 on wide screens).
+import { shown, isDone } from "./livecfg.js?v=20261112r";
 export const SPORT_ICONS = {
 // karom: square board, corner pockets, centre circle, discs
 karom: `<rect x="5" y="5" width="22" height="22" rx="2"/><circle cx="8.5" cy="8.5" r="1.6"/><circle cx="23.5" cy="8.5" r="1.6"/><circle cx="8.5" cy="23.5" r="1.6"/><circle cx="23.5" cy="23.5" r="1.6"/><circle cx="16" cy="16" r="4"/><circle cx="16" cy="16" r="1.2" fill="currentColor"/>`,
@@ -43,6 +44,7 @@ const CSS = `
 .sgrid a.on{background:color-mix(in srgb,var(--c) 18%,var(--card))!important;border-color:var(--c)!important;box-shadow:0 0 0 1px var(--c);color:var(--ink)!important}
 .sgrid a:before{content:none!important}
 .sgrid a small{display:block!important}
+.sgrid a .dnc{position:absolute;top:4px;right:4px;background:#16a34a;color:#fff;border-radius:999px;font:900 9px/1 Inter,sans-serif;padding:3px 5px;letter-spacing:.02em}
 .sgrid a .lvc{position:absolute;top:4px;right:4px;background:#e11d48;color:#fff;border-radius:999px;font:900 9px/1 Inter,sans-serif;padding:3px 5px;letter-spacing:.02em}
 `;
 let cssDone = false;
@@ -56,20 +58,21 @@ export function renderSportGrid(el, items, current) {
   if (!cssDone) { const st = document.createElement("style"); st.textContent = CSS; document.head.appendChild(st); cssDone = true; }
   el.classList.add("sgrid");
   el.innerHTML = items.map(it => `<a href="${esc(it.href)}" class="${it.id === current ? "on" : ""}" style="--c:${esc(it.color)}" aria-label="${esc(it.name)}">
-    ${it.live ? `<span class="lvc">${it.live} LIVE</span>` : ""}${svg(it.id)}<span class="nm">${esc(it.name)}</span>${it.sub ? `<small>${esc(it.sub)}</small>` : ""}</a>`).join("");
+    ${it.live ? `<span class="lvc">${it.live} LIVE</span>` : it.done ? `<span class="dnc">✓ DONE</span>` : ""}${svg(it.id)}<span class="nm">${esc(it.name)}</span>${it.sub ? `<small>${esc(it.sub)}</small>` : ""}</a>`).join("");
 }
 // the standard list: every sport + bowling + Mobile Legends. hrefOf(id) gives each link.
-export function sportItems(SPORTS, hrefOf, names = {}, liveCounts = {}) {
+// cfg (settings/live, see js/livecfg.js): sports hidden in Admin are left out, completed ones get a ✓.
+export function sportItems(SPORTS, hrefOf, names = {}, liveCounts = {}, cfg = null) {
   return [
     ...Object.entries(SPORTS).map(([id, s]) => ({ id, name: s.name, sub: shortDay(s.day), color: s.color, href: hrefOf(id), live: liveCounts[id] || 0 })),
     { id: "bowling", name: names.bowling || "Bowling", sub: "Tenpin", color: "#8b5cf6", href: hrefOf("bowling") },
     { id: "mlbb", name: names.mlbb || "Mobile Legends", sub: "E-Sport", color: "#f59e0b", href: hrefOf("mlbb") }
-  ];
+  ].filter(it => shown(cfg, it.id)).map(it => ({ ...it, done: isDone(cfg, it.id), live: isDone(cfg, it.id) ? 0 : it.live }));
 }
 // how many matches are live in each sport: reads only the keys of pub/<sport>/live (a few bytes each)
-export async function fetchLiveCounts(base, ids) {
+export async function fetchLiveCounts(base, ids, cfg = null) {
   const out = {};
-  await Promise.all(ids.map(async id => {
+  await Promise.all(ids.filter(id => shown(cfg, id) && !isDone(cfg, id)).map(async id => {
     try { const r = await fetch(`${base}/pub/${id}/live.json?shallow=true`, { cache: "no-store" }); const j = r.ok ? await r.json() : null; out[id] = j ? Object.keys(j).length : 0; }
     catch (e) { out[id] = 0; }
   }));
