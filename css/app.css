@@ -221,3 +221,8 @@ details.guide[open]>summary::after{content:"▴"}
 details.guide ol,details.guide ul{padding-left:20px;line-height:1.6;margin:10px 0 4px}
 details.guide li{margin:4px 0}
 @media (max-width:520px){.tabs{width:100%;display:grid;grid-template-columns:repeat(5,1fr);gap:2px}.tabs button{padding:9px 2px;font-size:13px}}
+.nextstep{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;justify-content:space-between;margin:10px 0;padding:14px 16px;border-radius:14px;
+  background:color-mix(in srgb,var(--sport,var(--acc)) 10%,var(--card));border:1px solid color-mix(in srgb,var(--sport,var(--acc)) 40%,var(--line))}
+.nextstep .ns-text{display:flex;flex-direction:column;gap:3px;flex:1;min-width:220px}
+.nextstep .ns-text span{color:var(--mute);font-size:14px}
+.nextstep .ns-btns{display:flex;gap:8px;flex-wrap:wrap}

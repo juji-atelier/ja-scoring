@@ -1,8 +1,8 @@
 // Public live-score page. Uses plain HTTPS polling (no live connection),
 // so hundreds of spectators stay inside Firebase's free limits.
-import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261112a";
-import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261112a";
-import { standings, clockMs, mmss } from "../js/engines.js?v=20261112a";
+import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261112b";
+import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261112b";
+import { standings, clockMs, mmss } from "../js/engines.js?v=20261112b";
 
 const POLL_MS = 12000;
 const BASE = String(firebaseConfig.databaseURL || "").replace(/\/$/, "");

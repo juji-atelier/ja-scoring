@@ -1,8 +1,8 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261112a";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261112b";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS } from "../js/engines.js?v=20261112a";
-import * as C from "../js/common.js?v=20261112a";
-import { applySportInfo } from "../js/sportinfo.js?v=20261112a";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS } from "../js/engines.js?v=20261112b";
+import * as C from "../js/common.js?v=20261112b";
+import { applySportInfo } from "../js/sportinfo.js?v=20261112b";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -331,6 +331,7 @@ function matchCard(m, st) {
   </button>`;
 }
 function renderList() {
+  renderNextStep($("#nextStep"));
   const all = arrMatches();
   const mc = m => m.event || "";
   const catList = [...new Set(all.map(mc).filter(Boolean))].sort((a, b) => a.localeCompare(b));
@@ -1000,6 +1001,7 @@ function playersField(id, val) {
 }
 function renderTeams() {
   fillCatList();
+  renderNextStep($("#teamNext"));
   if (!$("#tPlayersWrap").dataset.ready) {
     $("#tPlayersWrap").innerHTML = playersField("tPlayers", "");
     $("#tPlayersWrap").dataset.ready = "1";
@@ -1196,12 +1198,12 @@ async function deleteMatch(id) {
   if (editingId === id) clearForm(false);
 }
 
-$("#btnRR").onclick = async () => {
-  const g = $("#rrGroup").value;
-  if (!g) return toast("Give teams a group first");
+// Make every pairing for one category (or pool). Used by Setup and by the "next step" card.
+async function genRR(g, court, ask = true) {
+  if (!g) { toast("Add teams with a category first"); return false; }
   const ids = Object.entries(teams).filter(([, t]) => keyOf(t) === g).map(([id]) => id);
   const t0 = teams[ids[0]] || {};
-  if (ids.length < 2) return toast("Need at least 2 teams in the group");
+  if (ids.length < 2) { toast("Need at least 2 teams"); return false; }
   // circle method so teams rest between matches
   const list = ids.length % 2 ? [...ids, null] : [...ids];
   const pairs = [];
@@ -1212,21 +1214,61 @@ $("#btnRR").onclick = async () => {
     }
     list.splice(1, 0, list.pop());
   }
-  if (!confirm(`Create ${pairs.length} matches for ${g}?`)) return;
+  if (ask && !confirm(`Create ${pairs.length} matches for ${g}?`)) return false;
   let no = nextNo();
   const upd = {}, pubs = {};
   for (const [x, y] of pairs) {
     const id = C.push(ref(db, `sports/${S}/matches`)).key;
-    const m = { no: String(no++), time: "", court: $("#rrCourt").value.trim(), round: poolOf(t0) ? "Pool " + poolOf(t0) : (catOf(t0) ? "Group stage" : "Group " + g), group: g,
+    const m = { no: String(no++), time: "", court: (court || "").trim(), round: poolOf(t0) ? "Pool " + poolOf(t0) : (catOf(t0) ? "Group stage" : "Group " + g), group: g,
       event: catOf(t0), teamA: x, teamB: y, fmt: FORMATS[S], status: "scheduled", createdAt: C.now(), updatedAt: C.now() };
     upd[id] = m;
     pubs[id] = publicRecord(S, m, teams);
   }
-  await C.update(ref(db, `sports/${S}/matches`), upd);
-  await C.update(ref(db, `pub/${S}/m`), pubs);
+  try {
+    await C.update(ref(db, `sports/${S}/matches`), upd);
+    await C.update(ref(db, `pub/${S}/m`), pubs);
+  } catch (e) { toast("Couldn't save – check the connection"); return false; }
   if (!editingId) $("#fNo").value = no;
-  toast(`${pairs.length} matches created`);
+  log("", { no: "" }, `${pairs.length} matches created for ${g}`);
+  return pairs.length;
+}
+$("#btnRR").onclick = async () => {
+  const n = await genRR($("#rrGroup").value, $("#rrCourt").value);
+  if (n) toast(`${n} matches created`);
 };
+
+// ---------------------------------------------------------------- next step card
+// A category (or pool) with teams but no matches yet → offer to create them in one tap.
+const skipKey = "ja_skiprr_" + S;
+const skipped = () => { try { return JSON.parse(store(skipKey) || "[]"); } catch (e) { return []; } };
+function pendingGroups() {
+  const by = {};
+  for (const t of Object.values(teams)) { const k = keyOf(t); if (k) by[k] = (by[k] || 0) + 1; }
+  const used = new Set(Object.values(matches).map(m => String(m.group || "").toUpperCase()));
+  const skip = skipped();
+  return Object.entries(by).filter(([k, n]) => n >= 2 && !used.has(k) && !skip.includes(k))
+    .sort((a, b) => a[0].localeCompare(b[0])).map(([k, n]) => ({ k, n, games: n * (n - 1) / 2 }));
+}
+function renderNextStep(el) {
+  if (!el) return;
+  const list = pendingGroups();
+  el.innerHTML = list.map(p => `<div class="nextstep">
+      <div class="ns-text"><b>Next step: ${esc(p.k)} has ${p.n} teams but no matches yet.</b>
+        <span>${p.games > 1 ? `Create all ${p.games} matches now? Everyone plays everyone once.` : "Create their match now?"}</span></div>
+      <div class="ns-btns"><button class="small primary" data-nsgo="${esc(p.k)}">Create ${p.games} match${p.games > 1 ? "es" : ""}</button>
+        <button class="small ghost" data-nsskip="${esc(p.k)}">I'll add them myself</button></div>
+    </div>`).join("");
+  $$("[data-nsgo]", el).forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    const n = await genRR(b.dataset.nsgo, "", false);
+    if (n) toast(`${n} matches created. Set each match's time and court in Setup → Edit.`, 5000);
+    else b.disabled = false;
+  });
+  $$("[data-nsskip]", el).forEach(b => b.onclick = () => {
+    store(skipKey, JSON.stringify([...skipped(), b.dataset.nsskip]));
+    renderNextStep($("#nextStep")); renderNextStep($("#teamNext"));
+  });
+}
 
 $("#btnRepublish").onclick = async () => {
   try { await republishAll(); toast("Public data refreshed"); } catch (e) { toast("Error: " + e.message); }
@@ -1282,7 +1324,8 @@ function renderGuide() {
       <li><b>Finished with the match:</b> tap <b>← Matches</b> to go back. This releases the lock automatically.</li></ul>`)}
     ${sec("6 · For the AJK lead (before the event)", `<ol>
       <li><b>Teams tab:</b> pick the category, then add each team with its players (e.g. <i>VOLTRA – Irfan / Ali</i>). Use “Paste many teams” to add a whole category at once.</li>
-      <li><b>Setup tab → Generate round-robin:</b> pick a category to create all its matches in one go. Or paste the whole schedule from Excel with <b>Paste the schedule</b>, or add matches one by one with <b>Add match</b>.</li>
+      <li>When a category has its teams, a <b>“Create matches”</b> card appears on the Matches tab – one tap makes every match for that category.</li>
+      <li>Or use <b>Setup tab → Generate round-robin:</b> pick a category to create all its matches in one go. Or paste the whole schedule from Excel with <b>Paste the schedule</b>, or add matches one by one with <b>Add match</b>.</li>
       <li>Then <b>Edit</b> each match to set the <b>time</b>, <b>court</b> and, if needed, the <b>format</b>.</li>
       <li>Standings are worked out automatically for each category from confirmed results.</li></ol>`)}
     ${sec("Tips", `<ul>
