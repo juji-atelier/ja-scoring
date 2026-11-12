@@ -1,8 +1,8 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261112k";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261112l";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor } from "../js/engines.js?v=20261112k";
-import * as C from "../js/common.js?v=20261112k";
-import { applySportInfo } from "../js/sportinfo.js?v=20261112k";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor } from "../js/engines.js?v=20261112l";
+import * as C from "../js/common.js?v=20261112l";
+import { applySportInfo } from "../js/sportinfo.js?v=20261112l";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -1496,6 +1496,16 @@ const BIG_URL = new URL(`../display/?sport=${S}`, location.href).href;
 $("#bigBar").innerHTML = `<a class="bigbtn" href="${BIG_URL}" target="_blank" rel="noopener">
   <span>📺 Open the ${esc(SP.name)} big screen</span><small>Live scores of this sport, full screen · opens in a new tab</small></a>
   <button class="bigbtn sharebtn" id="btnShare" type="button"><span>📲 Share this scorer page</span><small>QR code or WhatsApp link for another AJK / scorer</small></button>`;
+
+// "More ▾" menu: open towards whichever side has room, so it never runs off the screen
+document.addEventListener("toggle", e => {
+  const d = e.target;
+  if (!(d instanceof HTMLDetailsElement) || !d.classList.contains("menu") || !d.open) return;
+  const it = d.querySelector(".items"); if (!it) return;
+  it.style.left = "0"; it.style.right = "auto";
+  const r = it.getBoundingClientRect();
+  if (r.right > window.innerWidth - 8) { it.style.left = "auto"; it.style.right = "0"; }
+}, true);
 
 // ---------------------------------------------------------------- add to home screen (invite card + steps)
 const A2_KEY = "ja_a2hs_hide";
