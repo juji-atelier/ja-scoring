@@ -281,10 +281,8 @@ details.guide li{margin:4px 0}
 .shbtns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
 .shbtns button{flex:1;min-width:110px}
 
-/* ---------- no pull-to-refresh on scorer / admin pages ----------
-   Scrolling back to the top on a phone must not reload the page mid-match.
-   (Android Chrome; iPhone Safari 16+. The public live page keeps its pull-to-refresh.) */
-html,body{overscroll-behavior-y:none}
+/* ---------- opened from the Home Screen: keep the top bar clear of the notch / clock ---------- */
+@media (display-mode:standalone){header.top{padding-top:calc(10px + env(safe-area-inset-top))}}
 
 /* ---------- add to home screen ---------- */
 .a2bar{display:flex;align-items:center;gap:12px;margin:8px 0;padding:12px 14px;border-radius:14px;background:linear-gradient(120deg,color-mix(in srgb,var(--acc) 12%,var(--card)),var(--card));border:1px solid color-mix(in srgb,var(--acc) 35%,var(--line))}
