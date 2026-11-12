@@ -1,8 +1,8 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261112j";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261112k";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor } from "../js/engines.js?v=20261112j";
-import * as C from "../js/common.js?v=20261112j";
-import { applySportInfo } from "../js/sportinfo.js?v=20261112j";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor } from "../js/engines.js?v=20261112k";
+import * as C from "../js/common.js?v=20261112k";
+import { applySportInfo } from "../js/sportinfo.js?v=20261112k";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -1504,8 +1504,24 @@ const UA = navigator.userAgent || "";
 const isIOS = /iPhone|iPad|iPod/.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1);
 const isAndroid = /Android/.test(UA);
 const isPhone = isIOS || isAndroid || (window.matchMedia && matchMedia("(pointer:coarse)").matches);
-// bottom tab bar on Android and in the Home Screen app; iPhone Safari keeps the tabs at the top
-document.documentElement.classList.toggle("btabs", !(isIOS && !isStandalone()));
+// Bottom tab bar on phones. In iPhone browsers (Safari, Chrome…) the page's "bottom" sits above
+// the real bottom of the screen, so there the bar is placed by measuring what is actually visible.
+document.documentElement.classList.add("btabs");
+if (isIOS && !isStandalone()) {
+  document.documentElement.classList.add("iosvv");
+  const vv = window.visualViewport;
+  const placeTabs = () => {
+    const t = document.getElementById("tabs");
+    if (!t || t.classList.contains("hide")) return;
+    const bottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
+    t.style.top = Math.round(bottom - t.offsetHeight) + "px";
+  };
+  ["resize", "scroll", "orientationchange"].forEach(ev => window.addEventListener(ev, placeTabs, { passive: true }));
+  if (vv) { vv.addEventListener("resize", placeTabs); vv.addEventListener("scroll", placeTabs); }
+  new MutationObserver(placeTabs).observe(document.getElementById("tabs"), { attributes: true, attributeFilter: ["class"] });
+  setInterval(placeTabs, 700);   // browser bars slide in/out without always telling the page
+  placeTabs();
+}
 let installEvt = null;
 window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; renderA2hs(); });
 window.addEventListener("appinstalled", () => { store(A2_KEY, "1"); renderA2hs(); toast("Added to your Home Screen 🎉"); });

@@ -273,6 +273,8 @@ details.guide li{margin:4px 0}
   html.btabs #tabs.tabs button.on{color:var(--acc);background:none;box-shadow:none}
   html.btabs body:has(#tabs:not(.hide)){padding-bottom:78px}
   html.btabs body:has(#tabs:not(.hide)) #toast{bottom:92px}
+  /* iPhone browsers: placed from the top by scorer.js (see "iosvv"); no extra home-bar padding */
+  html.iosvv #tabs.tabs{bottom:auto;padding-bottom:8px;transition:top .12s ease-out}
 }
 
 /* ---------- share scorer page ---------- */
