@@ -34,6 +34,9 @@ const other = s => (s === "a" ? "b" : "a");
 const idx = s => (s === "a" ? 0 : 1);
 const ordinal = n => n + (["th", "st", "nd", "rd"][(n % 100 > 10 && n % 100 < 14) ? 0 : (n % 10 < 4 ? n % 10 : 0)] || "th");
 
+// Sports whose rally "unit" is a set (labels: "Set 2", "SET POINT")
+export const SET_SPORTS = { sepaktakraw: true, bolatampar: true };
+export const unitOf = sport => (SET_SPORTS[sport] ? "Set" : "Game");
 export function fmtOf(sport, m) {
   return { ...(FORMATS[sport] || {}), ...((m && m.fmt) || {}) };
 }
@@ -207,7 +210,9 @@ export function view(sport, m, now = Date.now()) {
   const f = fmtOf(sport, m);
   if (kind === "rally") {
     const d = deriveRally(m, f);
-    const unit = f.unit || "Game";
+    const unit = f.unit || unitOf(sport);
+    const U = unit.toUpperCase();
+    for (const x of ["a", "b"]) if (d.point[x] === "GAME POINT") d.point[x] = U + " POINT";
     return {
       kind, big: d.winner ? [d.won[0], d.won[1]] : d.cur, small: d.won, smallLabel: unit + "s",
       serve: m.status === "live" && f.serve !== "none" ? d.srv : null,

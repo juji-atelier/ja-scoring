@@ -1,8 +1,8 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261112d";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261112e";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor } from "../js/engines.js?v=20261112d";
-import * as C from "../js/common.js?v=20261112d";
-import { applySportInfo } from "../js/sportinfo.js?v=20261112d";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor } from "../js/engines.js?v=20261112e";
+import * as C from "../js/common.js?v=20261112e";
+import { applySportInfo } from "../js/sportinfo.js?v=20261112e";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -727,6 +727,7 @@ function headerHTML(m) {
 
 function sideBox(m, s, opts) {
   const cls = s === "a" ? "A" : "B";
+  if (opts.tag) opts.tag = String(opts.tag).replace("GAME POINT", UNIT.toUpperCase() + " POINT");
   const tag = opts.tag ? `<span class="stag">${esc(opts.tag)}</span>` : "";
   const srv = opts.serving ? `<span class="sserve">● ${KIND === "darts" ? "THROWING" : "SERVING"}</span>` : "";
   const inner = `${srv}${tag}<div class="sname">${esc(sideName(m, s))}</div>${tp(s === "a" ? m.teamA : m.teamB) ? `<div class="splayers">${esc(tp(s === "a" ? m.teamA : m.teamB))}</div>` : ""}
@@ -794,7 +795,7 @@ function rallyBody(m, f, mine, order) {
   else if (live) h += `<div class="ptitle">${UNIT} ${d.gameNo}${d.deciding ? " · decider" : ""} · to ${d.rules.points}${d.rules.cap ? " (max " + d.rules.cap + ")" : ""}</div>`;
   if (live && !d.winner) {
     const ps = ["a", "b"].filter(x => d.point[x]);
-    if (ps.length) h += `<div class="gpban ${d.point[ps[0]] === "MATCH POINT" ? "mp" : ""}">${esc(d.point[ps[0]])}<small>${esc(sideName(m, ps[0]))} · one more point wins the ${d.point[ps[0]] === "MATCH POINT" ? "match" : UNIT.toLowerCase()}</small></div>`;
+    if (ps.length) h += `<div class="gpban ${d.point[ps[0]] === "MATCH POINT" ? "mp" : ""}">${esc(d.point[ps[0]].replace("GAME", UNIT.toUpperCase()))}<small>${esc(sideName(m, ps[0]))} · one more point wins the ${d.point[ps[0]] === "MATCH POINT" ? "match" : UNIT.toLowerCase()}</small></div>`;
   }
   h += `<div class="court">` + order.map(s => sideBox(m, s, {
     button: true, disabled: !mine || !live || !!d.winner,
