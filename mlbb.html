@@ -7,8 +7,8 @@
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 <meta name="theme-color" content="#F6F4F2">
 <title>Mobile Legends · Live Standings</title>
-<link rel="stylesheet" href="css/theme.css?v=20261112p">
-<script src="js/theme.js?v=20261112p"></script>
+<link rel="stylesheet" href="css/theme.css?v=20261112q">
+<script src="js/theme.js?v=20261112q"></script>
 <style>
 :root{--sport:#f59e0b;--ga:#D23A3A;--gb:#2F6FE0}
 *{box-sizing:border-box}
@@ -26,6 +26,9 @@ html,body{margin:0;font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing
 .hero .pill{display:inline-block;margin-top:10px;background:#ffffff1f;border-radius:999px;padding:5px 12px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;position:relative}
 nav{display:flex;gap:8px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none}
 nav::-webkit-scrollbar{display:none}
+nav.sgrid{overflow:visible;flex-wrap:nowrap;padding:0}
+nav.sgrid a:before{content:none}
+nav.sgrid a small{display:block}
 @media(min-width:700px){nav{flex-wrap:wrap;overflow:visible}}
 nav a{flex:none;display:flex;align-items:center;gap:7px;text-decoration:none;color:var(--mute);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-weight:600;font-size:13px;line-height:1.1}
 nav a:before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c,var(--acc));flex:none}
@@ -89,7 +92,7 @@ tr.cut td{border-bottom:2px dashed var(--gold)}
 /* iPhone zooms into text boxes under 16px */
 @media (pointer:coarse){input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea{font-size:max(16px,1em)!important}}
 </style>
-<script src="js/splash.js?v=20261112p"></script>
+<script src="js/splash.js?v=20261112q"></script>
 </head>
 <body>
 <header class="hd"><div class="wrap">
@@ -118,7 +121,8 @@ tr.cut td{border-bottom:2px dashed var(--gold)}
 const ML_VENUE = "Centralized Meeting Room, Block E, Tingkat 1, Bangunan KWSP";
 // Mobile Legends standings for the HQ Games live page.
 // Data: Firebase  mlbb/live  — written by the JA ESPORT console (Group Stage tab).
-import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "./config.js?v=20261112p";
+import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "./config.js?v=20261112q";
+import { renderSportGrid, sportItems, fetchLiveCounts } from "./js/sportnav.js?v=20261112q";
 const BASE = String(firebaseConfig.databaseURL || "").replace(/\/$/, "");
 const POLL_MS = 12000;
 const $ = s => document.querySelector(s);
@@ -129,11 +133,15 @@ let sub = (() => { try { return sessionStorage.getItem("mlbbSub") || "table"; } 
 
 let boardNames = {};
 const bname = (id, d) => String((boardNames[id] || {}).name || "").trim() || d;
-const sportTabs = () => { $("#tabs").innerHTML = Object.entries(SPORTS).map(([id, s]) => `<a href="live/#${id}" style="--c:${s.color}">${esc(s.name)}</a>`).join("")
-  + `<a href="bowling.html" style="--c:#8b5cf6">${esc(bname("bowling", "Bowling"))}</a><a href="mlbb.html" class="on" style="--c:#f59e0b">${esc(bname("mlbb", "Mobile Legends"))}</a>`;
+let liveCounts = {};
+const sportTabs = () => {
+  renderSportGrid($("#tabs"), sportItems(SPORTS, id => id === "bowling" ? "bowling.html" : id === "mlbb" ? "mlbb.html" : "live/#" + id,
+    { bowling: bname("bowling", "Bowling"), mlbb: bname("mlbb", "Mobile Legends") }, liveCounts), "mlbb");
   const t = document.getElementById("title"); if (t) t.textContent = bname("mlbb", "Mobile Legends"); };
 sportTabs();
-setTimeout(() => { const on = $("#tabs .on"); if (on) on.scrollIntoView({ inline: "center", block: "nearest" }); }, 50);
+{ const base = String(firebaseConfig.databaseURL || "").replace(/\/$/, "");
+  const lc = () => fetchLiveCounts(base, Object.keys(SPORTS)).then(c => { liveCounts = c; sportTabs(); }).catch(() => {});
+  lc(); setInterval(() => { if (!document.hidden) lc(); }, 60000); }
 
 function setSub(v) {
   sub = v; try { sessionStorage.setItem("mlbbSub", v); } catch (e) {}

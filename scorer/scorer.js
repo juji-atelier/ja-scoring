@@ -1,8 +1,8 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261112p";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261112q";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor } from "../js/engines.js?v=20261112p";
-import * as C from "../js/common.js?v=20261112p";
-import { applySportInfo } from "../js/sportinfo.js?v=20261112p";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor } from "../js/engines.js?v=20261112q";
+import * as C from "../js/common.js?v=20261112q";
+import { applySportInfo } from "../js/sportinfo.js?v=20261112q";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -101,14 +101,21 @@ function renderPending() {
 setInterval(renderPending, 1000);
 addEventListener("beforeunload", e => { if (pending) { e.preventDefault(); e.returnValue = ""; } });
 
+// Public copy for the big screen and the live page. Live matches are also copied to
+// pub/<sport>/live – a tiny list the public page checks every few seconds (saves download data).
 function publish(id, m) {
-  if (!m) return track(C.remove(ref(db, `pub/${S}/m/${id}`))).catch(() => {});
-  return track(C.set(ref(db, `pub/${S}/m/${id}`), publicRecord(S, m, teams))).catch(e => console.warn(e));
+  if (!m) {
+    track(C.remove(ref(db, `pub/${S}/live/${id}`))).catch(() => {});
+    return track(C.remove(ref(db, `pub/${S}/m/${id}`))).catch(() => {});
+  }
+  const rec = publicRecord(S, m, teams);
+  const upd = { [`m/${id}`]: rec, [`live/${id}`]: rec.st === "live" ? rec : null };
+  return track(C.update(ref(db, `pub/${S}`), upd)).catch(e => console.warn(e));
 }
 async function republishAll() {
-  const all = {};
-  for (const [id, m] of Object.entries(matches)) all[id] = publicRecord(S, m, teams);
-  await C.set(ref(db, `pub/${S}/m`), all);
+  const all = {}, live = {};
+  for (const [id, m] of Object.entries(matches)) { all[id] = publicRecord(S, m, teams); if (all[id].st === "live") live[id] = all[id]; }
+  await C.update(ref(db, `pub/${S}`), { m: all, live: Object.keys(live).length ? live : null });
 }
 function log(id, m, act) {
   track(C.push(ref(db, `logs/${S}`), {

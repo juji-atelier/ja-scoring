@@ -17,8 +17,8 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#F6F4F2">
 <title>Live Scores</title>
-<link rel="stylesheet" href="../css/theme.css?v=20261112p">
-<script src="../js/theme.js?v=20261112p"></script>
+<link rel="stylesheet" href="../css/theme.css?v=20261112q">
+<script src="../js/theme.js?v=20261112q"></script>
 <style>
 :root{--sport:var(--acc);--text:var(--ink);--muted:var(--mute)}
 *{box-sizing:border-box}
@@ -115,6 +115,41 @@ tr.me td{background:color-mix(in srgb,var(--gold) 14%,var(--card))}
 @media(prefers-reduced-motion:reduce){.jasplash,.jasplash *{animation-duration:.01s!important;animation-delay:0s!important}.jasplash{animation-delay:1.2s!important}}
 .evs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:12.5px;color:var(--mute)}
 .evs span{display:block;line-height:1.5}.evs i{font-style:normal;opacity:.75}.evs>div:last-child{text-align:right}
+
+/* ---------- sport grid (js/sportnav.js) inside the old nav ---------- */
+nav.sgrid{overflow:visible;flex-wrap:nowrap;padding:0}
+nav.sgrid a:before{content:none}
+nav.sgrid a small{display:block}
+/* ---------- livelier match cards ---------- */
+.m{position:relative}
+.m.hascat{border-left:5px solid var(--cc)}
+html[data-theme="dark"] .m.hascat{--cc:var(--ccd)}
+.m .meta:before{display:none}
+.m .meta .ctb{background:var(--ink);color:var(--bg);border-radius:6px;padding:1px 7px;font-weight:900;font-size:11px}
+.m .meta .evc{color:var(--cc,var(--mute));font-weight:800;letter-spacing:.02em}
+.m .meta .ptb{background:linear-gradient(120deg,#D2AC70,#9a7442);color:#fff;border-radius:6px;padding:1px 7px;font-weight:900;font-size:10.5px;letter-spacing:.08em}
+.r.lead .b{color:var(--acc)}
+.m.flash{box-shadow:0 0 0 2px #D2AC70,0 0 26px #D2AC7088;transition:box-shadow .3s}
+.r .b{position:relative}
+.plus1{position:absolute;right:calc(100% + 6px);top:50%;transform:translateY(-50%);font:900 13px/1 Inter,sans-serif;font-style:normal;color:#9a7442;background:#fff6e5;border:1px solid #D2AC70;border-radius:7px;padding:3px 6px;animation:plusup 2.8s ease-out forwards}
+@keyframes plusup{0%{opacity:0;transform:translateY(-20%)}12%{opacity:1;transform:translateY(-50%)}75%{opacity:1}100%{opacity:0;transform:translateY(-110%)}}
+/* ---------- just finished ---------- */
+.fin{margin:10px 0;border-radius:16px;overflow:hidden;border:1px solid #D2AC7088;background:var(--card);box-shadow:var(--shadow);animation:finin .5s ease-out}
+.fin .bn{background:linear-gradient(120deg,#D2AC70,#9a7442);color:#fff;padding:9px 14px;font-weight:900;font-size:15px}
+.fin .bd{padding:10px 14px;font-size:13.5px;color:var(--mute);line-height:1.45}.fin .bd b{color:var(--ink)}
+@keyframes finin{from{opacity:0;transform:translateY(6px)}}
+/* ---------- live status line ---------- */
+.ldot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#16a34a;margin-right:6px;vertical-align:1px;animation:japulse 1.6s infinite}
+/* ---------- background glow in the sport's colour ---------- */
+body{background:
+  radial-gradient(900px 420px at 50% -140px, color-mix(in srgb, var(--sport) 22%, transparent), transparent 70%),
+  radial-gradient(600px 420px at 110% 35%, color-mix(in srgb, var(--sport) 8%, transparent), transparent 70%),
+  var(--bg);background-attachment:fixed}
+html[data-theme="dark"] body{background:
+  radial-gradient(900px 420px at 50% -140px, color-mix(in srgb, var(--sport) 34%, transparent), transparent 70%),
+  radial-gradient(600px 420px at 110% 35%, color-mix(in srgb, var(--sport) 13%, transparent), transparent 70%),
+  var(--bg);background-attachment:fixed}
+@media (prefers-reduced-motion:reduce){.plus1,.fin,.ldot{animation:none}}
 /* iPhone zooms into text boxes under 16px */
 @media (pointer:coarse){input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea{font-size:max(16px,1em)!important}}
 </style>
@@ -148,6 +183,6 @@ try{var n=performance.getEntriesByType("navigation")[0],t=n?n.type:"navigate",se
   </main>
 </div>
 <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
-<script type="module" src="live.js?v=20261112p"></script>
+<script type="module" src="live.js?v=20261112q"></script>
 </body>
 </html>

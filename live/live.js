@@ -1,10 +1,13 @@
 // Public live-score page. Uses plain HTTPS polling (no live connection),
 // so hundreds of spectators stay inside Firebase's free limits.
-import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261112p";
-import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261112p";
-import { standings, clockMs, mmss } from "../js/engines.js?v=20261112p";
+import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261112q";
+import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261112q";
+import { standings, clockMs, mmss, catColor } from "../js/engines.js?v=20261112q";
+import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261112q";
 
-const POLL_MS = 12000;
+const FAST_MS = 5000;     // live matches: small live-only list (pub/<sport>/live)
+const QUIET_MS = 8000;    // nothing live: the live list is empty, so this costs almost nothing
+const FULL_MS = 60000;    // whole sport (results, schedule, announcement)
 const BASE = String(firebaseConfig.databaseURL || "").replace(/\/$/, "");
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -30,16 +33,16 @@ function pickDefault() {
   return s ? s[0] : Object.keys(SPORTS)[0];
 }
 
+let liveCounts = {};
 function renderTabs() {
-  $("#tabs").innerHTML = Object.entries(SPORTS).map(([id, s]) =>
-    `<a href="#${id}" class="${id === sport ? "on" : ""}" style="--c:${s.color}">${esc(s.name)}<small>${esc(s.day)}</small></a>`).join("") + `<a href="../bowling.html" style="--c:#8b5cf6">${esc(boardTabName(settings.sportInfo, "bowling"))}<small>Sabah Electricity Bowling</small></a><a href="../mlbb.html" style="--c:#f59e0b">${esc(boardTabName(settings.sportInfo, "mlbb"))}<small>E-Sport HQ Championship</small></a>`;
+  const counts = { ...liveCounts, [sport]: list().filter(r => r.st === "live").length };
+  renderSportGrid($("#tabs"), sportItems(SPORTS, id => id === "bowling" ? "../bowling.html" : id === "mlbb" ? "../mlbb.html" : "#" + id,
+    { bowling: boardTabName(settings.sportInfo, "bowling"), mlbb: boardTabName(settings.sportInfo, "mlbb") }, counts), sport);
   document.documentElement.style.setProperty("--sport", SPORTS[sport].color);
-  const on = $("#tabs .on");
-  if (on) on.scrollIntoView({ inline: "center", block: "nearest" });
 }
 
 window.addEventListener("hashchange", () => {
-  if (SPORTS[location.hash.slice(1)]) { sport = location.hash.slice(1); data = {}; ann = null; q = ""; $("#find").value = ""; renderTabs(); renderHeader(); render(); poll(); }
+  if (SPORTS[location.hash.slice(1)]) { sport = location.hash.slice(1); data = {}; ann = null; q = ""; $("#find").value = ""; fullAt = 0; seenBig = {}; renderTabs(); renderHeader(); render(); poll(); }
 });
 document.querySelectorAll("#sub button").forEach(b => b.onclick = () => {
   sub = b.dataset.v;
@@ -55,24 +58,38 @@ async function getJSON(path) {
   return r.json();
 }
 
-let settingsAt = 0;
+let settingsAt = 0, fullAt = 0, countsAt = 0;
 async function poll() {
   clearTimeout(timer);
   if (document.hidden) return;
+  const want = sport;
   try {
-    const want = sport;
-    const p = (await getJSON(`pub/${want}`)) || {};
-    if (want === sport) { data = p.m || {}; ann = p.ann || null; lastOk = Date.now(); render(); }
+    const liveBefore = list().filter(r => r.st === "live").map(r => r.id);
+    if (Date.now() - fullAt > FULL_MS) {
+      const p = (await getJSON(`pub/${want}`)) || {};
+      if (want === sport) { data = p.m || {}; ann = p.ann || null; fullAt = Date.now(); }
+    } else {
+      // only the matches being played right now (a few hundred bytes each)
+      const lv = (await getJSON(`pub/${want}/live`)) || {};
+      if (want === sport) {
+        for (const [id, rec] of Object.entries(lv)) data[id] = rec;
+        // a match left the live list → it just finished (or was reset): fetch everything now
+        if (liveBefore.some(id => !lv[id])) { const p = (await getJSON(`pub/${want}`)) || {}; data = p.m || {}; ann = p.ann || null; fullAt = Date.now(); }
+      }
+    }
+    if (want === sport) { lastOk = Date.now(); render(); }
     if (Date.now() - settingsAt > 60000) {
       settings = (await getJSON("settings")) || {};
       settingsAt = Date.now();
-      const tabsWere = $("#tabs").textContent; applySportInfo(settings.sportInfo); renderTabs(); if ($("#tabs").textContent !== tabsWere) render();
+      applySportInfo(settings.sportInfo);
       renderHeader();
     }
+    if (Date.now() - countsAt > 60000) { countsAt = Date.now(); liveCounts = await fetchLiveCounts(BASE, Object.keys(SPORTS)); }
+    renderTabs();
   } catch (e) {
     $("#upd").textContent = "Connection problem – retrying…";
   }
-  timer = setTimeout(poll, POLL_MS);
+  timer = setTimeout(poll, list().some(r => r.st === "live") ? FAST_MS : QUIET_MS);
 }
 document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
 
@@ -117,22 +134,48 @@ function champions() {
   }).filter(Boolean);
 }
 
-function row(r, s) {
+// point flash: remember the last big score of each live match; a change lights the card up for a moment
+let seenBig = {}; const flashAt = {};
+function noteScores() {
+  const now = Date.now();
+  for (const r of list()) {
+    if (r.st !== "live") continue;
+    const b = ((r.v || {}).big || []).map(Number), was = seenBig[r.id];
+    if (was) for (const [k, i] of [["a", 0], ["b", 1]]) if (b[i] > was[i]) flashAt[r.id] = { at: now, side: k };
+    seenBig[r.id] = b;
+  }
+}
+const cats = () => list().map(r => r.ev || "");
+function row(r, s, lead, tagOn = true) {
   const i = s === "a" ? 0 : 1, v = r.v || {};
   const done = r.st === "done", sched = r.st === "scheduled";
   const big = sched ? "" : done ? (r.wo ? (r.w === s ? "W/O" : "") : (r.sc || [])[i]) : (v.big || [])[i];
   const small = !sched && !done && v.small ? v.small[i] : "";
-  const tag = r.st === "live" ? (s === "a" ? v.tagA : v.tagB) : "";
-  return `<div class="r ${done && r.w === s ? "win" : ""}"><span class="dot ${r.st === "live" && v.srv === s ? "on" : ""}"></span>
+  const tag = tagOn && r.st === "live" ? (s === "a" ? v.tagA : v.tagB) : "";
+  const fl = flashAt[r.id] && flashAt[r.id].side === s && Date.now() - flashAt[r.id].at < 3000;
+  return `<div class="r ${done && r.w === s ? "win" : ""} ${lead === s ? "lead" : ""}"><span class="dot ${r.st === "live" && v.srv === s ? "on" : ""}"></span>
     <span class="n ${isMe(r[s]) ? "me" : ""}">${mark(r[s])}${tag ? `<span class="tag">${esc(tag)}</span>` : ""}${r["p" + s] ? `<span class="pl">${esc(r["p" + s])}</span>` : ""}</span>
-    <span class="s">${small ?? ""}</span><span class="b cond">${big ?? ""}</span></div>`;
+    <span class="s">${small ?? ""}</span><span class="b cond">${fl ? `<i class="plus1">+1</i>` : ""}${big ?? ""}</span></div>`;
 }
 function card(r) {
   const v = r.v || {};
   let st = r.st === "live" ? esc(v.stx || "Live") : r.st === "done" ? "Final" : esc(r.tm || "");
   if (r.st === "live" && v.clock) st += ` · <span class="clk" data-c='${esc(JSON.stringify(v.clock))}'>--:--</span>`;
-  return `<div class="m ${r.st === "live" ? "live" : ""}"><div class="meta">${r.ct ? `<span>Court ${esc(r.ct)}</span>` : ""}${r.rd ? `<span>${esc(r.rd)}</span>` : ""}${r.ev ? `<span>${esc(r.ev)}</span>` : ""}<span class="st">${st}</span></div>
-    ${row(r, "a")}${row(r, "b")}${v.hist ? `<div class="h">${esc(v.hist)}</div>` : ""}${events(r)}</div>`;
+  const pt = r.st === "live" ? (v.tagA || v.tagB || "") : "";
+  const rd = r.rd && !/^group stage$/i.test(r.rd) ? r.rd : "";
+  let lead = "";
+  if (r.st === "live" && v.big) { const [x, y] = v.big.map(Number); lead = x > y ? "a" : y > x ? "b" : ""; }
+  const fl = flashAt[r.id] && Date.now() - flashAt[r.id].at < 3000;
+  const cc = r.ev ? `--cc:${catColor(r.ev, cats())};--ccd:${catColor(r.ev, cats(), true)}` : "";
+  return `<div class="m ${r.st === "live" ? "live" : ""} ${fl ? "flash" : ""} ${r.ev ? "hascat" : ""}" style="${cc}"><div class="meta">${r.ct ? `<span class="ctb">C${esc(r.ct)}</span>` : ""}${r.ev ? `<span class="evc">${esc(r.ev)}</span>` : ""}${rd ? `<span>${esc(rd)}</span>` : ""}${pt ? `<span class="ptb">${esc(pt)}</span>` : ""}<span class="st">${st}</span></div>
+    ${row(r, "a", lead, false)}${row(r, "b", lead, false)}${v.hist ? `<div class="h">${esc(v.hist)}</div>` : ""}${events(r)}</div>`;
+}
+// 🏆 a result from the last 10 minutes
+function finCard(r) {
+  const sc = r.wo ? "by walkover" : `${(r.sc || [])[0]}–${(r.sc || [])[1]}`;
+  const head = r.w ? `🏆 ${esc(r.w === "a" ? r.a : r.b)} wins ${r.wo ? "(walkover)" : r.w === "a" ? sc : `${(r.sc || [])[1]}–${(r.sc || [])[0]}`}` : `Draw ${sc}`;
+  const v = r.v || {};
+  return `<div class="fin"><div class="bn">${head}</div><div class="bd"><b>${esc(r.a)}</b> vs <b>${esc(r.b)}</b>${v.hist ? " · " + esc(v.hist) : ""}${r.ev ? " · " + esc(r.ev) : ""}${r.ct ? " · C" + esc(r.ct) : ""}</div></div>`;
 }
 // goal scorers and cards under a match (only when the scorer recorded them)
 const ICON = { g: "⚽", og: "⚽", y: "🟨", r: "🟥" };
@@ -172,6 +215,7 @@ document.addEventListener("click", e => {
 $("#find").addEventListener("input", e => { q = low(e.target.value.trim()); render(); });
 
 function render() {
+  noteScores();
   renderFind();
   // which matches to show: search first, then "only my team"
   const keep = r => q ? (low(r.a).includes(q) || low(r.b).includes(q) || low(r.as).includes(q) || low(r.bs).includes(q) || low(r.pa).includes(q) || low(r.pb).includes(q)) : onlyMine() && followed() ? (isMe(r.a) || isMe(r.b)) : true;
@@ -184,6 +228,9 @@ function render() {
     : `<div class="empty">No matches published yet for ${esc(SPORTS[sport].name)}.</div>`;
   else if (sub === "live") {
     h += `<h2>${live.length ? '<span class="lv">LIVE</span>' : ""} Now playing</h2>` + (live.length ? live.map(card).join("") : `<div class="empty">No match in progress.</div>`);
+    const nowS = Date.now() + clockSkew;
+    const fresh = done.filter(r => r.t && nowS - r.t < 10 * 60000).slice(0, 3);
+    if (fresh.length) h += `<h2>Just finished</h2>` + fresh.map(finCard).join("");
     h += `<h2>Up next</h2>` + (next.length ? next.slice(0, 12).map(card).join("") : `<div class="empty">No more scheduled matches.</div>`);
     if (next.length > 12) h += `<div class="empty">+ ${next.length - 12} more</div>`;
   } else if (sub === "results") {
@@ -226,7 +273,8 @@ function tick() {
     const s = Math.round((Date.now() - lastOk) / 1000);
     const lastT = Math.max(0, ...list().map(r => Number(r.t) || 0));
     const at = lastT ? new Date(lastT).toLocaleTimeString("en-MY", { hour: "numeric", minute: "2-digit" }) : "";
-    $("#upd").textContent = (at ? `Last score ${at} · ` : "") + "checked " + (s < 5 ? "just now" : s < 60 ? `${s}s ago` : `${Math.round(s / 60)} min ago`);
+    const lv = list().some(r => r.st === "live");
+    $("#upd").innerHTML = (lv ? `<i class="ldot"></i>Live · updates every ${FAST_MS / 1000} s · ` : at ? `Last score ${at} · ` : "") + "checked " + (s < 5 ? "just now" : s < 60 ? `${s}s ago` : `${Math.round(s / 60)} min ago`);
   }
 }
 setInterval(tick, 1000);

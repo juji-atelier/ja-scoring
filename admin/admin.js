@@ -1,10 +1,10 @@
-import { SPORTS, ADMIN_EMAIL, EVENT_DEFAULTS } from "../config.js?v=20261112p";
-import { publicRecord, standings, FORMATS, ENGINE_OF, DETAILS } from "../js/engines.js?v=20261112p";
-import { bowlingStandings, BOWL_ROOT } from "../js/bowling-data.js?v=20261112p";
-import { BOARDS, mlbbMatches, applyBoardInfo, boardBaseName } from "../js/boards.js?v=20261112p";
-import { applySportInfo, SPORT_BASE } from "../js/sportinfo.js?v=20261112p";
-import { firebaseConfig } from "../config.js?v=20261112p";
-import * as C from "../js/common.js?v=20261112p";
+import { SPORTS, ADMIN_EMAIL, EVENT_DEFAULTS } from "../config.js?v=20261112q";
+import { publicRecord, standings, FORMATS, ENGINE_OF, DETAILS } from "../js/engines.js?v=20261112q";
+import { bowlingStandings, BOWL_ROOT } from "../js/bowling-data.js?v=20261112q";
+import { BOARDS, mlbbMatches, applyBoardInfo, boardBaseName } from "../js/boards.js?v=20261112q";
+import { applySportInfo, SPORT_BASE } from "../js/sportinfo.js?v=20261112q";
+import { firebaseConfig } from "../config.js?v=20261112q";
+import * as C from "../js/common.js?v=20261112q";
 const { $, $$, esc, toast, ref } = C;
 
 if (!C.configured) { C.notConfiguredScreen(); throw new Error("not configured"); }
@@ -420,6 +420,8 @@ $("#btnRepubAll").onclick = async () => {
       const m = {};
       for (const [id, match] of Object.entries(s.matches || {})) m[id] = publicRecord(sp, match, s.teams || {});
       upd[`pub/${sp}/m`] = m;
+      const lv = Object.fromEntries(Object.entries(m).filter(([, r]) => r.st === "live"));
+      upd[`pub/${sp}/live`] = Object.keys(lv).length ? lv : null;   // small live-only copy the public page polls
     }
     await C.update(ref(db), upd);
     toast("All public data refreshed");
@@ -677,7 +679,7 @@ async function doRestore() {
         const pm = {};
         for (const [mid, m] of Object.entries(sp.matches || {})) pm[mid] = publicRecord(id, m, sp.teams || {});
         upd[`sports/${id}`] = sp;
-        upd[`pub/${id}`] = { ...((b.pub || {})[id] || {}), m: pm };
+        upd[`pub/${id}`] = { ...((b.pub || {})[id] || {}), m: pm, live: null };   // restored matches are not live
       } else if (kind === "board" && BOARDS[id] && BOARDS[id].restore) upd[BOARDS[id].path] = b.boards[id];
     }
     await C.update(ref(db), upd);
