@@ -140,15 +140,21 @@ html[data-theme="dark"] .m.hascat{--cc:var(--ccd)}
 @keyframes finin{from{opacity:0;transform:translateY(6px)}}
 /* ---------- live status line ---------- */
 .ldot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#16a34a;margin-right:6px;vertical-align:1px;animation:japulse 1.6s infinite}
-/* ---------- background glow in the sport's colour ---------- */
-body{background:
-  radial-gradient(900px 420px at 50% -140px, color-mix(in srgb, var(--sport) 22%, transparent), transparent 70%),
-  radial-gradient(600px 420px at 110% 35%, color-mix(in srgb, var(--sport) 8%, transparent), transparent 70%),
-  var(--bg);background-attachment:fixed}
-html[data-theme="dark"] body{background:
-  radial-gradient(900px 420px at 50% -140px, color-mix(in srgb, var(--sport) 34%, transparent), transparent 70%),
-  radial-gradient(600px 420px at 110% 35%, color-mix(in srgb, var(--sport) 13%, transparent), transparent 70%),
-  var(--bg);background-attachment:fixed}
+/* ---------- moving background glow in the sport's colour ---------- */
+/* Two soft blobs on their own fixed layers, moved with transform only (GPU, no repaint). */
+html{background:var(--bg)}body{background:transparent}
+body::before,body::after{content:"";position:fixed;z-index:-1;pointer-events:none;will-change:transform}
+body::before{inset:-25% -25% auto -25%;height:90vh;
+  background:radial-gradient(closest-side, color-mix(in srgb, var(--sport) 26%, transparent), transparent);
+  animation:jaDriftA 26s ease-in-out infinite alternate}
+body::after{width:70vmax;height:70vmax;right:-30vmax;top:30vh;border-radius:50%;
+  background:radial-gradient(closest-side, color-mix(in srgb, #B3202F 12%, transparent), transparent);
+  animation:jaDriftB 34s ease-in-out infinite alternate}
+html[data-theme="dark"] body::before{background:radial-gradient(closest-side, color-mix(in srgb, var(--sport) 38%, transparent), transparent)}
+html[data-theme="dark"] body::after{background:radial-gradient(closest-side, color-mix(in srgb, #B3202F 20%, transparent), transparent)}
+@keyframes jaDriftA{0%{transform:translate3d(-12%,-6%,0) scale(1)}50%{transform:translate3d(8%,2%,0) scale(1.12)}100%{transform:translate3d(14%,-4%,0) scale(.95)}}
+@keyframes jaDriftB{0%{transform:translate3d(0,0,0) scale(1)}100%{transform:translate3d(-45vw,22vh,0) scale(1.25)}}
+@media (prefers-reduced-motion:reduce){body::before,body::after{animation:none}}
 @media (prefers-reduced-motion:reduce){.plus1,.fin,.ldot{animation:none}}
 /* iPhone zooms into text boxes under 16px */
 @media (pointer:coarse){input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea{font-size:max(16px,1em)!important}}
