@@ -1,8 +1,8 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113q";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113r";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113q";
-import * as C from "../js/common.js?v=20261113q";
-import { applySportInfo } from "../js/sportinfo.js?v=20261113q";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113r";
+import * as C from "../js/common.js?v=20261113r";
+import { applySportInfo } from "../js/sportinfo.js?v=20261113r";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -410,6 +410,31 @@ function compactBody(g, st) {
   return out;
 }
 
+// Landscape: the day as a timetable – one column per table, one row per start time – so all
+// six tables of a round sit side by side. Every status in one grid: live cells are outlined,
+// finished ones show the score.
+function gridHTML(list) {
+  const t = s => { const x = parseT(s || ""); return x == null ? 1e9 : x; };
+  const courts = [...new Set(list.map(m => String(m.court || "").trim()))]
+    .sort((a, b) => (a === "") - (b === "") || (Number(a) || 0) - (Number(b) || 0) || a.localeCompare(b));
+  const times = [...new Set(list.map(m => m.time || ""))].sort((a, b) => t(a) - t(b));
+  const cats = Object.values(matches).map(x => x.event || "");
+  const cell = m => {
+    const st = m.status || "scheduled", [sa, sb] = scoreCells(m);
+    const round = m.round && !/^group stage$/i.test(m.round) ? m.round : "";
+    const w = s => (st === "done" && m.winner === s ? "win" : "");
+    return `<button class="gcell ${st}" data-open="${m.id}" style="--c:${catColor(m.event || "", cats)}">
+      <span class="gn ${w("a")}">${esc(tnm(m, "a"))}</span>
+      <span class="gs">${st === "scheduled" ? "vs" : esc(String(sa)) + " – " + esc(String(sb))}</span>
+      <span class="gn ${w("b")}">${esc(tnm(m, "b"))}</span>
+      <span class="gr">${st === "live" ? "● LIVE" + (round ? " · " : "") : ""}${esc(round)}</span></button>`;
+  };
+  const head = `<tr><th></th>${courts.map(c => `<th>${c ? esc(CW) + " " + esc(c) : "No " + esc(cw)}</th>`).join("")}</tr>`;
+  const rows = times.map(tm => `<tr><th class="gt">${tm ? esc(tm) : "No time"}</th>${courts.map(c =>
+    `<td>${list.filter(m => (m.time || "") === tm && String(m.court || "").trim() === c).sort(C.byNo).map(cell).join("")}</td>`).join("")}</tr>`).join("");
+  return `<div class="gwrap"><table class="ggrid" style="--gc:${courts.length}">${head}${rows}</table></div>`;
+}
+
 function renderList() {
   renderProgress($("#progress"), true);
   renderNextStep($("#nextStep"));
@@ -439,13 +464,14 @@ function renderList() {
     $("#matchList").innerHTML = `<div class="card muted">No matches yet. ${Object.keys(teams).length ? "Add them in the Setup tab." : "Start by adding teams in the Teams tab."}</div>`;
     return;
   }
-  const compact = listView === "compact";
+  const compact = listView === "compact", grid = listView === "grid";
   const split = !catFilter && catList.length > 1 && !compact;
   const groups = [["live", "Live now"], ["scheduled", "Up next"], ["done", "Finished"]];
   const bar = `<div class="viewbar"><span>View</span>
+    <button data-view="grid" class="${grid ? "on" : ""}">⇆ Landscape</button>
     <button data-view="compact" class="${compact ? "on" : ""}">☰ Compact</button>
-    <button data-view="full" class="${compact ? "" : "on"}">▦ Full</button></div>`;
-  $("#matchList").innerHTML = bar + groups.map(([st, title]) => {
+    <button data-view="full" class="${compact || grid ? "" : "on"}">▦ Full</button></div>`;
+  $("#matchList").innerHTML = bar + (grid ? gridHTML(list) : groups.map(([st, title]) => {
     const g = list.filter(m => (m.status || "scheduled") === st);
     if (!g.length) return "";
     let body;
@@ -457,7 +483,7 @@ function renderList() {
         `<div class="cat-title">${esc(c)} <span class="muted">(${byCat[c].length})</span></div>` + byCat[c].map(m => matchCard(m, st)).join("")).join("");
     } else body = g.map(m => matchCard(m, st)).join("");
     return `<div class="group-title">${title} (${g.length})</div>` + body;
-  }).join("");
+  }).join(""));
   $$("#matchList [data-open]").forEach(b => b.onclick = () => openMatch(b.dataset.open));
   $$("#matchList [data-view]").forEach(b => b.onclick = () => {
     listView = b.dataset.view; store("ja_view_" + S, listView); renderList();

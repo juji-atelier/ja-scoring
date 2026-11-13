@@ -71,6 +71,20 @@ main{max-width:1100px;margin:0 auto;padding:16px 20px 40px}
   .crow .crd{display:none}
   .crow .cnm{white-space:normal;line-height:1.25}
 }
+.gwrap{width:min(1500px,calc(100vw - 32px));position:relative;left:50%;transform:translateX(-50%);overflow-x:auto;margin-top:12px;-webkit-overflow-scrolling:touch}
+table.ggrid{border-collapse:separate;border-spacing:6px;width:100%;min-width:calc(var(--gc,4) * 150px + 80px)}
+table.ggrid th{border:0;padding:4px 6px;font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:.08em;font-weight:800;text-align:center}
+table.ggrid th.gt{text-align:right;white-space:nowrap;color:var(--ink);font-size:13px;text-transform:none;letter-spacing:0;vertical-align:middle;width:1%}
+table.ggrid td{border:0;padding:0;vertical-align:top}
+.gcell{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;margin:0 0 4px;padding:9px 8px;text-align:center;
+  border-top:4px solid var(--c,var(--line));border-radius:10px;font-weight:400}
+.gcell .gn{font-weight:800;font-size:13px;line-height:1.2}
+.gcell .gn.win{color:#16a34a}
+.gcell .gs{font-size:11px;color:var(--mute);font-weight:700;font-variant-numeric:tabular-nums}
+.gcell .gr{font-size:11px;color:var(--mute)}
+.gcell.live{border-color:var(--live);box-shadow:inset 0 0 0 1px var(--live)}
+.gcell.live .gr{color:var(--live);font-weight:800}
+.gcell.done{opacity:.7}
 .group-title{margin:20px 0 8px;font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:.14em;font-weight:700}
 .mcard{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);
   border-left:4px solid var(--line);border-radius:14px;padding:13px 15px;margin:8px 0;font-weight:400;box-shadow:var(--shadow)}
