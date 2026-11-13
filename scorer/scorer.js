@@ -1,8 +1,9 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113v";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113w";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113v";
-import * as C from "../js/common.js?v=20261113v";
-import { applySportInfo } from "../js/sportinfo.js?v=20261113v";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113w";
+import * as C from "../js/common.js?v=20261113w";
+import { applySportInfo } from "../js/sportinfo.js?v=20261113w";
+import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261113w";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -41,7 +42,7 @@ const SPORT_EMAIL = `${S}@${EMAIL_DOMAIN}`;
 
 document.documentElement.style.setProperty("--sport", SP.color);
 document.title = `${SP.name} · Scorer`;
-let mainVenue = EVENT_DEFAULTS.venue;
+let mainVenue = EVENT_DEFAULTS.venue, eventName = EVENT_DEFAULTS.name;
 function showSportHead() {
   document.title = `${SP.name} · Scorer`;
   $("#sportName").textContent = SP.name;
@@ -49,7 +50,7 @@ function showSportHead() {
 }
 showSportHead();
 // name / date / venue can be changed in Admin
-C.onValue(ref(C.db, "settings"), s => { const v = s.val() || {}; applySportInfo(v.sportInfo); mainVenue = v.venue || EVENT_DEFAULTS.venue; showSportHead(); }, () => {});
+C.onValue(ref(C.db, "settings"), s => { const v = s.val() || {}; applySportInfo(v.sportInfo); mainVenue = v.venue || EVENT_DEFAULTS.venue; eventName = v.event || EVENT_DEFAULTS.name; showSportHead(); }, () => {});
 // wording of the (i) hints depends on the sport ("points per game" vs "per set")
 if (window.JAHints) { window.JAHints.ctx = { sport: S, name: SP.name, unit: UNIT, kind: KIND }; window.JAHints.apply(); }
 
@@ -435,6 +436,86 @@ function gridHTML(list) {
   return `<div class="gwrap"><table class="ggrid" style="--gc:${courts.length}">${head}${rows}</table></div>`;
 }
 
+// ---------------------------------------------------------------- export the schedule
+// For the PIC to hand out: a clean printable page (Print / Save as PDF) and a WhatsApp-ready text.
+// Exports exactly what the filters on screen show: a category and/or a court, or everything.
+const tSort = (a, b) => { const t = s => { const x = parseT(s || ""); return x == null ? 1e9 : x; };
+  return t(a.time) - t(b.time) || (Number(a.court) || 99) - (Number(b.court) || 99) || C.byNo(a, b); };
+function exportScope(list) {
+  const cats = [...new Set(list.map(m => m.event || "").filter(Boolean))];
+  const parts = [catFilter, courtFilter ? CW + " " + courtFilter : ""].filter(Boolean);
+  return { cats, many: cats.length > 1, sub: parts.join(" \u00b7 ") };
+}
+const roundOf = m => (m.round && !/^group stage$/i.test(m.round) ? m.round : "");
+function exportText(list) {
+  const sc = exportScope(list), rows = [...list].sort(tSort);
+  let out = `*${eventName} \u00b7 ${SP.name}*\n${SP.day} \u00b7 ${SP.venue || mainVenue}` + (sc.sub ? `\n_${sc.sub}_` : "") + "\n";
+  let last = null;
+  for (const m of rows) {
+    const k = m.time || "";
+    if (k !== last) { out += `\n*${k || "Time to be confirmed"}*\n`; last = k; }
+    const tag = [sc.many ? m.event : "", roundOf(m)].filter(Boolean).join(" \u00b7 ");
+    const res = m.status === "done" ? ` *${scoreCells(m).join("\u2013")}*` : "";
+    out += `${m.court ? CW + " " + m.court + " \u00b7 " : ""}${tnm(m, "a")} vs ${tnm(m, "b")}${res}${tag ? ` _(${tag})_` : ""}\n`;
+  }
+  return out.trim() + `\n\nLive scores: ${location.origin}${location.pathname.replace(/scorer\/.*$/, "live/")}?sport=${S}`;
+}
+function exportPrint(list) {
+  const sc = exportScope(list), rows = [...list].sort(tSort);
+  // pools first, so everyone can find which group they are in
+  const inCats = new Set(list.map(m => m.event || ""));
+  const byCat = {};
+  Object.entries(teams).filter(([, t]) => poolOf(t) && (!catFilter || sameCat(catOf(t), catFilter)) && inCats.has(catOf(t) || ""))
+    .forEach(([id, t]) => { const c = catOf(t) || ""; ((byCat[c] = byCat[c] || {})[poolOf(t)] = byCat[c][poolOf(t)] || []).push([id, t]); });
+  const pools = Object.keys(byCat).sort().map(c => `<div class="pc">${c ? `<h3>${esc(c)}</h3>` : ""}<div class="pg">${Object.keys(byCat[c]).sort().map(p =>
+    `<div class="pool"><b>Pool ${esc(p)}</b><ol>${byCat[c][p].sort((a, b) => (+a[1].seed || 99) - (+b[1].seed || 99)).map(([id, t]) =>
+      `<li>${esc(t.name)}${tp(id) ? `<small>${esc(tp(id))}</small>` : ""}</li>`).join("")}</ol></div>`).join("")}</div></div>`).join("");
+  let body = "", last = null;
+  for (const m of rows) {
+    const k = m.time || "";
+    if (k !== last) { body += `${last !== null ? "</tbody></table>" : ""}<h2>${esc(k || "Time to be confirmed")}</h2><table><tbody>`; last = k; }
+    const tag = [sc.many ? m.event : "", roundOf(m)].filter(Boolean).join(" \u00b7 ");
+    const res = m.status === "done" ? scoreCells(m).join(" \u2013 ") : "";
+    body += `<tr><td class="c">${m.court ? esc(CW) + " " + esc(m.court) : ""}</td><td class="m">${esc(tnm(m, "a"))} <i>vs</i> ${esc(tnm(m, "b"))}${res ? ` <b class="r">${esc(res)}</b>` : ""}</td><td class="t">${esc(tag)}</td><td class="n">#${esc(m.no)}</td></tr>`;
+  }
+  if (last !== null) body += "</tbody></table>";
+  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(SP.name)} schedule \u2013 ${esc(eventName)}</title><style>
+*{box-sizing:border-box}body{font:14px/1.35 -apple-system,Inter,Segoe UI,Roboto,sans-serif;color:#16181d;margin:0;padding:22px 26px;background:#fff}
+header{border-bottom:3px solid ${SP.color || "#B3162D"};padding-bottom:10px;margin-bottom:14px}
+h1{margin:0;font-size:22px}header p{margin:3px 0 0;color:#555}header .f{color:${SP.color || "#B3162D"};font-weight:700}
+h2{font-size:15px;margin:16px 0 4px;padding:4px 8px;background:#f2f2f4;border-radius:6px;break-after:avoid}
+h3{font-size:13px;margin:12px 0 6px;text-transform:uppercase;letter-spacing:.05em;color:#555}
+table{width:100%;border-collapse:collapse;break-inside:avoid}td{padding:5px 8px;border-bottom:1px solid #e5e5e8;vertical-align:top}
+td.c{width:78px;font-weight:700;white-space:nowrap}td.m{font-weight:700}td.m i{font-style:normal;font-weight:400;color:#888;margin:0 4px}
+td.t{color:#666;font-size:12px;white-space:nowrap;text-align:right}td.n{color:#aaa;font-size:11px;width:36px;text-align:right}
+.r{color:${SP.color || "#B3162D"};margin-left:6px}
+.pg{display:flex;flex-wrap:wrap;gap:10px}.pool{border:1px solid #e5e5e8;border-radius:8px;padding:8px 12px;min-width:200px;flex:1;break-inside:avoid}
+.pool ol{margin:4px 0 0;padding-left:20px}.pool li{margin:2px 0;font-weight:600}.pool small{display:block;font-weight:400;color:#777;font-size:11px}
+.sec{margin-top:18px;font-size:12px;color:#888;text-transform:uppercase;letter-spacing:.1em;font-weight:800}
+.bar{position:sticky;top:0;background:#fff;padding:0 0 12px;display:flex;gap:8px}
+.bar button{font:inherit;font-weight:700;padding:9px 14px;border-radius:9px;border:1px solid #ccc;background:#16181d;color:#fff;cursor:pointer}
+.bar button+button{background:#fff;color:#16181d}
+footer{margin-top:20px;color:#999;font-size:11px}@media print{.bar{display:none}body{padding:0}}
+</style></head><body>
+<div class="bar"><button onclick="print()">Print / Save as PDF</button><button onclick="close()">Close</button></div>
+<header><h1>${esc(SP.name)} \u2013 Schedule</h1><p><span class="f">${esc(eventName)}</span> \u00b7 ${esc(SP.day)} \u00b7 ${esc(SP.venue || mainVenue)}</p>${sc.sub ? `<p>${esc(sc.sub)}</p>` : ""}</header>
+${pools ? `<div class="sec">Pools</div>${pools}<div class="sec">Matches</div>` : ""}${body || "<p>No matches.</p>"}
+<footer>Live scores: ${esc(location.origin + location.pathname.replace(/scorer\/.*$/, "live/"))}?sport=${esc(S)} \u00b7 printed ${esc(new Date().toLocaleString())}</footer>
+</body></html>`;
+  const w = window.open("", "_blank");
+  if (!w) return toast("Allow pop-ups for this page to print the schedule");
+  w.document.write(html); w.document.close(); w.focus();
+}
+async function exportCopy(list) {
+  const text = exportText(list);
+  try { await navigator.clipboard.writeText(text); toast("Schedule copied \u2013 paste it into WhatsApp", 3500); }
+  catch (e) { prompt("Copy the schedule:", text); }
+}
+async function exportShare(list) {
+  try { await navigator.share({ title: `${SP.name} schedule`, text: exportText(list) }); } catch (e) { /* closed */ }
+}
+
 function renderList() {
   renderProgress($("#progress"), true);
   renderNextStep($("#nextStep"));
@@ -464,14 +545,27 @@ function renderList() {
     $("#matchList").innerHTML = `<div class="card muted">No matches yet. ${Object.keys(teams).length ? "Add them in the Setup tab." : "Start by adding teams in the Teams tab."}</div>`;
     return;
   }
-  const compact = listView === "compact", grid = listView === "grid";
+  const compact = listView === "compact", grid = listView === "grid", brk = listView === "bracket";
   const split = !catFilter && catList.length > 1 && !compact;
   const groups = [["live", "Live now"], ["scheduled", "Up next"], ["done", "Finished"]];
-  const bar = `<div class="viewbar"><span>View</span>
+  const bar = `<div class="viewbar">
+    <details class="menu exp"><summary>📤 Export schedule</summary><div class="items">
+      <button data-exp="print">🖨️ Print / Save as PDF</button>
+      <button data-exp="copy">💬 Copy for WhatsApp</button>
+      ${navigator.share ? `<button data-exp="share">📤 Share…</button>` : ""}
+      <small>${list.length} match${list.length > 1 ? "es" : ""}${catFilter || courtFilter ? " · as filtered above" : ""}</small></div></details>
+    <span>View</span>
     <button data-view="grid" class="${grid ? "on" : ""}">⇆ Landscape</button>
     <button data-view="compact" class="${compact ? "on" : ""}">☰ Compact</button>
-    <button data-view="full" class="${compact || grid ? "" : "on"}">▦ Full</button></div>`;
-  $("#matchList").innerHTML = bar + (grid ? gridHTML(list) : groups.map(([st, title]) => {
+    <button data-view="full" class="${compact || grid || brk ? "" : "on"}">▦ Full</button>
+    <button data-view="bracket" class="${brk ? "on" : ""}">🏆 Bracket</button></div>`;
+  // the bracket: the whole knockout of the category (or all of them), whatever court is picked
+  const brkHTML = () => {
+    const recs = inCat.map(m => ({ ...publicRecord(S, m, teams), id: m.id }));
+    return hasBracket(recs) ? `<div class="bwrap">${bracketHTML(recs, { esc, courtWord: CW })}</div>`
+      : `<div class="card muted" style="margin-top:14px">No knockout matches yet. Create them in the <b>Teams</b> tab with <b>🏆 Knockout</b> on a category – the bracket then fills itself in as results are confirmed.</div>`;
+  };
+  $("#matchList").innerHTML = bar + (brk ? brkHTML() : grid ? gridHTML(list) : groups.map(([st, title]) => {
     const g = list.filter(m => (m.status || "scheduled") === st);
     if (!g.length) return "";
     let body;
@@ -487,6 +581,10 @@ function renderList() {
   $$("#matchList [data-open]").forEach(b => b.onclick = () => openMatch(b.dataset.open));
   $$("#matchList [data-view]").forEach(b => b.onclick = () => {
     listView = b.dataset.view; store("ja_view_" + S, listView); renderList();
+  });
+  $$("#matchList [data-exp]").forEach(b => b.onclick = () => {
+    b.closest("details").open = false;
+    ({ print: exportPrint, copy: exportCopy, share: exportShare })[b.dataset.exp](list);
   });
 }
 // ---------------------------------------------------------------- locks

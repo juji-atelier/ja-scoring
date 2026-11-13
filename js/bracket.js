@@ -23,7 +23,7 @@ export function bracketHTML(recs, { esc, courtWord = "Court", isMe = () => false
     const cls = (ph ? "ph" : r.st === "done" ? (r.w === s ? "win" : "lose") : "") + (!ph && isMe(name) ? " me" : "");
     return `<div class="br ${cls}"><span class="bn">${!ph && isMe(name) ? "★ " : ""}${esc(ph ? short(name) : (name || "TBC"))}</span><b>${score ?? ""}</b></div>`;
   };
-  const box = (r, title) => `<div class="bm ${r.st}">
+  const box = (r, title) => `<div class="bm ${r.st}"${r.id ? ` data-open="${esc(r.id)}" role="button" tabindex="0"` : ""}>
       <div class="bh"><span>${esc(title || r.rd)}</span><span>${r.st === "live" ? '<i class="ld"></i>LIVE' : r.st === "done" ? "Done" : [r.tm, r.ct ? courtWord + " " + r.ct : ""].filter(Boolean).map(esc).join(" · ")}</span></div>
       ${side(r, "a")}${side(r, "b")}</div>`;
   return cats.map(ev => {
