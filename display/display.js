@@ -1,11 +1,11 @@
-import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261113s";
-import { clockMs, mmss, catColor } from "../js/engines.js?v=20261113s";
-import * as C from "../js/common.js?v=20261113s";
-import { applySportInfo } from "../js/sportinfo.js?v=20261113s";
-import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261113s";
-import { bowlingStandings } from "../js/bowling-data.js?v=20261113s";
-import { firebaseConfig } from "../config.js?v=20261113s";
-import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261113s";
+import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261113t";
+import { clockMs, mmss, catColor } from "../js/engines.js?v=20261113t";
+import * as C from "../js/common.js?v=20261113t";
+import { applySportInfo } from "../js/sportinfo.js?v=20261113t";
+import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261113t";
+import { bowlingStandings } from "../js/bowling-data.js?v=20261113t";
+import { firebaseConfig } from "../config.js?v=20261113t";
+import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261113t";
 const { $, esc, ref } = C;
 
 const P = new URLSearchParams(location.search);
@@ -74,6 +74,18 @@ const ANN_SRC = { bowling: BOARDS.bowling };   // name follows Admin
 const pubOf = sp => sportEffective(pub[sp], (pub[KEEP] || {})[sp], cfgOf(settings), sp).P;
 const recs = sp => Object.entries(pubOf(sp).m || {}).map(([id, r]) => ({ id, ...r }));
 const byNo = (x, y) => (Number(x.no) || 9999) - (Number(y.no) || 9999);
+// "9:30 AM" -> minutes; untimed matches sort after timed ones
+const tMin = s => {
+  const m = String(s || "").trim().match(/^(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm)?$/i);
+  if (!m) return 1e9;
+  let h = +m[1]; const mi = +(m[2] || 0);
+  if (m[3]) { const pm = /pm/i.test(m[3]); if (pm && h < 12) h += 12; if (!pm && h === 12) h = 0; }
+  return h * 60 + mi;
+};
+// what plays next, in the order it will actually be played: by start time, then table, then
+// number. By number alone, two categories in one room (men #1-20, women #21-26, both from 9:00)
+// would show only the men until the men were done.
+const byPlay = (x, y) => tMin(x.tm) - tMin(y.tm) || (Number(x.ct) || 99) - (Number(y.ct) || 99) || byNo(x, y);
 const disp = () => settings.display || {};
 
 function pickSport() {
@@ -199,7 +211,7 @@ setInterval(renderGoal, 1000);
 function listHTML(arr, kind) {
   if (!arr.length) return `<div class="empty">${kind === "next" ? "No more matches scheduled" : "No results yet"}</div>`;
   return `<div class="list">` + arr.map(r => {
-    if (kind === "next") return `<div class="it"><span class="n">${r.tm ? esc(r.tm) : r.lb ? esc(r.lb) : "#" + esc(r.no)}${r.ct ? " · C" + esc(r.ct) : ""}</span>
+    if (kind === "next") return `<div class="it"><span class="n">${r.tm ? esc(r.tm) : r.lb ? esc(r.lb) : "#" + esc(r.no)}${r.ct ? " · " + esc(cwNow) + " " + esc(r.ct) : ""}</span>
       <span class="t">${esc(r.a)} <span style="color:var(--muted)">vs</span> ${esc(r.b)}</span><span></span></div>`;
     const s = r.wo ? "W/O" : `${(r.sc || [])[0]}–${(r.sc || [])[1]}`;
     return `<div class="it"><span class="n">${esc(r.rd || "#" + r.no)}</span>
@@ -297,7 +309,7 @@ function renderView() {
     if (sp === "bowling") { main.className = ""; main.innerHTML = bowlingHTML(); renderTicker(); renderAnn(); tick(); return; }
     const all = BOARDS[sp] ? boardRecs(sp) : recs(sp);
     const live = all.filter(r => r.st === "live").sort((x, y) => String(x.ct).localeCompare(String(y.ct), undefined, { numeric: true }) || byNo(x, y)).slice(0, 6);
-    const next = all.filter(r => r.st === "scheduled").sort(byNo);
+    const next = all.filter(r => r.st === "scheduled").sort(byPlay);
     const done = all.filter(r => r.st === "done").sort((x, y) => (y.t || 0) - (x.t || 0));
     main.className = "";
     let left;
