@@ -1,8 +1,8 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113p";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113q";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113p";
-import * as C from "../js/common.js?v=20261113p";
-import { applySportInfo } from "../js/sportinfo.js?v=20261113p";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113q";
+import * as C from "../js/common.js?v=20261113q";
+import { applySportInfo } from "../js/sportinfo.js?v=20261113q";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -378,6 +378,38 @@ function matchCard(m, st) {
     ${v && v.hist ? `<div class="muted" style="font-size:13px;margin-top:4px">${esc(v.hist)}</div>` : ""}
   </button>`;
 }
+// ---------------------------------------------------------------- compact list
+// One line per match, grouped by start time, so a day of 26 matches reads as rounds of play on
+// about one screen. Live matches keep their full card – those are the ones being watched.
+let listView = store("ja_view_" + S) || "full";
+function matchRow(m, st) {
+  const [sa, sb] = scoreCells(m);
+  const col = catColor(m.event || "", Object.values(matches).map(x => x.event || ""));
+  const round = m.round && !/^group stage$/i.test(m.round) ? m.round : "";
+  const w = s => (st === "done" && m.winner === s ? "win" : "");
+  return `<button class="crow ${st}" data-open="${m.id}" style="--c:${col}">
+    <span class="cct">${m.court ? esc(CW) + " " + esc(m.court) : "#" + esc(m.no)}</span>
+    <span class="cnm"><span class="${w("a")}">${esc(tnm(m, "a"))}</span><i>vs</i><span class="${w("b")}">${esc(tnm(m, "b"))}</span></span>
+    ${st === "done" ? `<b class="csc">${esc(String(sa))}–${esc(String(sb))}</b>` : "<span></span>"}
+    <span class="crd">${esc(round)}</span></button>`;
+}
+// by time, then table, then match number; a time heading wherever the time changes
+function compactBody(g, st) {
+  const t = m => { const x = parseT(m.time || ""); return x == null ? 1e9 : x; };
+  const sorted = [...g].sort((a, b) => t(a) - t(b) || (Number(a.court) || 99) - (Number(b.court) || 99) || C.byNo(a, b));
+  let last = null, out = "";
+  for (const m of sorted) {
+    const k = m.time || "";
+    if (k !== last) {
+      const n = sorted.filter(x => (x.time || "") === k).length;
+      out += `<div class="ctime">${k ? esc(k) : "No time yet"} <span>· ${n} match${n > 1 ? "es" : ""}</span></div>`;
+      last = k;
+    }
+    out += matchRow(m, st);
+  }
+  return out;
+}
+
 function renderList() {
   renderProgress($("#progress"), true);
   renderNextStep($("#nextStep"));
@@ -407,13 +439,18 @@ function renderList() {
     $("#matchList").innerHTML = `<div class="card muted">No matches yet. ${Object.keys(teams).length ? "Add them in the Setup tab." : "Start by adding teams in the Teams tab."}</div>`;
     return;
   }
-  const split = !catFilter && catList.length > 1;
+  const compact = listView === "compact";
+  const split = !catFilter && catList.length > 1 && !compact;
   const groups = [["live", "Live now"], ["scheduled", "Up next"], ["done", "Finished"]];
-  $("#matchList").innerHTML = groups.map(([st, title]) => {
+  const bar = `<div class="viewbar"><span>View</span>
+    <button data-view="compact" class="${compact ? "on" : ""}">☰ Compact</button>
+    <button data-view="full" class="${compact ? "" : "on"}">▦ Full</button></div>`;
+  $("#matchList").innerHTML = bar + groups.map(([st, title]) => {
     const g = list.filter(m => (m.status || "scheduled") === st);
     if (!g.length) return "";
     let body;
-    if (split && st !== "live") {
+    if (compact && st !== "live") body = compactBody(g, st);
+    else if (split && st !== "live") {
       const byCat = {};
       g.forEach(m => (byCat[mc(m) || "Other"] = byCat[mc(m) || "Other"] || []).push(m));
       body = Object.keys(byCat).sort((a, b) => a.localeCompare(b)).map(c =>
@@ -422,6 +459,9 @@ function renderList() {
     return `<div class="group-title">${title} (${g.length})</div>` + body;
   }).join("");
   $$("#matchList [data-open]").forEach(b => b.onclick = () => openMatch(b.dataset.open));
+  $$("#matchList [data-view]").forEach(b => b.onclick = () => {
+    listView = b.dataset.view; store("ja_view_" + S, listView); renderList();
+  });
 }
 // ---------------------------------------------------------------- locks
 async function takeLock(id, force) {
