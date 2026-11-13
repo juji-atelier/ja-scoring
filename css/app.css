@@ -317,3 +317,17 @@ details.guide li{margin:4px 0}
 .drawpool li b{flex:none;min-width:30px;font-size:12px;text-align:center;padding:2px 6px;border-radius:8px;background:var(--card);border:1px solid var(--line)}
 .drawpool li.new{animation:drin .45s ease-out}
 @keyframes drin{from{opacity:0;transform:translateY(-8px) scale(.96);background:color-mix(in srgb,var(--sport,var(--acc)) 25%,transparent)}to{opacity:1}}
+
+/* match builder */
+.fxcourts{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0}
+.fxcourts div{flex:1;min-width:140px}
+.fxcourts label{margin-top:0}
+.fxlist{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.fxrow{display:grid;grid-template-columns:34px 1fr auto 1fr 90px 34px;gap:6px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:12px;background:var(--bg2)}
+.fxrow.bad{border-color:var(--warn)}
+.fxrow .no{font-weight:800;font-size:13px;color:var(--mute);text-align:center}
+.fxrow .vs{font-size:12px;color:var(--mute)}
+.fxrow select,.fxrow input{min-width:0;padding:7px 8px;font-size:14px}
+.fxrow button{padding:6px 0}
+.fxrow small{grid-column:2/-1;color:var(--warn);font-size:12px}
+@media (max-width:560px){.fxrow{grid-template-columns:28px 1fr 1fr 30px}.fxrow .vs{display:none}.fxrow .ct{grid-column:2/4}.fxrow .x{grid-row:1;grid-column:4}}

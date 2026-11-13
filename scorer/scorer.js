@@ -1,8 +1,8 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113a";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113b";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor } from "../js/engines.js?v=20261113a";
-import * as C from "../js/common.js?v=20261113a";
-import { applySportInfo } from "../js/sportinfo.js?v=20261113a";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor } from "../js/engines.js?v=20261113b";
+import * as C from "../js/common.js?v=20261113b";
+import { applySportInfo } from "../js/sportinfo.js?v=20261113b";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -1065,6 +1065,7 @@ function renderTeams() {
     return `<div class="card"><div class="row" style="align-items:center"><h3 style="flex:1;margin:0">${esc(c)}</h3>
       <span class="muted" style="font-size:13px">${by[c].length} team${by[c].length > 1 ? "s" : ""}</span>
       ${by[c].length >= 3 ? `<button class="small ghost" data-draw="${esc(c)}">🎲 Draw pools</button>` : ""}
+      ${by[c].length >= 2 ? `<button class="small ghost" data-fx="${esc(c)}">📋 Matches</button>` : ""}
       ${c !== "No category" ? `<button class="small ghost" data-addcat="${esc(c)}">+ Add here</button>` : ""}</div>
       <table class="teams" style="margin-top:8px">${rows}</table></div>`;
   }).join("") : `<div class="card muted">No teams yet. Add the first one above.</div>`;
@@ -1074,6 +1075,7 @@ function renderTeams() {
   $$("[data-tsave]").forEach(b => b.onclick = () => saveTeam(b.dataset.tsave));
   $$("[data-tcancel]").forEach(b => b.onclick = () => { editingTeam = null; renderTeams(); });
   $$("[data-draw]").forEach(b => b.onclick = () => openDraw(b.dataset.draw));
+  $$("[data-fx]").forEach(b => b.onclick = () => openFixtures(b.dataset.fx));
   $$("[data-addcat]").forEach(b => b.onclick = () => {
     $("#tCat").value = b.dataset.addcat; $("#teamFormCard").scrollIntoView({ behavior: "smooth" }); $("#tName").focus();
   });
@@ -1459,8 +1461,9 @@ async function saveDraw(by) {
   store(skipKey, JSON.stringify(skipped().filter(k => !k.startsWith(String(drawCat).toUpperCase()))));
   log("", { no: "" }, by ? `pools drawn for ${drawCat}: ` + Object.keys(by).map(p => `${p}(${by[p].map(tn).join(", ")})`).join(" ") : `pools removed for ${drawCat}`);
   $("#drawModal").classList.add("hide");
-  toast(by ? "Draw saved. Next: create the matches for each pool." : "Pools removed", 4500);
+  toast(by ? "Draw saved. Now choose courts and matches." : "Pools removed", 4500);
   republishAll().catch(() => {});
+  if (by) { const c = drawCat; setTimeout(() => openFixtures(c), 300); }
 }
 $("#drGo").onclick = () => runDraw(true);
 $("#drSave").onclick = () => drawRes && saveDraw(drawRes);
@@ -1468,6 +1471,106 @@ $("#drClear").onclick = () => saveDraw(null);
 $("#drClose").onclick = () => {
   if (drawRes && !$("#drSave").classList.contains("hide") && !confirm("Close without saving this draw?")) return;
   clearInterval(drawTimer); clearTimeout(drawTimer); drawRes = null; $("#drawModal").classList.add("hide");
+};
+
+// ---------------------------------------------------------------- match builder (after the draw, or any time)
+// Court per pool, pools taking turns, auto-filled list that can be edited, or a fully manual list.
+let fx = null;   // { cat, rows: [{a, b, court}] }
+const rrPairs = ids => {   // circle method: rounds where nobody plays twice
+  const list = ids.length % 2 ? [...ids, null] : [...ids], out = [];
+  for (let r = 0; r < list.length - 1; r++) {
+    for (let i = 0; i < list.length / 2; i++) { const x = list[i], y = list[list.length - 1 - i]; if (x && y) out.push(r % 2 ? [y, x] : [x, y]); }
+    list.splice(1, 0, list.pop());
+  }
+  return out;
+};
+const fxPools = () => { const g = groupNow(catTeams(fx.cat)); const rest = catTeams(fx.cat).filter(([, t]) => !poolOf(t)).map(([id]) => id);
+  if (rest.length) g[""] = rest; return g; };
+const tLabel = id => { const t = teams[id] || {}; return (poolOf(t) && t.seed ? poolOf(t) + t.seed + " · " : "") + (t.name || "?"); };
+function openFixtures(c) {
+  fx = { cat: c, rows: [] };
+  const pools = fxPools(), keys = Object.keys(pools).sort();
+  const ms = drawMatches(c);
+  $("#fxTitle").textContent = `📋 Matches – ${c}`;
+  $("#fxSub").textContent = (keys.length > 1 || keys[0] ? keys.map(p => `Pool ${p || "–"}: ${pools[p].length} teams`).join(" · ") : `${catTeams(c).length} teams`) +
+    (ms.length ? ` · ${ms.length} match${ms.length > 1 ? "es" : ""} already made – new ones are added after them.` : "");
+  const saved = (() => { try { return JSON.parse(store("ja_fxct_" + S) || "{}"); } catch (e) { return {}; } })();
+  $("#fxCourts").innerHTML = keys.map(p => `<div><label>Court for ${p ? "Pool " + esc(p) : "these matches"}</label>
+    <input data-fxct="${esc(p)}" value="${esc(saved[c + "|" + p] || "")}" placeholder="e.g. 1 or Court A"></div>`).join("");
+  $("#fxTurnWrap").classList.toggle("hide", keys.length < 2);
+  $$("[data-fxct]").forEach(i => i.oninput = () => {
+    const p = i.dataset.fxct;
+    fx.rows.forEach(r => { if (poolOf(teams[r.a]) === p) r.court = i.value.trim(); });
+    renderFx();
+  });
+  if (!ms.length) fillFx(); else renderFx();
+  $("#fxModal").classList.remove("hide");
+}
+const courtOf = p => { const i = $$("[data-fxct]").find(x => x.dataset.fxct === p); return i ? i.value.trim() : ""; };
+function fillFx() {
+  const pools = fxPools(), keys = Object.keys(pools).sort();
+  const per = keys.map(p => rrPairs(pools[p]).map(([a, b]) => ({ a, b, court: courtOf(p) })));
+  let rows = [];
+  if ($("#fxTurns").checked && keys.length > 1) {
+    for (let i = 0; per.some(l => i < l.length); i++) per.forEach(l => { if (l[i]) rows.push(l[i]); });
+  } else rows = per.flat();
+  fx.rows = rows; renderFx();
+}
+function renderFx() {
+  const ids = catTeams(fx.cat).sort((a, b) => poolOf(a[1]).localeCompare(poolOf(b[1])) || ((+a[1].seed || 99) - (+b[1].seed || 99)) || a[1].name.localeCompare(b[1].name)).map(([id]) => id);
+  const opts = sel => `<option value="">– team –</option>` + ids.map(id => `<option value="${id}" ${id === sel ? "selected" : ""}>${esc(tLabel(id))}</option>`).join("");
+  const start = nextNo(), seen = new Set();
+  let bad = 0;
+  $("#fxList").innerHTML = fx.rows.map((r, i) => {
+    const key = [r.a, r.b].sort().join("|");
+    let warn = "";
+    if (!r.a || !r.b) warn = "Choose both teams";
+    else if (r.a === r.b) warn = "Same team twice";
+    else if (seen.has(key)) warn = "This pair is already in the list";
+    else if (poolOf(teams[r.a]) !== poolOf(teams[r.b])) warn = "Different pools – this match won't count in the pool table";
+    seen.add(key);
+    if (warn && !/Different pools/.test(warn)) bad++;
+    return `<div class="fxrow ${warn ? "bad" : ""}"><span class="no">#${start + i}</span>
+      <select data-fxa="${i}">${opts(r.a)}</select><span class="vs">vs</span><select data-fxb="${i}">${opts(r.b)}</select>
+      <input class="ct" data-fxc="${i}" value="${esc(r.court || "")}" placeholder="Court">
+      <button type="button" class="small ghost danger x" data-fxx="${i}" title="Remove">✕</button>
+      ${warn ? `<small>${esc(warn)}</small>` : ""}</div>`;
+  }).join("") || `<p class="muted">No matches in the list. Tap “Fill all” or “+ Add a match”.</p>`;
+  $$("[data-fxa]").forEach(e => e.onchange = () => { fx.rows[+e.dataset.fxa].a = e.value; renderFx(); });
+  $$("[data-fxb]").forEach(e => e.onchange = () => { fx.rows[+e.dataset.fxb].b = e.value; renderFx(); });
+  $$("[data-fxc]").forEach(e => e.oninput = () => { fx.rows[+e.dataset.fxc].court = e.value.trim(); });
+  $$("[data-fxx]").forEach(e => e.onclick = () => { fx.rows.splice(+e.dataset.fxx, 1); renderFx(); });
+  $("#fxNote").textContent = fx.rows.length ? `${fx.rows.length} match${fx.rows.length > 1 ? "es" : ""}, numbered #${start}–#${start + fx.rows.length - 1}. Times can be set later in Setup.` : "";
+  $("#fxSave").textContent = fx.rows.length ? `Create ${fx.rows.length} match${fx.rows.length > 1 ? "es" : ""}` : "Create matches";
+  $("#fxSave").disabled = !fx.rows.length || bad > 0;
+}
+$("#fxFill").onclick = () => { if (fx.rows.length && !confirm("Replace the list with all pool matches?")) return; fillFx(); };
+$("#fxTurns").onchange = () => { if (fx) fillFx(); };
+$("#fxEmpty").onclick = () => { fx.rows = []; renderFx(); };
+$("#fxAdd").onclick = () => { const last = fx.rows[fx.rows.length - 1]; fx.rows.push({ a: "", b: "", court: last ? last.court : "" }); renderFx(); };
+$("#fxClose").onclick = () => { if (fx && fx.rows.length && !confirm("Close without creating these matches?")) return; fx = null; $("#fxModal").classList.add("hide"); };
+$("#fxSave").onclick = async () => {
+  if (!fx || !fx.rows.length) return;
+  let no = nextNo();
+  const upd = {}, pubs = {};
+  for (const r of fx.rows) {
+    const ta = teams[r.a], tb = teams[r.b], same = poolOf(ta) === poolOf(tb);
+    const id = C.push(ref(db, `sports/${S}/matches`)).key;
+    const m = { no: String(no++), time: "", court: r.court || "", round: same ? (poolOf(ta) ? "Pool " + poolOf(ta) : "Group stage") : "",
+      group: same ? keyOf(ta) : "", event: catOf(ta), teamA: r.a, teamB: r.b, fmt: FORMATS[S], status: "scheduled", createdAt: C.now(), updatedAt: C.now() };
+    upd[id] = m; pubs[id] = publicRecord(S, m, teams);
+  }
+  $("#fxSave").disabled = true;
+  try {
+    await C.update(ref(db, `sports/${S}/matches`), upd);
+    await C.update(ref(db, `pub/${S}/m`), pubs);
+  } catch (e) { toast("Couldn't save – check the connection"); $("#fxSave").disabled = false; return; }
+  const saved = (() => { try { return JSON.parse(store("ja_fxct_" + S) || "{}"); } catch (e) { return {}; } })();
+  $$("[data-fxct]").forEach(i => saved[fx.cat + "|" + i.dataset.fxct] = i.value.trim());
+  store("ja_fxct_" + S, JSON.stringify(saved));
+  log("", { no: "" }, `${fx.rows.length} matches created for ${fx.cat}`);
+  toast(`${fx.rows.length} matches created. Set the times in Setup.`, 4500);
+  fx = null; $("#fxModal").classList.add("hide");
 };
 
 // ---------------------------------------------------------------- next step card
@@ -1489,6 +1592,7 @@ function renderNextStep(el) {
       <div class="ns-text"><b>Next step: ${esc(p.k)} has ${p.n} teams but no matches yet.</b>
         <span>${p.games > 1 ? `Create all ${p.games} matches now? Everyone plays everyone once.` : "Create their match now?"}</span></div>
       <div class="ns-btns"><button class="small primary" data-nsgo="${esc(p.k)}">Create ${p.games} match${p.games > 1 ? "es" : ""}</button>
+        <button class="small" data-nsfx="${esc(p.k)}">Choose courts / edit…</button>
         <button class="small ghost" data-nsskip="${esc(p.k)}">I'll add them myself</button></div>
     </div>`).join("");
   $$("[data-nsgo]", el).forEach(b => b.onclick = async () => {
@@ -1496,6 +1600,10 @@ function renderNextStep(el) {
     const n = await genRR(b.dataset.nsgo, "", false);
     if (n) toast(`${n} match${n > 1 ? "es" : ""} created. Next: set times & courts in Setup.`, 5000);
     else b.disabled = false;
+  });
+  $$("[data-nsfx]", el).forEach(b => b.onclick = () => {
+    const t = Object.values(teams).find(t => keyOf(t) === b.dataset.nsfx);
+    if (t) openFixtures(catOf(t) || "No category");
   });
   $$("[data-nsskip]", el).forEach(b => b.onclick = () => {
     store(skipKey, JSON.stringify([...skipped(), b.dataset.nsskip]));

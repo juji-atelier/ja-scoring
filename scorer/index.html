@@ -13,10 +13,10 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="HQ Scorer" id="appTitle">
 <meta name="theme-color" content="#F6F4F2">
-<script src="../js/hints.js?v=20261113a"></script>
-<script src="../js/theme.js?v=20261113a"></script>
+<script src="../js/hints.js?v=20261113b"></script>
+<script src="../js/theme.js?v=20261113b"></script>
 <title>Scorer · JA Scoring</title>
-<link rel="stylesheet" href="../css/app.css?v=20261113a">
+<link rel="stylesheet" href="../css/app.css?v=20261113b">
 </head>
 <body>
 <header class="top">
@@ -199,6 +199,25 @@
     </div>
   </div>
 </div>
+<div class="modal hide" id="fxModal" role="dialog" aria-modal="true" aria-labelledby="fxTitle">
+  <div class="sheet drawsheet">
+    <h3 id="fxTitle">📋 Matches</h3>
+    <p class="muted" style="margin-top:0" id="fxSub"></p>
+    <div class="fxcourts" id="fxCourts"></div>
+    <label class="ckline" id="fxTurnWrap"><input type="checkbox" id="fxTurns" checked> Pools take turns (A, B, A, B…) – best when they share one court</label>
+    <div class="row" style="margin-top:10px;flex-wrap:wrap">
+      <button type="button" id="fxFill">⚡ Fill all – everyone plays everyone</button>
+      <button type="button" class="ghost" id="fxEmpty">Clear list</button>
+    </div>
+    <div class="fxlist" id="fxList"></div>
+    <div class="row" style="margin-top:8px"><button type="button" class="small ghost" id="fxAdd">+ Add a match</button></div>
+    <p class="muted" style="font-size:13px;margin:10px 0 0" id="fxNote"></p>
+    <div class="row" style="margin-top:12px;flex-wrap:wrap">
+      <button type="button" class="primary" id="fxSave">Create matches</button>
+      <button type="button" class="ghost" id="fxClose" style="margin-left:auto">Close</button>
+    </div>
+  </div>
+</div>
 <div class="modal hide" id="a2hsModal" role="dialog" aria-modal="true" aria-labelledby="a2Title">
   <div class="sheet">
     <h3 id="a2Title">📲 Add to your Home Screen</h3>
@@ -263,7 +282,7 @@
 <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
 <div id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script type="module" src="scorer.js?v=20261113a"></script>
+<script type="module" src="scorer.js?v=20261113b"></script>
 <script src="../js/feedback.js?v=20261111a"></script>
 </body>
 </html>
