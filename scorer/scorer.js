@@ -1,9 +1,9 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113y";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113z";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113y";
-import * as C from "../js/common.js?v=20261113y";
-import { applySportInfo } from "../js/sportinfo.js?v=20261113y";
-import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261113y";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113z";
+import * as C from "../js/common.js?v=20261113z";
+import { applySportInfo } from "../js/sportinfo.js?v=20261113z";
+import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261113z";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -1617,10 +1617,10 @@ function renderTC() {
       <label>Every</label><input id="qfEvery" inputmode="numeric" value="${store("ja_qfevery_" + S) || 25}" placeholder="min">
       <label>Rest<small style="display:block;text-transform:none;letter-spacing:0">min per team</small></label><input id="qfRest" inputmode="numeric" value="${store("ja_qfrest_" + S) ?? 5}" placeholder="0">
       <span class="full muted" style="font-size:12px">Every = minutes from one match start to the next on a court. Rest = extra minutes a team gets before its next match – matches are re-ordered (and re-numbered) to give it.</span>
-      ${need.map(b => `<label>${esc(CW)}${buckets.length > 1 ? `<small style="display:block;text-transform:none;letter-spacing:0">${esc(b)}</small>` : ""}</label>
-        <input data-qfc="${esc(b)}" value="" placeholder="e.g. 1">`).join("")}
-      ${need.length < buckets.length ? `<span class="full muted" style="font-size:12px">${need.length ? "The other matches keep" : "Every match keeps"} the court already set on it – only the times are filled.</span>` : ""}
-      ${need.length && buckets.length > 1 ? `<span class="full muted" style="font-size:12px">Different courts play at the same time. Knockout matches start after the pool matches.</span>` : ""}
+      ${need.length ? `<label>${esc(CW)}s<small style="display:block;text-transform:none;letter-spacing:0">in the room</small></label>
+        <select id="qfTables"><option value="">–</option>${Array.from({ length: 12 }, (_, i) => `<option ${String(i + 1) === String(store("ja_fxtb_" + S) || "") ? "selected" : ""}>${i + 1}</option>`).join("")}</select>
+        <span class="full muted" style="font-size:12px">How many ${esc(cw)}s the room has altogether – the same question as in the Matches window. Matches without a ${esc(cw)} are spread over them, so matches at the same time are on different ${esc(cw)}s; ${esc(cw)}s another category already uses are left to it.</span>` : ""}
+      ${need.length < buckets.length ? `<span class="full muted" style="font-size:12px">${need.length ? "The other matches keep" : "Every match keeps"} the ${esc(cw)} already set on it – only the times are filled.</span>` : ""}
       <span></span><button class="small primary" id="btnQF">Fill</button></div>` : ""}
     <div class="qhead"><span>#</span><span>Match</span><span>Time</span><span>${esc(CW)}</span></div>
     ${list.map(m => { const lock = (m.status || "scheduled") !== "scheduled";
@@ -1643,22 +1643,54 @@ function renderTC() {
   const qf = $("#btnQF", el);
   if (qf) qf.onclick = async () => {
     const start = parseT($("#qfStart").value), every = Number($("#qfEvery").value);
-    const courtOfB = {}; $$("[data-qfc]", el).forEach(i => courtOfB[i.dataset.qfc] = i.value.trim());
+    const nT = Number(($("#qfTables", el) || {}).value || 0);
+    if (need.length && !nT) return toast(`Choose how many ${cw}s the room has`);
     if (start == null) return toast("Start time like 9:00 AM");
     if (!(every > 0)) return toast("Minutes between matches, e.g. 25");
     if (sched.some(m => m.time) && !confirm(`Fill the times for all ${sched.length} ${tcCat} matches?\nTimes already typed will be replaced, and the matches may be re-ordered and re-numbered. Courts already set are kept.`)) return;
     store("ja_qfevery_" + S, String(every));
     const rest = Math.max(0, Number($("#qfRest").value) || 0);
     store("ja_qfrest_" + S, String(rest));
-    const { at, laneOf } = planTimes(sched, start, every, rest, courtOfB, bucketOf);
-    if (sched.some(m => at[m.id] == null)) return toast("Couldn't fit every match – check the knockout matches");
+    // matches without a table get one from the room: dealt down the list (pools taking turns), a
+    // new round whenever the tables run out or a team is already playing, so nobody is on two
+    // tables at once. Tables another category already uses are left to it.
+    let plan = sched;
+    if (nT) {
+      store("ja_fxtb_" + S, String(nT));
+      const used = new Set(all.filter(m => (m.event || "Other") !== tcCat).map(m => String(m.court || "").trim()).filter(Boolean));
+      const room = Array.from({ length: nT }, (_, i) => String(i + 1));
+      const tables = room.filter(t => !used.has(t)).length ? room.filter(t => !used.has(t)) : room;
+      // round by round: the teams with the most matches still to play go first, then any match
+      // whose teams are both free, until the tables run out. That keeps rounds full to the end
+      // even when the list is no longer in round order (e.g. after an earlier Fill).
+      const give = {}, wave = {}, left = [...sched].sort(C.byNo).filter(m => !(m.court || "").trim());
+      for (let w = 0; left.length; w++) {
+        const owe = {}; left.forEach(m => [m.teamA, m.teamB].forEach(t => { if (t) owe[t] = (owe[t] || 0) + 1; }));
+        const load = m => (owe[m.teamA] || 0) + (owe[m.teamB] || 0);
+        const order = [...left].sort((x, y) => load(y) - load(x) || C.byNo(x, y));
+        const playing = new Set(); let i = 0;
+        for (const m of order) {
+          if (i >= tables.length) break;
+          if ((m.teamA && playing.has(m.teamA)) || (m.teamB && playing.has(m.teamB))) continue;
+          give[m.id] = tables[i++]; wave[m.id] = w;
+          if (m.teamA) playing.add(m.teamA);
+          if (m.teamB) playing.add(m.teamB);
+          left.splice(left.indexOf(m), 1);
+        }
+      }
+      // and timed round by round, so each table plays its matches in that order
+      plan = sched.map(m => (give[m.id] ? { ...m, court: give[m.id] } : m))
+        .sort((x, y) => (wave[x.id] ?? -1) - (wave[y.id] ?? -1) || (Number(x.court) || 99) - (Number(y.court) || 99) || C.byNo(x, y));
+    }
+    const { at, laneOf } = planTimes(plan, start, every, rest, {}, bucketOf);
+    if (plan.some(m => at[m.id] == null)) return toast("Couldn't fit every match – check the knockout matches");
     // # follows the playing order: hand the same numbers out again in time order
-    const byTime = [...sched].sort((x, y) => at[x.id] - at[y.id] || laneOf[x.id].localeCompare(laneOf[y.id]) || C.byNo(x, y));
+    const byTime = [...plan].sort((x, y) => at[x.id] - at[y.id] || laneOf[x.id].localeCompare(laneOf[y.id]) || C.byNo(x, y));
     const nums = sched.map(m => m.no).filter(n => /^\d+$/.test(String(n))).map(Number).sort((x, y) => x - y);
     const renum = nums.length === sched.length && new Set(nums).size === nums.length;
     const out = {};
     byTime.forEach((m, i) => {
-      const court = (m.court || "").trim() || courtOfB[bucketOf(m)] || "";
+      const court = (m.court || "").trim();
       out[m.id] = { time: fmtT(at[m.id]), ...(court ? { court } : {}), ...(renum ? { no: String(nums[i]) } : {}) };
     });
     const upd = {};

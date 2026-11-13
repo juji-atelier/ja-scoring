@@ -330,7 +330,7 @@ details.guide li{margin:4px 0}
 .todo h4{margin:0 0 4px;font-size:16px} .todo p{margin:0 0 10px;color:var(--mute);font-size:14px}
 /* ---------- times & courts ---------- */
 .qfill{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:6px 8px;align-items:center;background:var(--bg2);border-radius:12px;padding:10px 12px;margin:10px 0 12px;font-size:13px;font-weight:600}
-.qfill label{margin:0;text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink)} .qfill input{margin:0;padding:8px} .qfill .full{grid-column:1/-1}
+.qfill label{margin:0;text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink)} .qfill input,.qfill select{margin:0;padding:8px} .qfill .full{grid-column:1/-1}
 .qhead,.qrow{display:grid;grid-template-columns:30px 1fr 104px 64px;gap:8px;align-items:center}
 .qhead{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);font-weight:700;padding:4px 0}
 .qrow{padding:8px 0;border-top:1px solid var(--line)}
