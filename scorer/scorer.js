@@ -1,8 +1,8 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113k";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113l";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113k";
-import * as C from "../js/common.js?v=20261113k";
-import { applySportInfo } from "../js/sportinfo.js?v=20261113k";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113l";
+import * as C from "../js/common.js?v=20261113l";
+import { applySportInfo } from "../js/sportinfo.js?v=20261113l";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -1382,7 +1382,7 @@ const bucketOf = m => {
 // for all pool matches (+ rest), a final waits for its semis. Ties keep the match-number order.
 function planTimes(sched, start, every, rest, courtOfB, bucketOf) {
   const at = {}, laneOf = {}, teamFree = {}, free = {};
-  sched.forEach(m => { const b = bucketOf(m); laneOf[m.id] = (courtOfB[b] || "") || "·" + b; });
+  sched.forEach(m => { const b = bucketOf(m); laneOf[m.id] = (m.court || "").trim() || (courtOfB[b] || "") || "·" + b; });
   const left = [...sched];
   const isKO = m => bucketOf(m) === "Knockout";
   const earliest = m => {
@@ -1425,6 +1425,8 @@ function renderTC() {
   const sched = list.filter(m => (m.status || "scheduled") === "scheduled");
   const firstT = sched.map(m => parseT(m.time)).find(x => x != null);
   const buckets = [...new Set(sched.map(bucketOf))].sort((a, b) => (a === "Knockout") - (b === "Knockout") || a.localeCompare(b));
+  // a court box only where some match of that pool still has none
+  const need = buckets.filter(b => sched.some(m => bucketOf(m) === b && !(m.court || "").trim()));
   el.innerHTML = `<h3 style="margin:0 0 4px">Times &amp; courts</h3>
     <p class="muted" style="margin:0;font-size:13px">Type straight into the boxes – each one saves when you leave it.</p>
     ${catsM.length > 1 ? `<div class="chips" style="margin:10px 0 4px">${catsM.map(c => `<button data-tcc="${esc(c)}" class="${c === tcCat ? "on" : ""}">${esc(c)} ${miss(c) ? `· ${miss(c)} left` : "✓"}</button>`).join("")}</div>` : ""}
@@ -1433,9 +1435,10 @@ function renderTC() {
       <label>Every</label><input id="qfEvery" inputmode="numeric" value="${store("ja_qfevery_" + S) || 25}" placeholder="min">
       <label>Rest<small style="display:block;text-transform:none;letter-spacing:0">min per team</small></label><input id="qfRest" inputmode="numeric" value="${store("ja_qfrest_" + S) ?? 5}" placeholder="0">
       <span class="full muted" style="font-size:12px">Every = minutes from one match start to the next on a court. Rest = extra minutes a team gets before its next match – matches are re-ordered (and re-numbered) to give it.</span>
-      ${buckets.map(b => `<label>Court${buckets.length > 1 ? `<small style="display:block;text-transform:none;letter-spacing:0">${esc(b)}</small>` : ""}</label>
-        <input data-qfc="${esc(b)}" value="${esc((sched.find(m => bucketOf(m) === b && m.court) || {}).court || "")}" placeholder="e.g. 1">`).join("")}
-      ${buckets.length > 1 ? `<span class="full muted" style="font-size:12px">Different courts play at the same time. Knockout matches start after the pool matches.</span>` : ""}
+      ${need.map(b => `<label>Court${buckets.length > 1 ? `<small style="display:block;text-transform:none;letter-spacing:0">${esc(b)}</small>` : ""}</label>
+        <input data-qfc="${esc(b)}" value="" placeholder="e.g. 1">`).join("")}
+      ${need.length < buckets.length ? `<span class="full muted" style="font-size:12px">${need.length ? "The other matches keep" : "Every match keeps"} the court already set on it – only the times are filled.</span>` : ""}
+      ${need.length && buckets.length > 1 ? `<span class="full muted" style="font-size:12px">Different courts play at the same time. Knockout matches start after the pool matches.</span>` : ""}
       <span></span><button class="small primary" id="btnQF">Fill</button></div>` : ""}
     <div class="qhead"><span>#</span><span>Match</span><span>Time</span><span>Court</span></div>
     ${list.map(m => { const lock = (m.status || "scheduled") !== "scheduled";
@@ -1461,7 +1464,7 @@ function renderTC() {
     const courtOfB = {}; $$("[data-qfc]", el).forEach(i => courtOfB[i.dataset.qfc] = i.value.trim());
     if (start == null) return toast("Start time like 9:00 AM");
     if (!(every > 0)) return toast("Minutes between matches, e.g. 25");
-    if (sched.some(m => m.time || m.court) && !confirm(`Fill times and courts for all ${sched.length} ${tcCat} matches?\nTimes already typed will be replaced, and the matches may be re-ordered and re-numbered.`)) return;
+    if (sched.some(m => m.time) && !confirm(`Fill the times for all ${sched.length} ${tcCat} matches?\nTimes already typed will be replaced, and the matches may be re-ordered and re-numbered. Courts already set are kept.`)) return;
     store("ja_qfevery_" + S, String(every));
     const rest = Math.max(0, Number($("#qfRest").value) || 0);
     store("ja_qfrest_" + S, String(rest));
@@ -1473,7 +1476,7 @@ function renderTC() {
     const renum = nums.length === sched.length && new Set(nums).size === nums.length;
     const out = {};
     byTime.forEach((m, i) => {
-      const court = courtOfB[bucketOf(m)] || "";
+      const court = (m.court || "").trim() || courtOfB[bucketOf(m)] || "";
       out[m.id] = { time: fmtT(at[m.id]), ...(court ? { court } : {}), ...(renum ? { no: String(nums[i]) } : {}) };
     });
     const upd = {};
