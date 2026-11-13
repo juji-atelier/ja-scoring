@@ -1,9 +1,9 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261114e";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261114f";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261114e";
-import * as C from "../js/common.js?v=20261114e";
-import { applySportInfo } from "../js/sportinfo.js?v=20261114e";
-import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261114e";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261114f";
+import * as C from "../js/common.js?v=20261114f";
+import { applySportInfo } from "../js/sportinfo.js?v=20261114f";
+import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261114f";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -2171,11 +2171,11 @@ function renderGuide() {
       <li>When someone wins, a green banner appears. Check the score, then tap <b>Confirm result</b>.</li></ol>
       <p class="muted">The format (e.g. best of 3, 21 points, max 30) is shown before you start. If it's wrong, ask your AJK lead to fix it before the first point.</p>`,
      `<ol>
-      <li>Buka perlawanan anda. Tekan pasangan/pasukan yang <b>membuat servis dahulu</b>.</li>
-      <li>Selepas setiap rali, tekan <b>kotak besar pihak yang menang rali itu</b>. Satu tekan untuk satu mata – itu sahaja.</li>
-      <li>Tanda <b>● SERVING</b>, rehat, deuce, mata maksimum dan ${u} seterusnya semuanya diuruskan secara automatik.</li>
-      <li>Apabila ada pemenang, banner hijau akan keluar. Semak skor, kemudian tekan <b>Confirm result</b>.</li></ol>
-      <p class="muted">Format perlawanan (cth. best of 3, 21 mata, maksimum 30) ditunjukkan sebelum mula. Jika salah, minta ketua AJK betulkan sebelum mata pertama.</p>`),
+      <li>Buka match, tekan pasangan/pasukan yang <b>servis dulu</b>.</li>
+      <li>Setiap kali habis rali, tekan <b>kotak besar pihak yang menang rali</b>. Satu tekan, satu mata. Itu saja.</li>
+      <li>Tanda <b>● SERVING</b>, rehat, deuce, mata maksimum dan ${u} seterusnya – semua sistem uruskan sendiri.</li>
+      <li>Bila ada yang menang, banner hijau akan keluar. Semak skor dulu, kemudian tekan <b>Confirm result</b>.</li></ol>
+      <p class="muted">Format match (contoh best of 3, 21 mata, maksimum 30) ditunjuk sebelum mula. Kalau salah, minta ketua AJK betulkan sebelum mata pertama.</p>`),
     goals: L(`<ol>
       <li>Open your match and tap <b>Start match</b>. Tap <b>▶ Start clock</b> when play starts and <b>⏸ Pause clock</b> when the referee stops time.</li>
       <li>Tap <b>+ Goal</b> for the team that scored${ROSTER ? ", then tap who scored" : ""}.${FORMATS[S].fouls ? " Tap <b>+ Foul</b> when a foul is given." : ""}${DET && DET.cards ? " Cards: <b>🟨 Yellow</b> / <b>🟥 Red</b>." : ""}</li>
@@ -2183,85 +2183,85 @@ function renderGuide() {
       <li>When the match is over, tap <b>Confirm result</b>.</li>
       <li><b>Knockout match ends level?</b> More ▾ → <b>Penalty shoot-out result…</b> → type e.g. <i>4-3</i>. That decides the winner.</li></ol>`,
      `<ol>
-      <li>Buka perlawanan dan tekan <b>Start match</b>. Tekan <b>▶ Start clock</b> bila permainan bermula dan <b>⏸ Pause clock</b> bila pengadil hentikan masa.</li>
-      <li>Tekan <b>+ Goal</b> untuk pasukan yang menjaring${ROSTER ? ", kemudian pilih siapa penjaringnya" : ""}.${FORMATS[S].fouls ? " Tekan <b>+ Foul</b> bila kekasaran diberi." : ""}${DET && DET.cards ? " Kad: <b>🟨 Yellow</b> / <b>🟥 Red</b>." : ""}</li>
-      <li>Di akhir setiap ${u}, tekan <b>End ${esc(UNIT)}</b>. Jam akan bermula semula untuk ${u} seterusnya.</li>
-      <li>Bila perlawanan tamat, tekan <b>Confirm result</b>.</li>
-      <li><b>Perlawanan kalah mati seri?</b> More ▾ → <b>Penalty shoot-out result…</b> → taip cth. <i>4-3</i>. Itu yang menentukan pemenang.</li></ol>`),
+      <li>Buka match, tekan <b>Start match</b>. Tekan <b>▶ Start clock</b> bila wisel mula, dan <b>⏸ Pause clock</b> bila pengadil hentikan masa.</li>
+      <li>Tekan <b>+ Goal</b> untuk pasukan yang jaring${ROSTER ? ", lepas tu pilih siapa yang jaring" : ""}.${FORMATS[S].fouls ? " Ada foul? Tekan <b>+ Foul</b>." : ""}${DET && DET.cards ? " Kad: <b>🟨 Yellow</b> / <b>🟥 Red</b>." : ""}</li>
+      <li>Habis setiap ${u}, tekan <b>End ${esc(UNIT)}</b>. Jam akan reset untuk ${u} seterusnya.</li>
+      <li>Habis match, tekan <b>Confirm result</b>.</li>
+      <li><b>Match kalah mati seri?</b> More ▾ → <b>Penalty shoot-out result…</b> → taip contoh <i>4-3</i>. Itu yang tentukan pemenang.</li></ol>`),
     darts: L(`<ol>
       <li>Open your match and tap who <b>throws first</b>.</li>
       <li>After each turn of 3 darts, type the score on the keypad and tap <b>Enter</b>. The remaining score and whose turn it is update by themselves.</li>
       <li>A checkout must finish on a double – the page asks you to confirm.</li>
       <li>When the match is won, tap <b>Confirm result</b>.</li></ol>`,
      `<ol>
-      <li>Buka perlawanan dan tekan siapa yang <b>membaling dahulu</b>.</li>
-      <li>Selepas setiap giliran 3 dart, taip skor pada papan kekunci dan tekan <b>Enter</b>. Baki skor dan giliran seterusnya dikemas kini sendiri.</li>
-      <li>Checkout mesti tamat pada double – halaman akan minta anda sahkan.</li>
-      <li>Bila perlawanan dimenangi, tekan <b>Confirm result</b>.</li></ol>`)
+      <li>Buka match, tekan siapa yang <b>baling dulu</b>.</li>
+      <li>Lepas setiap giliran 3 dart, taip skor kat keypad dan tekan <b>Enter</b>. Baki skor dan giliran akan bertukar sendiri.</li>
+      <li>Checkout mesti habis dengan double – sistem akan minta confirm dulu.</li>
+      <li>Bila dah menang, tekan <b>Confirm result</b>.</li></ol>`)
   }[KIND];
   $("#guideBody").innerHTML = `
     <div class="card"><div class="glang"><button data-gl="en" class="${ms ? "" : "on"}">English</button><button data-gl="ms" class="${ms ? "on" : ""}">Bahasa Melayu</button></div>
-      <h3 style="margin-top:10px">${L("Scorer guide", "Panduan pencatat skor")} · ${n}</h3>
+      <h3 style="margin-top:10px">${L("Scorer guide", "Panduan scorer")} · ${n}</h3>
       <p>${L(`Every tap goes <b>straight to the big screen and the public QR page</b>. Take your time – every mistake can be undone.`,
-             `Setiap tekan terus dipaparkan di <b>skrin besar dan halaman QR awam</b>. Jangan tergesa-gesa – setiap kesilapan boleh dibatalkan.`)}</p>
-      <p class="muted" style="font-size:13px">${L("Button names are written as they appear on screen.", "Nama butang ditulis seperti di skrin (dalam Bahasa Inggeris).")}</p></div>
+             `Setiap kali tekan, skor terus keluar di <b>skrin besar dan page QR</b>. Tak perlu kelam-kabut – kalau tersilap, semua boleh undo.`)}</p>
+      <p class="muted" style="font-size:13px">${L("Button names are written as they appear on screen.", "Nama butang ditulis sama macam yang keluar di skrin.")}</p></div>
 
-    ${sec(L("1 · Log in", "1 · Log masuk"), L(`<ol>
+    ${sec(L("1 · Log in", "1 · Log in"), L(`<ol>
       <li>Open the ${n} scorer link from the organiser.</li>
       <li>Type <b>your name and ${cwL}</b>, e.g. <i>Ali – ${esc(CW)} 1</i>, so the log shows who scored which match.</li>
       <li>Enter the ${n} password and tap <b>Log in</b>. Every ${cwL} uses its own phone; everyone uses the same password.</li>
       <li>The dot at the top is <b>green</b> when online. If it turns <b>red</b>, keep scoring – it syncs when the signal is back.</li>
       <li>Need another scorer? Matches tab → <b>📲 Share this scorer page</b> (QR or WhatsApp). Give them the password yourself.</li></ol>`,
      `<ol>
-      <li>Buka pautan pencatat skor ${n} daripada penganjur.</li>
-      <li>Taip <b>nama dan ${cwL} anda</b>, cth. <i>Ali – ${esc(CW)} 1</i>, supaya log menunjukkan siapa mencatat perlawanan mana.</li>
-      <li>Masukkan kata laluan ${n} dan tekan <b>Log in</b>. Setiap ${cwL} guna telefon sendiri; semua guna kata laluan yang sama.</li>
-      <li>Titik di atas berwarna <b>hijau</b> bila dalam talian. Jika jadi <b>merah</b>, teruskan mencatat – ia akan disegerakkan bila talian pulih.</li>
-      <li>Perlu pencatat lain? Tab Matches → <b>📲 Share this scorer page</b> (QR atau WhatsApp). Beri kata laluan sendiri.</li></ol>`), true)}
+      <li>Buka link scorer ${n} yang penganjur bagi.</li>
+      <li>Tulis <b>nama dan ${cwL}</b>, contoh <i>Ali – ${esc(CW)} 1</i>. Senang nak tahu siapa pegang match mana.</li>
+      <li>Masukkan password ${n}, tekan <b>Log in</b>. Setiap ${cwL} guna telefon masing-masing; password sama untuk semua.</li>
+      <li>Titik kecil di atas <b>hijau</b> = online. Kalau jadi <b>merah</b>, teruskan saja – skor akan masuk sendiri bila line okay balik.</li>
+      <li>Nak tambah scorer? Tab Matches → <b>📲 Share this scorer page</b> (QR atau WhatsApp). Password, bagi sendiri.</li></ol>`), true)}
 
-    ${sec(L("2 · Find your match", "2 · Cari perlawanan anda"), L(`<ol>
+    ${sec(L("2 · Find your match", "2 · Cari match"), L(`<ol>
       <li>Go to the <b>Matches</b> tab. Tap your <b>category</b> and your <b>${esc(CW)}</b> at the top to see only your matches. The phone remembers this.</li>
       <li>Tap a match to open it. It is now <b>locked to your phone</b> 🔒 so nobody changes it by accident.</li>
       <li><b>View</b>: <b>Full</b> (big cards), <b>Compact</b> (one line per match, by time), <b>Landscape</b> (a timetable: ${cwL}s across, times down) or <b>🏆 Bracket</b> (the knockout rounds).</li></ol>`,
      `<ol>
-      <li>Pergi ke tab <b>Matches</b>. Tekan <b>kategori</b> dan <b>${esc(CW)}</b> anda di atas untuk lihat perlawanan anda sahaja. Telefon akan ingat pilihan ini.</li>
-      <li>Tekan perlawanan untuk membukanya. Ia kini <b>dikunci pada telefon anda</b> 🔒 supaya tiada orang lain mengubahnya secara tidak sengaja.</li>
-      <li><b>View</b>: <b>Full</b> (kad besar), <b>Compact</b> (satu baris setiap perlawanan, ikut masa), <b>Landscape</b> (jadual: ${cwL} melintang, masa menurun) atau <b>🏆 Bracket</b> (pusingan kalah mati).</li></ol>`))}
+      <li>Pergi tab <b>Matches</b>. Pilih <b>kategori</b> dan <b>${esc(CW)}</b> anda di atas – yang keluar nanti match anda saja. Telefon akan ingat.</li>
+      <li>Tekan match untuk buka. Match tu terus <b>dikunci pada telefon anda</b> 🔒, jadi orang lain tak boleh ubah tanpa sengaja.</li>
+      <li><b>View</b>: <b>Full</b> (kad besar), <b>Compact</b> (satu baris satu match, ikut masa), <b>Landscape</b> (jadual – ${cwL} ke tepi, masa ke bawah) atau <b>🏆 Bracket</b> (pusingan kalah mati).</li></ol>`))}
 
-    ${sec(L("3 · Score the match", "3 · Catat skor"), scoring, true)}
+    ${sec(L("3 · Score the match", "3 · Masukkan skor"), scoring, true)}
 
-    ${sec(L("4 · Fixing mistakes", "4 · Membetulkan kesilapan"), L(`<ul>
+    ${sec(L("4 · Fixing mistakes", "4 · Kalau tersilap"), L(`<ul>
       <li><b>Wrong point/goal?</b> Tap <b>↶ Undo</b> – as many times as you need.</li>
       <li><b>Wrong result after confirming?</b> More ▾ → <b>Reopen match</b>, fix it, confirm again.</li>
       <li><b>Tapped Start by mistake?</b> More ▾ → <b>Back to "not started"</b> (before the first point only).</li>
       <li><b>Phone died / new scorer?</b> On the other phone open the match and tap <b>Take control</b>. The score is kept.</li></ul>`,
      `<ul>
-      <li><b>Salah mata/gol?</b> Tekan <b>↶ Undo</b> – seberapa banyak kali yang perlu.</li>
-      <li><b>Keputusan salah selepas confirm?</b> More ▾ → <b>Reopen match</b>, betulkan, kemudian confirm semula.</li>
-      <li><b>Tertekan Start?</b> More ▾ → <b>Back to "not started"</b> (hanya sebelum mata pertama).</li>
-      <li><b>Telefon mati / tukar pencatat?</b> Di telefon lain, buka perlawanan dan tekan <b>Take control</b>. Skor tidak hilang.</li></ul>`))}
+      <li><b>Tersalah tekan mata/gol?</b> Tekan <b>↶ Undo</b> – boleh undo berapa kali pun.</li>
+      <li><b>Result salah lepas confirm?</b> More ▾ → <b>Reopen match</b>, betulkan, kemudian confirm balik.</li>
+      <li><b>Tertekan Start?</b> More ▾ → <b>Back to "not started"</b> (sebelum mata pertama saja).</li>
+      <li><b>Telefon mati / tukar scorer?</b> Buka match tu di telefon lain, tekan <b>Take control</b>. Skor tak hilang.</li></ul>`))}
 
-    ${sec(L("5 · Special situations", "5 · Situasi khas"), L(`<ul>
+    ${sec(L("5 · Special situations", "5 · Situasi lain"), L(`<ul>
       <li><b>A team doesn't turn up:</b> More ▾ → <b>Walkover</b> → pick the winner.</li>
       <li><b>Players change ends:</b> More ▾ → <b>Swap sides on this screen</b>.</li>
       <li><b>Calling teams / a delay / a break:</b> Matches tab → <b>📢 Make an announcement</b>. It shows on the big screen and the public page.</li>
       <li><b>Done with the match:</b> tap <b>← Matches</b>. This releases the lock.</li></ul>`,
      `<ul>
-      <li><b>Pasukan tidak hadir:</b> More ▾ → <b>Walkover</b> → pilih pemenang.</li>
+      <li><b>Pasukan tak datang:</b> More ▾ → <b>Walkover</b> → pilih pemenang.</li>
       <li><b>Pemain tukar tempat:</b> More ▾ → <b>Swap sides on this screen</b>.</li>
-      <li><b>Panggil pasukan / kelewatan / rehat:</b> Tab Matches → <b>📢 Make an announcement</b>. Ia dipaparkan di skrin besar dan halaman awam.</li>
-      <li><b>Selesai perlawanan:</b> tekan <b>← Matches</b>. Kunci akan dilepaskan.</li></ul>`))}
+      <li><b>Nak panggil pasukan / match lambat / waktu rehat:</b> Tab Matches → <b>📢 Make an announcement</b>. Mesej akan keluar di skrin besar dan page QR.</li>
+      <li><b>Habis match:</b> tekan <b>← Matches</b>. Kunci akan dilepaskan.</li></ul>`))}
 
-    ${sec(L("6 · AJK lead: teams and pools", "6 · Ketua AJK: pasukan dan kumpulan"), L(`<ol>
+    ${sec(L("6 · AJK lead: teams and pools", "6 · Ketua AJK: pasukan & pool"), L(`<ol>
       <li><b>Teams</b> tab: choose or type the category, then add each team with its players (e.g. <i>VOLTRA</i> – <i>Irfan & Ali</i>). <b>Paste many teams</b> adds a whole list at once: <i>Name | Players | Short name | Pool</i>.</li>
       <li><b>Pool</b> is the letter only (A, B…). If your draw sheet says <b>A1, A2, B3</b>, type that – the system keeps the letter as the pool and the number as the team's place.</li>
       <li>No draw yet? <b>🎲 Draw pools</b> on the category draws them on screen. Nothing is saved until <b>Save draw</b> – and it <b>replaces</b> any pools already there.</li></ol>`,
      `<ol>
-      <li>Tab <b>Teams</b>: pilih atau taip kategori, kemudian tambah setiap pasukan dengan pemainnya (cth. <i>VOLTRA</i> – <i>Irfan & Ali</i>). <b>Paste many teams</b> menambah satu senarai sekaligus: <i>Nama | Pemain | Nama pendek | Kumpulan</i>.</li>
-      <li><b>Pool</b> ialah huruf sahaja (A, B…). Jika kertas cabutan tulis <b>A1, A2, B3</b>, taip sahaja begitu – sistem simpan huruf sebagai kumpulan dan nombor sebagai kedudukan pasukan.</li>
-      <li>Belum ada cabutan? <b>🎲 Draw pools</b> pada kategori itu membuat cabutan di skrin. Tiada yang disimpan sehingga <b>Save draw</b> – dan ia <b>menggantikan</b> kumpulan yang sedia ada.</li></ol>`))}
+      <li>Tab <b>Teams</b>: pilih atau taip kategori, lepas tu masukkan setiap pasukan dengan nama pemain (contoh <i>VOLTRA</i> – <i>Irfan & Ali</i>). Nak masukkan ramai sekali gus? Guna <b>Paste many teams</b>: <i>Nama | Pemain | Nama pendek | Pool</i>.</li>
+      <li><b>Pool</b> cuma huruf (A, B…). Kalau kertas cabutan tulis <b>A1, A2, B3</b>, taip terus macam tu – sistem ambil huruf sebagai pool, nombor sebagai kedudukan.</li>
+      <li>Belum buat cabutan? Tekan <b>🎲 Draw pools</b> pada kategori – cabutan dibuat terus di skrin. Tak disimpan selagi tak tekan <b>Save draw</b>. Hati-hati: cabutan baru akan <b>ganti</b> pool yang sedia ada.</li></ol>`))}
 
-    ${sec(L("7 · AJK lead: matches, times and " + cwL + "s", "7 · Ketua AJK: perlawanan, masa dan " + cwL), L(`<ol>
+    ${sec(L("7 · AJK lead: matches, times and " + cwL + "s", "7 · Ketua AJK: match, masa & " + cwL), L(`<ol>
       <li><b>Teams</b> tab → <b>📋 Matches</b> on the category → <b>Fill all – everyone plays everyone</b>.</li>
       <li>Choose how the room is used: <b>One ${cwL} per pool</b>, or <b>Several ${cwL}s at once</b> → pick how many ${cwL}s the <b>room</b> has → <b>Spread across them</b>. ${cwL.charAt(0).toUpperCase() + cwL.slice(1)}s another category uses are left to it, so pick the same number for every category. Then <b>Create matches</b>.</li>
       <li><b>Setup → Times &amp; ${cwL}s → ⚡ Quick fill</b>: start time, minutes per match, rest per team → <b>Fill</b>. ${cwL.charAt(0).toUpperCase() + cwL.slice(1)}s already set are kept.</li>
@@ -2269,30 +2269,30 @@ function renderGuide() {
       <li><b>📤 Export schedule</b> (Matches tab): <b>Print / Save as PDF</b> or <b>Copy for WhatsApp</b> to send the schedule to teams. It exports what the filters show.</li></ol>`,
      `<ol>
       <li>Tab <b>Teams</b> → <b>📋 Matches</b> pada kategori → <b>Fill all – everyone plays everyone</b>.</li>
-      <li>Pilih cara bilik digunakan: <b>One ${esc(cw)} per pool</b> (satu ${cwL} untuk setiap kumpulan), atau <b>Several ${esc(cw)}s at once</b> → pilih berapa ${cwL} yang ada <b>dalam bilik</b> → <b>Spread across them</b>. ${CWL} yang digunakan kategori lain akan dibiarkan, jadi pilih nombor yang sama untuk setiap kategori. Kemudian <b>Create matches</b>.</li>
-      <li><b>Setup → Times &amp; ${esc(cw)}s → ⚡ Quick fill</b>: masa mula, minit setiap perlawanan, rehat setiap pasukan → <b>Fill</b>. ${CWL} yang sudah ditetapkan tidak diubah.</li>
-      <li><b>Kalah mati:</b> Tab Teams → <b>🏆 Knockout</b> → separuh akhir + akhir (atau akhir sahaja), boleh tambah tempat ke-3. Pasukan diisi <b>secara automatik</b> setelah semua perlawanan kumpulan disahkan – jadi pastikan setiap perlawanan ditekan <b>Confirm result</b>.</li>
-      <li><b>📤 Export schedule</b> (tab Matches): <b>Print / Save as PDF</b> atau <b>Copy for WhatsApp</b> untuk hantar jadual kepada pasukan. Ia mengeksport apa yang ditapis di skrin.</li></ol>`))}
+      <li>Pilih cara guna ${cwL}: <b>One ${esc(cw)} per pool</b> (satu pool, satu ${cwL}), atau <b>Several ${esc(cw)}s at once</b> → pilih berapa ${cwL} yang ada <b>dalam dewan</b> → <b>Spread across them</b>. ${CWL} yang sudah dipakai kategori lain tak akan diusik, jadi pilih nombor yang sama untuk setiap kategori. Lepas tu tekan <b>Create matches</b>.</li>
+      <li><b>Setup → Times &amp; ${esc(cw)}s → ⚡ Quick fill</b>: masukkan masa mula, berapa minit satu match, dan rehat untuk setiap pasukan → <b>Fill</b>. ${CWL} yang sudah ada tak akan berubah.</li>
+      <li><b>Kalah mati:</b> Tab Teams → <b>🏆 Knockout</b> → separuh akhir + akhir (atau akhir saja), boleh tambah perebutan tempat ke-3. Nama pasukan akan masuk <b>sendiri</b> bila semua match pool sudah di-confirm – jadi pastikan setiap match ditekan <b>Confirm result</b>.</li>
+      <li><b>📤 Export schedule</b> (tab Matches): <b>Print / Save as PDF</b> atau <b>Copy for WhatsApp</b> untuk hantar jadual kepada pasukan. Yang di-export ikut apa yang ditapis di skrin.</li></ol>`))}
 
-    ${sec(L("8 · AJK lead: on the day", "8 · Ketua AJK: pada hari kejohanan"), L(`<ul>
+    ${sec(L("8 · AJK lead: on the day", "8 · Ketua AJK: hari kejohanan"), L(`<ul>
       <li><b>🖥 Open the ${n} big screen</b> (Matches tab) on the hall screen – it shows the live matches, results and a QR to the public page.</li>
       <li>The <b>Log</b> tab shows every change: who, what and when. Check it first if a score looks wrong.</li>
       <li>Standings are worked out by themselves from <b>confirmed</b> results.</li></ul>`,
      `<ul>
-      <li><b>🖥 Open the ${n} big screen</b> (tab Matches) pada skrin dewan – ia memaparkan perlawanan langsung, keputusan dan QR ke halaman awam.</li>
-      <li>Tab <b>Log</b> menunjukkan setiap perubahan: siapa, apa dan bila. Semak di sini dahulu jika skor nampak salah.</li>
-      <li>Kedudukan dikira sendiri daripada keputusan yang telah <b>disahkan</b>.</li></ul>`))}
+      <li>Buka <b>🖥 Open the ${n} big screen</b> (tab Matches) di skrin dewan – keluar match yang tengah berlangsung, keputusan dan QR ke page awam.</li>
+      <li>Tab <b>Log</b> simpan semua perubahan: siapa, buat apa, pukul berapa. Kalau skor nampak pelik, semak sini dulu.</li>
+      <li>Kedudukan pool dikira sendiri daripada match yang sudah di-<b>confirm</b>.</li></ul>`))}
 
-    ${sec(L("Tips", "Tip"), L(`<ul>
+    ${sec(L("Tips", "Tips"), L(`<ul>
       <li>Charge the phone fully, keep the screen on and the brightness up.</li>
       <li><b>Add the scorer page to your Home Screen</b> so it opens like an app – no accidental refresh. <a href="#" id="guideA2">Show me how</a></li>
       <li>Don't share the password outside your sport's AJK.</li>
       <li>Not sure? Don't guess – ask your AJK lead, then use Undo if needed.</li></ul>`,
      `<ul>
-      <li>Cas telefon sepenuhnya, biarkan skrin sentiasa hidup dan cerah.</li>
-      <li><b>Tambah halaman pencatat ke Home Screen</b> supaya ia dibuka seperti aplikasi – tiada refresh tidak sengaja. <a href="#" id="guideA2">Tunjukkan caranya</a></li>
-      <li>Jangan kongsi kata laluan di luar AJK sukan anda.</li>
-      <li>Tidak pasti? Jangan teka – tanya ketua AJK, kemudian guna Undo jika perlu.</li></ul>`))}`;
+      <li>Caj telefon penuh-penuh. Biar skrin sentiasa on dan cerah.</li>
+      <li><b>Letak page scorer di Home Screen</b> supaya buka macam app – tak ter-refresh. <a href="#" id="guideA2">Tunjuk caranya</a></li>
+      <li>Jangan kongsi password dengan orang luar AJK sukan anda.</li>
+      <li>Tak pasti? Jangan main teka – tanya ketua AJK dulu, lepas tu guna Undo kalau perlu.</li></ul>`))}`;
   const ga = $("#guideA2"); if (ga) ga.onclick = e => { e.preventDefault(); openA2hs(); };
   $$("#guideBody [data-gl]").forEach(b => b.onclick = () => { guideLang = b.dataset.gl; store("ja_guide_lang", guideLang); renderGuide(); });
 }
