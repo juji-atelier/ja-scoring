@@ -1,11 +1,11 @@
-import { SPORTS, ADMIN_EMAIL, EVENT_DEFAULTS } from "../config.js?v=20261113u";
-import { publicRecord, standings, FORMATS, ENGINE_OF, DETAILS } from "../js/engines.js?v=20261113u";
-import { bowlingStandings, BOWL_ROOT } from "../js/bowling-data.js?v=20261113u";
-import { BOARDS, mlbbMatches, applyBoardInfo, boardBaseName } from "../js/boards.js?v=20261113u";
-import { applySportInfo, SPORT_BASE } from "../js/sportinfo.js?v=20261113u";
-import { firebaseConfig } from "../config.js?v=20261113u";
-import * as C from "../js/common.js?v=20261113u";
-import { cfgOf, shown, isDone, mlHas, mlEffective, KEEP } from "../js/livecfg.js?v=20261113u";
+import { SPORTS, ADMIN_EMAIL, EVENT_DEFAULTS } from "../config.js?v=20261113v";
+import { publicRecord, standings, FORMATS, ENGINE_OF, DETAILS } from "../js/engines.js?v=20261113v";
+import { bowlingStandings, BOWL_ROOT } from "../js/bowling-data.js?v=20261113v";
+import { BOARDS, mlbbMatches, applyBoardInfo, boardBaseName } from "../js/boards.js?v=20261113v";
+import { applySportInfo, SPORT_BASE } from "../js/sportinfo.js?v=20261113v";
+import { firebaseConfig } from "../config.js?v=20261113v";
+import * as C from "../js/common.js?v=20261113v";
+import { cfgOf, shown, isDone, mlHas, mlEffective, KEEP } from "../js/livecfg.js?v=20261113v";
 const { $, $$, esc, toast, ref } = C;
 
 if (!C.configured) { C.notConfiguredScreen(); throw new Error("not configured"); }

@@ -10,7 +10,7 @@
 //  (SPORTS) and js/engines.js (FORMATS / ENGINE_OF) instead; Admin picks
 //  those up the same way.
 // =====================================================================
-import { BOWL_ROOT } from "./bowling-data.js?v=20261113u";
+import { BOWL_ROOT } from "./bowling-data.js?v=20261113v";
 
 // Mobile Legends: every match in the data published by the JA ESPORT console (mlbb/live)
 export function mlbbMatches(D) {

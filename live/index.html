@@ -17,8 +17,8 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#F6F4F2">
 <title>Live Scores</title>
-<link rel="stylesheet" href="../css/theme.css?v=20261113u">
-<script src="../js/theme.js?v=20261113u"></script>
+<link rel="stylesheet" href="../css/theme.css?v=20261113v">
+<script src="../js/theme.js?v=20261113v"></script>
 <style>
 :root{--sport:var(--acc);--text:var(--ink);--muted:var(--mute)}
 *{box-sizing:border-box}
@@ -162,6 +162,40 @@ html[data-theme="dark"] body::after{background:radial-gradient(closest-side, col
 /* ---------- big faded JA watermark on the right of the title card ---------- */
 .hero:before{content:"";position:absolute;right:-2.5%;top:50%;height:104%;width:auto;aspect-ratio:140/79;transform:translateY(-50%) rotate(-6deg);background:#fff;opacity:.09;pointer-events:none;-webkit-mask:url(../img/ja.svg) center/contain no-repeat;mask:url(../img/ja.svg) center/contain no-repeat}
 @media(max-width:600px){.hero:before{width:200px;height:114px;right:-40px;opacity:.08}}
+/* ---------- knockout bracket ---------- */
+.bk{margin:6px 0 22px}
+.bk h3{margin:0 0 10px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);font-weight:800}
+.bk .bscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+.bk .brow{display:flex;min-width:max-content}
+.bk .bcol{display:flex;flex-direction:column;width:178px}
+.bk .bt{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin:0 0 6px 2px}
+.bk .bcol:not(:first-child) .bt{margin-left:18px}
+.bk .bbody{flex:1;display:flex;flex-direction:column;justify-content:space-around}
+.bk .pair{position:relative;display:flex;flex-direction:column;justify-content:space-around;gap:14px;padding-right:18px;flex:1}
+/* the bracket line joining two matches to the one they feed */
+.bk .pair.two::after{content:"";position:absolute;right:0;top:25%;bottom:25%;width:18px;border:2px solid var(--line);border-left:0;border-radius:0 8px 8px 0}
+.bk .bcol:last-child .pair{padding-right:0;flex:0;margin:auto 0}
+.bk .bcol:not(:first-child) .bm{margin-left:18px}
+.bk .bcol:not(:first-child) .bm::before{content:"";position:absolute;left:-18px;top:50%;width:18px;border-top:2px solid var(--line)}
+.bk .bm{position:relative;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:7px 10px 6px;box-shadow:var(--shadow)}
+.bk .bm.live{border-color:var(--live);box-shadow:0 0 0 1px var(--live) inset}
+.bk .bh{display:flex;justify-content:space-between;gap:6px;font-size:10.5px;font-weight:700;color:var(--mute);margin-bottom:3px;white-space:nowrap}
+.bk .bm.live .bh span:last-child{color:var(--live)}
+.bk .ld{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--live);margin-right:4px;vertical-align:1px}
+.bk .br{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:13.5px;font-weight:800}
+.bk .br + .br{border-top:1px solid var(--line)}
+.bk .br .bn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bk .br b{font-variant-numeric:tabular-nums;min-width:14px;text-align:right}
+.bk .br.ph .bn{font-style:italic;font-weight:600;color:var(--mute)}
+.bk .br.win{color:var(--gold)}
+.bk .br.lose{color:var(--mute);font-weight:600}
+.bk .bchamp{margin:12px 0 0 18px;padding:8px 10px;border-radius:12px;text-align:center;font-weight:900;font-size:13px;
+  background:linear-gradient(120deg,#D2AC70,#9a7442);color:#16181d}
+.bk .bchamp span{display:block;font-size:15px}
+.bk .b3{margin-top:12px;max-width:178px}
+.bk .br.me .bn{color:var(--acc)}
+.bk .bm:has(.br.me){border-color:var(--acc)}
+
 </style>
 <script>/* Splash plays on open and on refresh; skipped on Back/Forward and when hopping here from another page of this site */
 try{var n=performance.getEntriesByType("navigation")[0],t=n?n.type:"navigate",seen=sessionStorage.getItem("ja-splash"),own=document.referrer.indexOf(location.origin+"/")===0;sessionStorage.setItem("ja-splash","1");if(t==="back_forward"||(t==="navigate"&&own&&seen))document.documentElement.classList.add("nosplash")}catch(e){}</script>
@@ -184,6 +218,7 @@ try{var n=performance.getEntriesByType("navigation")[0],t=n?n.type:"navigate",se
       <button data-v="live" class="on">Live &amp; next</button>
       <button data-v="results">Results</button>
       <button data-v="table">Standings</button>
+      <button data-v="bracket" id="subBracket" hidden>Bracket</button>
     </div>
     <div class="findrow"><input id="find" type="search" placeholder="🔍 Find a team" autocomplete="off" enterkeyhint="search"><span id="findN"></span></div>
     <div id="findHits"></div>
@@ -193,6 +228,6 @@ try{var n=performance.getEntriesByType("navigation")[0],t=n?n.type:"navigate",se
   </main>
 </div>
 <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
-<script type="module" src="live.js?v=20261113u"></script>
+<script type="module" src="live.js?v=20261113v"></script>
 </body>
 </html>

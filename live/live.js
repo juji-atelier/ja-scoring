@@ -1,10 +1,11 @@
 // Public live-score page. Uses plain HTTPS polling (no live connection),
 // so hundreds of spectators stay inside Firebase's free limits.
-import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261113u";
-import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261113u";
-import { standings, clockMs, mmss, catColor } from "../js/engines.js?v=20261113u";
-import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261113u";
-import { cfgOf, shown, isDone, KEEP } from "../js/livecfg.js?v=20261113u";
+import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261113v";
+import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261113v";
+import { standings, clockMs, mmss, catColor } from "../js/engines.js?v=20261113v";
+import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261113v";
+import { cfgOf, shown, isDone, KEEP } from "../js/livecfg.js?v=20261113v";
+import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261113v";
 
 const FAST_MS = 5000;     // live matches: small live-only list (pub/<sport>/live)
 const QUIET_MS = 8000;    // nothing live: the live list is empty, so this costs almost nothing
@@ -254,13 +255,20 @@ function render() {
   // which matches to show: search first, then "only my team"
   const keep = r => q ? (low(r.a).includes(q) || low(r.b).includes(q) || low(r.as).includes(q) || low(r.bs).includes(q) || low(r.pa).includes(q) || low(r.pb).includes(q)) : onlyMine() && followed() ? (isMe(r.a) || isMe(r.b)) : true;
   const all = list().filter(keep);
+  // the Bracket tab is there only for a sport that has knockout matches
+  const hasKO = hasBracket(list());
+  $("#subBracket").hidden = !hasKO;
+  if (sub === "bracket" && !hasKO) { sub = "live"; document.querySelectorAll("#sub button").forEach(x => x.classList.toggle("on", x.dataset.v === "live")); }
   const live = all.filter(r => r.st === "live").sort((x, y) => String(x.ct).localeCompare(String(y.ct), undefined, { numeric: true }));
   const next = all.filter(r => r.st === "scheduled").sort(byNo);
   const done = all.filter(r => r.st === "done").sort((x, y) => (y.t || 0) - (x.t || 0));
   let h = "";
   if (!all.length) h = q || (onlyMine() && followed()) ? `<div class="empty">No matches for ${q ? "“" + esc(q) + "”" : esc(followed())}.</div>`
     : `<div class="empty">No matches published yet for ${esc(SPORTS[sport].name)}.</div>`;
-  else if (sub === "live" && isDone(cfg, sport)) {
+  else if (sub === "bracket") {
+    // always the whole bracket, whatever is typed in the search box: the followed team is starred in it
+    h += bracketHTML(list(), { esc, courtWord: courtWord(), isMe });
+  } else if (sub === "live" && isDone(cfg, sport)) {
     h += `<h2>Final results</h2>` + (done.length ? done.map(card).join("") : `<div class="empty">No results.</div>`);
   } else if (sub === "live") {
     h += `<h2>${live.length ? '<span class="lv">LIVE</span>' : ""} Now playing</h2>` + (live.length ? live.map(card).join("") : `<div class="empty">No match in progress.</div>`);
