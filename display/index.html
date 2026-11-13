@@ -7,8 +7,8 @@
 <link rel="icon" type="image/png" sizes="192x192" href="../img/icon-192.png">
 <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
 <title>Big Screen · JA Scoring</title>
-<link rel="stylesheet" href="../css/theme.css?v=20261114f">
-<script src="../js/theme.js?v=20261114f"></script>
+<link rel="stylesheet" href="../css/theme.css?v=20261114g">
+<script src="../js/theme.js?v=20261114g"></script>
 <style>
 :root{--u:min(1vw,1.7778vh);--sport:#B3162D;--bg:#16181D;--card:#23262E;--line:#343844;--text:#F2F3F5;--muted:#9A9FAA;--gold:#D2AC70}
 *{box-sizing:border-box}
@@ -25,6 +25,11 @@ body.transparent,html:has(body.transparent){background:transparent}
 .bar .venue{font-size:calc(1*var(--u));color:#ffffffb3}
 .bar .sp{flex:1}
 .bar .now{font-size:calc(1.9*var(--u));font-weight:800;font-variant-numeric:tabular-nums}
+.bar .nowbox{display:flex;flex-direction:column;align-items:flex-end;line-height:1.05}
+.bar .today{font-size:calc(1.05*var(--u));font-weight:600;opacity:.8;white-space:nowrap;margin-top:calc(.2*var(--u))}
+.fsbtn{position:fixed;left:50%;top:calc(1*var(--u));transform:translateX(-50%);z-index:50;font:700 calc(.8*var(--u))/1 inherit;color:#fff;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:calc(.45*var(--u)) calc(1*var(--u));cursor:pointer;opacity:0;pointer-events:none;transition:opacity .3s}
+.fsbtn.on{opacity:1;pointer-events:auto}
+body.idle{cursor:none}
 .sportchip{font-size:calc(1.7*var(--u));font-weight:900;text-transform:uppercase;letter-spacing:.06em;padding:calc(.35*var(--u)) calc(1.2*var(--u));border-radius:calc(.5*var(--u));background:var(--sport);color:#fff}
 .dots{display:flex;gap:calc(.4*var(--u))}
 .dots i{width:calc(.7*var(--u));height:calc(.7*var(--u));border-radius:50%;background:#ffffff33}
@@ -224,15 +229,16 @@ body.fx .aw-wrap{position:relative;z-index:1}
     <div class="sp"></div>
     <div class="dots" id="dots"></div>
     <div class="sportchip cond" id="sportChip">—</div>
-    <div class="now cond" id="now">--:--</div>
+    <div class="nowbox"><div class="now cond" id="now">--:--</div><div class="today" id="today"></div></div>
     <img class="org" src="../img/sabah-electricity.png" alt="Sabah Electricity">
     <i class="rot" id="rot"></i>
   </div>
   <main id="main"></main>
+  <button class="fsbtn" id="fsBtn" type="button" title="Full screen (F)">⛶ <span>Full screen</span></button>
   <div class="ann" id="ann" hidden></div>
   <div class="tick"><div class="lbl cond">RESULTS</div><div class="mq"><span id="ticker"></span></div><div class="ja"><span class="jamark"></span>JUJI-ATELIER</div></div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script type="module" src="display.js?v=20261114f"></script>
+<script type="module" src="display.js?v=20261114g"></script>
 </body>
 </html>

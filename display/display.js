@@ -1,11 +1,11 @@
-import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261114f";
-import { clockMs, mmss, catColor } from "../js/engines.js?v=20261114f";
-import * as C from "../js/common.js?v=20261114f";
-import { applySportInfo } from "../js/sportinfo.js?v=20261114f";
-import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261114f";
-import { bowlingStandings } from "../js/bowling-data.js?v=20261114f";
-import { firebaseConfig } from "../config.js?v=20261114f";
-import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261114f";
+import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261114g";
+import { clockMs, mmss, catColor } from "../js/engines.js?v=20261114g";
+import * as C from "../js/common.js?v=20261114g";
+import { applySportInfo } from "../js/sportinfo.js?v=20261114g";
+import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261114g";
+import { bowlingStandings } from "../js/bowling-data.js?v=20261114g";
+import { firebaseConfig } from "../config.js?v=20261114g";
+import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261114g";
 const { $, esc, ref } = C;
 
 const P = new URLSearchParams(location.search);
@@ -444,6 +444,7 @@ function renderTicker() {
 function tick() {
   const d = new Date();
   $("#now").textContent = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  $("#today").textContent = d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short", year: "numeric" }).replace(/^(\w+),?\s/, "$1 · ");
   for (const el of document.querySelectorAll(".clk")) {
     const ms = clockMs({ run: el.dataset.run === "1", st: Number(el.dataset.st), el: Number(el.dataset.el) }, C.now());
     const left = Number(el.dataset.len) - ms;
@@ -483,3 +484,25 @@ function renderAwards(main) {
       ${a.p.map((name, i) => name ? `<div class="aw-row p${i + 1}"><span class="aw-m">${i + 1}</span><span class="aw-n">${esc(name)}</span></div>` : "").join("")}
     </div>`).join("") + `</div></div>`;
 }
+
+// Full screen: button appears on mouse move / tap, then hides; F key or double-click also toggles
+(() => {
+  const btn = $("#fsBtn"); if (!btn) return;
+  const can = !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
+  if (!can) { btn.remove(); return; }
+  const isFs = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+  const toggle = () => {
+    if (isFs()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else { const el = document.documentElement; const p = (el.requestFullscreen || el.webkitRequestFullscreen).call(el); if (p && p.catch) p.catch(() => {}); }
+  };
+  const label = () => { btn.querySelector("span").textContent = isFs() ? "Exit full screen" : "Full screen"; };
+  let t;
+  const wake = () => { btn.classList.add("on"); document.body.classList.remove("idle"); clearTimeout(t);
+    t = setTimeout(() => { btn.classList.remove("on"); document.body.classList.add("idle"); }, 3000); };
+  btn.onclick = e => { e.stopPropagation(); toggle(); };
+  document.addEventListener("mousemove", wake); document.addEventListener("touchstart", wake, { passive: true });
+  document.addEventListener("dblclick", toggle);
+  document.addEventListener("keydown", e => { if ((e.key === "f" || e.key === "F") && !e.ctrlKey && !e.metaKey && !e.altKey) toggle(); });
+  document.addEventListener("fullscreenchange", label); document.addEventListener("webkitfullscreenchange", label);
+  label(); wake();
+})();
