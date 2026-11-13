@@ -204,7 +204,28 @@ function listHTML(arr, kind) {
   }).join("") + `</div>`;
 }
 
-function render() { renderView(); fx(); }
+function render() { renderView(); fx(); fitText(); }
+
+// ---------------- long names on a big screen
+// Team names come from the scorer ("FLICK & STRIKE DX") and the optional Short name is usually
+// left blank, so rather than cut a name off with an ellipsis, step its size down until it fits
+// its own box. Only ever shrinks, never past 60%, and below that the old ellipsis still applies,
+// so the worst case is what the screen did before.
+const FIT_SEL = ".trow .nm, .bw-n, .list .it .t, .aw-n";   // the boxes that hold a name on one line
+function fitText(root) {
+  for (const el of (root || document).querySelectorAll(FIT_SEL)) {
+    el.style.fontSize = "";                                   // back to the size the CSS asks for
+    const base = parseFloat(getComputedStyle(el).fontSize);
+    if (!base || !el.clientWidth) continue;
+    for (let k = 0.95; k >= 0.6 && el.scrollWidth > el.clientWidth + 1; k -= 0.05)
+      el.style.fontSize = (base * k).toFixed(2) + "px";
+  }
+}
+// the box changes with the window (--u is vw/vh based) and text measures differently once the
+// web font is in, so fit again after both
+let fitTimer = null;
+addEventListener("resize", () => { clearTimeout(fitTimer); fitTimer = setTimeout(fitText, 150); });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitText()).catch(() => {});
 
 // ---------------- lively bits: content slides in when the view changes, a score "bumps" when it changes
 let fxKey = "", fxPrev = {}, fxEnterAt = 0;
