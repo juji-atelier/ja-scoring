@@ -1,8 +1,8 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113d";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113e";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113d";
-import * as C from "../js/common.js?v=20261113d";
-import { applySportInfo } from "../js/sportinfo.js?v=20261113d";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113e";
+import * as C from "../js/common.js?v=20261113e";
+import { applySportInfo } from "../js/sportinfo.js?v=20261113e";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -1301,6 +1301,12 @@ const parseT = t => {   // "10:30 AM", "10.30am", "14:30", "1030" → minutes af
   return h * 60 + mi;
 };
 const fmtT = min => { min = ((min % 1440) + 1440) % 1440; const h = Math.floor(min / 60), m = min % 60; return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; };
+// which court box a match belongs to in Quick fill: its pool, "Knockout", or "Matches"
+const bucketOf = m => {
+  if (m.slotA || m.slotB || /final|semi|quarter|3rd|third/i.test(m.round || "")) return "Knockout";
+  const p = (String(m.group || "").match(/POOL\s+(\w+)$/i) || [])[1];
+  return p ? "Pool " + p.toUpperCase() : "Matches";
+};
 function renderTC() {
   const el = $("#tcCard");
   if (!el) return;
@@ -1314,13 +1320,16 @@ function renderTC() {
   const list = all.filter(m => (m.event || "Other") === tcCat);
   const sched = list.filter(m => (m.status || "scheduled") === "scheduled");
   const firstT = sched.map(m => parseT(m.time)).find(x => x != null);
+  const buckets = [...new Set(sched.map(bucketOf))].sort((a, b) => (a === "Knockout") - (b === "Knockout") || a.localeCompare(b));
   el.innerHTML = `<h3 style="margin:0 0 4px">Times &amp; courts</h3>
     <p class="muted" style="margin:0;font-size:13px">Type straight into the boxes – each one saves when you leave it.</p>
     ${catsM.length > 1 ? `<div class="chips" style="margin:10px 0 4px">${catsM.map(c => `<button data-tcc="${esc(c)}" class="${c === tcCat ? "on" : ""}">${esc(c)} ${miss(c) ? `· ${miss(c)} left` : "✓"}</button>`).join("")}</div>` : ""}
     ${sched.length ? `<div class="qfill"><span class="full">⚡ Quick fill all ${sched.length} at once</span>
       <label>Start</label><input id="qfStart" value="${firstT != null ? fmtT(firstT) : "9:00 AM"}">
       <label>Every</label><input id="qfEvery" inputmode="numeric" value="${store("ja_qfevery_" + S) || 25}" placeholder="min">
-      <label>Court</label><input id="qfCourt" value="${esc((sched.find(m => m.court) || {}).court || "")}" placeholder="e.g. 1">
+      ${buckets.map(b => `<label>Court${buckets.length > 1 ? `<small style="display:block;text-transform:none;letter-spacing:0">${esc(b)}</small>` : ""}</label>
+        <input data-qfc="${esc(b)}" value="${esc((sched.find(m => bucketOf(m) === b && m.court) || {}).court || "")}" placeholder="e.g. 1">`).join("")}
+      ${buckets.length > 1 ? `<span class="full muted" style="font-size:12px">Different courts play at the same time. Knockout matches start after the pool matches.</span>` : ""}
       <span></span><button class="small primary" id="btnQF">Fill</button></div>` : ""}
     <div class="qhead"><span>#</span><span>Match</span><span>Time</span><span>Court</span></div>
     ${list.map(m => { const lock = (m.status || "scheduled") !== "scheduled";
@@ -1342,15 +1351,30 @@ function renderTC() {
   });
   const qf = $("#btnQF", el);
   if (qf) qf.onclick = async () => {
-    const start = parseT($("#qfStart").value), every = Number($("#qfEvery").value), court = $("#qfCourt").value.trim();
+    const start = parseT($("#qfStart").value), every = Number($("#qfEvery").value);
+    const courtOfB = {}; $$("[data-qfc]", el).forEach(i => courtOfB[i.dataset.qfc] = i.value.trim());
     if (start == null) return toast("Start time like 9:00 AM");
     if (!(every > 0)) return toast("Minutes between matches, e.g. 25");
-    if (sched.some(m => m.time || m.court) && !confirm(`Fill time${court ? " and court" : ""} for all ${sched.length} ${tcCat} matches?\nTimes already typed will be replaced.`)) return;
+    if (sched.some(m => m.time || m.court) && !confirm(`Fill times and courts for all ${sched.length} ${tcCat} matches?\nTimes already typed will be replaced.`)) return;
     store("ja_qfevery_" + S, String(every));
+    // each court is its own queue; knockouts wait for the pool matches, a final waits for its semis
+    const free = {}, at = {}, out = {};
+    const poolEnd = () => Math.max(start, ...sched.filter(m => bucketOf(m) !== "Knockout").map(m => (at[m.id] ?? start - every) + every));
+    for (const m of sched) {
+      const b = bucketOf(m), court = courtOfB[b] || "", lane = court || "·" + b;
+      let earliest = start;
+      if (b === "Knockout") {
+        earliest = poolEnd();
+        for (const sl of [m.slotA, m.slotB]) { const [k, ref2] = String(sl || "").split("|"); if ((k === "W" || k === "L") && at[ref2] != null) earliest = Math.max(earliest, at[ref2] + every); }
+      }
+      const t = Math.max(free[lane] ?? start, earliest);
+      at[m.id] = t; free[lane] = t + every;
+      out[m.id] = { time: fmtT(t), ...(court ? { court } : {}) };
+    }
     const upd = {};
-    sched.forEach((m, i) => { upd[`${m.id}/time`] = fmtT(start + i * every); if (court) upd[`${m.id}/court`] = court; upd[`${m.id}/updatedAt`] = C.now(); });
+    sched.forEach(m => { upd[`${m.id}/time`] = out[m.id].time; if (out[m.id].court) upd[`${m.id}/court`] = out[m.id].court; upd[`${m.id}/updatedAt`] = C.now(); });
     try { await C.update(ref(db, `sports/${S}/matches`), upd); } catch (e) { toast("Couldn't save – check the connection"); return; }
-    sched.forEach((m, i) => publish(m.id, { ...m, time: fmtT(start + i * every), ...(court ? { court } : {}) }));
+    sched.forEach(m => publish(m.id, { ...m, ...out[m.id] }));
     log("", { no: "" }, `times filled for ${tcCat}`);
     toast(`${sched.length} matches filled`);
   };
