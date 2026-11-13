@@ -1,8 +1,8 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261112s";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113a";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor } from "../js/engines.js?v=20261112s";
-import * as C from "../js/common.js?v=20261112s";
-import { applySportInfo } from "../js/sportinfo.js?v=20261112s";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor } from "../js/engines.js?v=20261113a";
+import * as C from "../js/common.js?v=20261113a";
+import { applySportInfo } from "../js/sportinfo.js?v=20261113a";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -1043,7 +1043,7 @@ function renderTeams() {
   Object.entries(teams).forEach(([id, t]) => (by[catOf(t) || "No category"] = by[catOf(t) || "No category"] || []).push([id, t]));
   const keys = Object.keys(by).sort((a, b) => (a === "No category") - (b === "No category") || a.localeCompare(b));
   $("#teamCats").innerHTML = keys.length ? keys.map(c => {
-    const rows = by[c].sort((a, b) => poolOf(a[1]).localeCompare(poolOf(b[1])) || a[1].name.localeCompare(b[1].name)).map(([id, t]) => {
+    const rows = by[c].sort((a, b) => poolOf(a[1]).localeCompare(poolOf(b[1])) || ((+a[1].seed || 99) - (+b[1].seed || 99)) || a[1].name.localeCompare(b[1].name)).map(([id, t]) => {
       if (id === editingTeam) {
         const d = draft || { ...t, category: catOf(t), group: poolOf(t) };
         return `<tr class="tedit"><td colspan="2"><div class="tegrid">
@@ -1056,7 +1056,7 @@ function renderTeams() {
           <div class="row" style="margin-top:10px"><button class="small primary" data-tsave="${id}">Save</button><button class="small ghost" data-tcancel>Cancel</button></div>
         </td></tr>`;
       }
-      const pool = poolOf(t) ? ` <span class="badge">Pool ${esc(poolOf(t))}</span>` : "";
+      const pool = poolOf(t) ? ` <span class="badge">${t.seed ? esc(poolOf(t) + t.seed) : "Pool " + esc(poolOf(t))}</span>` : "";
       const np = ROSTER ? parsePlayers(t.players).length : 0;
       const pl = ROSTER ? (np ? np + " players" : "") : (tp(id) || (isOld(t) ? t.short : ""));
       return `<tr><td><b>${esc(t.name)}</b>${pool}${pl ? `<br><span class="muted" style="font-size:13px">${esc(pl)}</span>` : ""}</td>
@@ -1064,6 +1064,7 @@ function renderTeams() {
     }).join("");
     return `<div class="card"><div class="row" style="align-items:center"><h3 style="flex:1;margin:0">${esc(c)}</h3>
       <span class="muted" style="font-size:13px">${by[c].length} team${by[c].length > 1 ? "s" : ""}</span>
+      ${by[c].length >= 3 ? `<button class="small ghost" data-draw="${esc(c)}">🎲 Draw pools</button>` : ""}
       ${c !== "No category" ? `<button class="small ghost" data-addcat="${esc(c)}">+ Add here</button>` : ""}</div>
       <table class="teams" style="margin-top:8px">${rows}</table></div>`;
   }).join("") : `<div class="card muted">No teams yet. Add the first one above.</div>`;
@@ -1072,6 +1073,7 @@ function renderTeams() {
   $$("[data-td]").forEach(b => b.onclick = () => deleteTeam(b.dataset.td));
   $$("[data-tsave]").forEach(b => b.onclick = () => saveTeam(b.dataset.tsave));
   $$("[data-tcancel]").forEach(b => b.onclick = () => { editingTeam = null; renderTeams(); });
+  $$("[data-draw]").forEach(b => b.onclick = () => openDraw(b.dataset.draw));
   $$("[data-addcat]").forEach(b => b.onclick = () => {
     $("#tCat").value = b.dataset.addcat; $("#teamFormCard").scrollIntoView({ behavior: "smooth" }); $("#tName").focus();
   });
@@ -1137,6 +1139,7 @@ async function saveTeam(id) {
   if (!name) { toast("Team name can't be empty"); $("#teName").focus(); return; }
   if (nameTaken(name, category, id)) { toast("Another team in this category has that name"); $("#teName").focus(); return; }
   const val = { name, category, players: readPlayers($("#tePlayers").value), short: $("#teShort").value.trim(), group: $("#tePool").value.trim().toUpperCase() };
+  val.seed = (val.group && val.group === poolOf(teams[id]) && sameCat(category, catOf(teams[id]))) ? (teams[id].seed || null) : null;
   try {
     await C.update(ref(db, `sports/${S}/teams/${id}`), val);
   } catch (e) { toast("Couldn't save – check the connection"); return; }
@@ -1222,7 +1225,8 @@ async function deleteMatch(id) {
 // Make every pairing for one category (or pool). Used by Setup and by the "next step" card.
 async function genRR(g, court, ask = true) {
   if (!g) { toast("Add teams with a category first"); return false; }
-  const ids = Object.entries(teams).filter(([, t]) => keyOf(t) === g).map(([id]) => id);
+  const ids = Object.entries(teams).filter(([, t]) => keyOf(t) === g)
+    .sort((a, b) => ((+a[1].seed || 99) - (+b[1].seed || 99)) || a[1].name.localeCompare(b[1].name)).map(([id]) => id);
   const t0 = teams[ids[0]] || {};
   if (ids.length < 2) { toast("Need at least 2 teams"); return false; }
   // circle method so teams rest between matches
@@ -1352,6 +1356,119 @@ function renderTC() {
     toast(`${sched.length} matches filled`);
   };
 }
+
+// ---------------------------------------------------------------- team draw (split a category into pools)
+// Random draw done on screen so everyone can watch it. Team i of the shuffled list goes to
+// pool i % n, so pools differ by at most one team. Saved as group = "A", seed = 1,2,3… (A1, A2…).
+const POOLS = "ABCD";
+let drawCat = null, drawRes = null, drawTimer = null;
+const rnd = n => { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % n; };
+const catTeams = c => Object.entries(teams).filter(([, t]) => (catOf(t) || "No category") === c);
+function drawMatches(c) {
+  const ids = new Set(catTeams(c).map(([id]) => id));
+  return Object.entries(matches).filter(([, m]) => ids.has(m.teamA) || ids.has(m.teamB));
+}
+function openDraw(c) {
+  drawCat = c; drawRes = null; clearInterval(drawTimer);
+  const list = catTeams(c), n = list.length;
+  $("#drTitle").textContent = `🎲 Team draw – ${c}`;
+  $("#drSub").textContent = `${n} teams. They are shuffled at random and dealt one by one into the pools.`;
+  const pools = [...new Set(list.map(([, t]) => poolOf(t)).filter(Boolean))].length;
+  $("#drN").value = String(Math.min(4, Math.max(2, pools || 2)));
+  $("#drOpts").classList.remove("hide"); $("#drGo").textContent = "🎲 Start draw";
+  $("#drPot").innerHTML = list.map(([, t]) => `<span>${esc(t.name)}</span>`).join("");
+  $("#drPools").innerHTML = ""; $("#drNote").textContent = "";
+  ["#drSave", "#drSkip"].forEach(x => $(x).classList.add("hide"));
+  $("#drClear").classList.toggle("hide", !list.some(([, t]) => poolOf(t)));
+  if (list.some(([, t]) => poolOf(t))) showPools(groupNow(list), false, "Current pools are shown below. Start a new draw to replace them.");
+  $("#drawModal").classList.remove("hide");
+}
+function groupNow(list) {
+  const out = {};
+  list.filter(([, t]) => poolOf(t)).sort((a, b) => ((+a[1].seed || 99) - (+b[1].seed || 99)) || a[1].name.localeCompare(b[1].name))
+    .forEach(([id, t]) => (out[poolOf(t)] = out[poolOf(t)] || []).push(id));
+  return out;
+}
+function showPools(by, lastId, note) {
+  const keys = Object.keys(by).sort();
+  $("#drPools").innerHTML = keys.map(p => `<div class="drawpool"><h4>POOL ${esc(p)}</h4><ol>${by[p].map((id, i) =>
+    `<li class="${id === lastId ? "new" : ""}"><b>${esc(p)}${i + 1}</b>${esc(tn(id))}</li>`).join("") || `<li class="muted">–</li>`}</ol></div>`).join("");
+  if (note != null) $("#drNote").textContent = note;
+}
+function runDraw(animate = true) {
+  clearInterval(drawTimer);
+  const list = catTeams(drawCat).map(([id]) => id);
+  for (let i = list.length - 1; i > 0; i--) { const j = rnd(i + 1); [list[i], list[j]] = [list[j], list[i]]; }
+  const n = +$("#drN").value;
+  if (list.length < n * 2) return toast(`Need at least ${n * 2} teams for ${n} pools`);
+  const by = {}; for (let p = 0; p < n; p++) by[POOLS[p]] = [];
+  drawRes = by;
+  $("#drOpts").classList.add("hide"); $("#drClear").classList.add("hide");
+  $("#drSave").classList.add("hide");
+  let i = 0;
+  const finish = () => {
+    clearInterval(drawTimer);
+    list.slice(i).forEach((id, k) => by[POOLS[(i + k) % n]].push(id)); i = list.length;
+    $("#drPot").innerHTML = ""; showPools(by, null);
+    const sizes = Object.keys(by).map(p => `Pool ${p}: ${by[p].length} teams (${by[p].length * (by[p].length - 1) / 2} matches)`).join(" · ");
+    $("#drNote").textContent = sizes + ". Not saved yet – tap Save draw to keep it.";
+    $("#drSkip").classList.add("hide");
+    $("#drSave").classList.remove("hide");
+    $("#drOpts").classList.remove("hide"); $("#drGo").textContent = "🎲 Draw again";
+  };
+  if (!animate) return finish();
+  $("#drSkip").classList.remove("hide");
+  showPools(by, null, "Drawing…");
+  const step = () => {
+    if (i >= list.length) return finish();
+    const id = list[i], pot = list.slice(i);
+    // short "spin" on the pot, then the picked team lands in its pool
+    let spins = 0;
+    clearInterval(drawTimer);
+    drawTimer = setInterval(() => {
+      const show = spins < 6 ? pot[rnd(pot.length)] : id;
+      $("#drPot").innerHTML = pot.map(x => `<span class="${x === show ? "pick" : ""}">${esc(tn(x))}</span>`).join("");
+      if (spins++ >= 7) {
+        clearInterval(drawTimer);
+        by[POOLS[i % n]].push(id); i++;
+        $("#drPot").innerHTML = list.slice(i).map(x => `<span>${esc(tn(x))}</span>`).join("");
+        showPools(by, id);
+        drawTimer = setTimeout(step, 450);
+      }
+    }, 110);
+  };
+  $("#drSkip").onclick = finish;
+  step();
+}
+async function saveDraw(by) {
+  const ms = drawMatches(drawCat);
+  if (ms.some(([, m]) => m.status && m.status !== "scheduled"))
+    return toast("This category already has matches that started. The pools can't be changed now.", 4500);
+  if (ms.length && !confirm(`${drawCat} already has ${ms.length} match${ms.length > 1 ? "es" : ""} (not started). Delete them and use the new pools?`)) return;
+  if (!ms.length && !by && !confirm(`Remove the pools from ${drawCat}? Teams go back to one group.`)) return;
+  const upd = {};
+  const inDraw = new Set();
+  if (by) for (const p of Object.keys(by)) by[p].forEach((id, k) => { upd[`teams/${id}/group`] = p; upd[`teams/${id}/seed`] = k + 1; inDraw.add(id); });
+  for (const [id] of catTeams(drawCat)) if (!inDraw.has(id)) { upd[`teams/${id}/group`] = ""; upd[`teams/${id}/seed`] = null; }
+  for (const [id] of ms) upd[`matches/${id}`] = null;
+  try {
+    await C.update(ref(db, `sports/${S}`), upd);
+    if (ms.length) await C.update(ref(db, `pub/${S}`), Object.fromEntries(ms.flatMap(([id]) => [[`m/${id}`, null], [`live/${id}`, null]])));
+  } catch (e) { toast("Couldn't save – check the connection"); return; }
+  // let the "create matches" card offer the new pools again
+  store(skipKey, JSON.stringify(skipped().filter(k => !k.startsWith(String(drawCat).toUpperCase()))));
+  log("", { no: "" }, by ? `pools drawn for ${drawCat}: ` + Object.keys(by).map(p => `${p}(${by[p].map(tn).join(", ")})`).join(" ") : `pools removed for ${drawCat}`);
+  $("#drawModal").classList.add("hide");
+  toast(by ? "Draw saved. Next: create the matches for each pool." : "Pools removed", 4500);
+  republishAll().catch(() => {});
+}
+$("#drGo").onclick = () => runDraw(true);
+$("#drSave").onclick = () => drawRes && saveDraw(drawRes);
+$("#drClear").onclick = () => saveDraw(null);
+$("#drClose").onclick = () => {
+  if (drawRes && !$("#drSave").classList.contains("hide") && !confirm("Close without saving this draw?")) return;
+  clearInterval(drawTimer); clearTimeout(drawTimer); drawRes = null; $("#drawModal").classList.add("hide");
+};
 
 // ---------------------------------------------------------------- next step card
 // A category (or pool) with teams but no matches yet → offer to create them in one tap.

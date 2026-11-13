@@ -13,10 +13,10 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="HQ Scorer" id="appTitle">
 <meta name="theme-color" content="#F6F4F2">
-<script src="../js/hints.js?v=20261112s"></script>
-<script src="../js/theme.js?v=20261112s"></script>
+<script src="../js/hints.js?v=20261113a"></script>
+<script src="../js/theme.js?v=20261113a"></script>
 <title>Scorer · JA Scoring</title>
-<link rel="stylesheet" href="../css/app.css?v=20261112s">
+<link rel="stylesheet" href="../css/app.css?v=20261113a">
 </head>
 <body>
 <header class="top">
@@ -98,7 +98,7 @@
         <div><label for="tShort">Short name</label><input id="tShort" placeholder="optional"></div>
         <div><label for="tPool">Pool</label><input id="tPool" placeholder="optional, A / B"></div>
       </div>
-      <p class="muted" style="font-size:13px">Pool is only needed if one category is split into pools. Otherwise leave it empty.</p>
+      <p class="muted" style="font-size:13px">Pool is only needed if one category is split into pools. Otherwise leave it empty. Tip: use <b>🎲 Draw pools</b> on the category below to split the teams randomly.</p>
       <div class="row" style="margin-top:10px"><button class="primary" id="btnAddTeam">Add team</button></div>
       <details style="margin-top:16px"><summary><b>Paste many teams at once</b></summary>
         <p class="muted" id="bulkHint">They go into the category above. One team per line: <b>Team name | Players | Short name</b> (players and short name are optional).</p>
@@ -179,6 +179,26 @@
 
 <!-- FEEDBACK -->
 <div class="fbwrap hide" id="fbWrap"><button class="fbbtn" id="fbOpen" type="button">💬 Send feedback</button></div>
+<div class="modal hide" id="drawModal" role="dialog" aria-modal="true" aria-labelledby="drTitle">
+  <div class="sheet drawsheet">
+    <h3 id="drTitle">🎲 Team draw</h3>
+    <p class="muted" style="margin-top:0" id="drSub"></p>
+    <div class="row drawopts" id="drOpts">
+      <label for="drN" style="margin:0">Split into</label>
+      <select id="drN"><option value="2">2 pools (A, B)</option><option value="3">3 pools (A, B, C)</option><option value="4">4 pools (A–D)</option></select>
+      <button type="button" class="primary" id="drGo">🎲 Start draw</button>
+    </div>
+    <div class="drawpot" id="drPot"></div>
+    <div class="drawpools" id="drPools"></div>
+    <p class="muted" style="font-size:13px;margin:10px 0 0" id="drNote"></p>
+    <div class="row" style="margin-top:12px;flex-wrap:wrap">
+      <button type="button" class="primary hide" id="drSave">✓ Save draw</button>
+      <button type="button" class="ghost hide" id="drSkip">Skip animation</button>
+      <button type="button" class="ghost danger hide" id="drClear">Remove pools</button>
+      <button type="button" class="ghost" id="drClose" style="margin-left:auto">Close</button>
+    </div>
+  </div>
+</div>
 <div class="modal hide" id="a2hsModal" role="dialog" aria-modal="true" aria-labelledby="a2Title">
   <div class="sheet">
     <h3 id="a2Title">📲 Add to your Home Screen</h3>
@@ -243,7 +263,7 @@
 <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
 <div id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script type="module" src="scorer.js?v=20261112s"></script>
+<script type="module" src="scorer.js?v=20261113a"></script>
 <script src="../js/feedback.js?v=20261111a"></script>
 </body>
 </html>
