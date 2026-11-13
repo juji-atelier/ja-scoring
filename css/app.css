@@ -331,3 +331,6 @@ details.guide li{margin:4px 0}
 .fxrow button{padding:6px 0}
 .fxrow small{grid-column:2/-1;color:var(--warn);font-size:12px}
 @media (max-width:560px){.fxrow{grid-template-columns:28px 1fr 1fr 30px}.fxrow .vs{display:none}.fxrow .ct{grid-column:2/4}.fxrow .x{grid-row:1;grid-column:4}}
+
+.korow{display:grid;grid-template-columns:34px 110px 1fr;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:var(--bg2);font-size:14px}
+.korow .no{font-weight:800;font-size:13px;color:var(--mute);text-align:center}

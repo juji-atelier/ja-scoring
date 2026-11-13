@@ -1,8 +1,8 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113c";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113d";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor } from "../js/engines.js?v=20261113c";
-import * as C from "../js/common.js?v=20261113c";
-import { applySportInfo } from "../js/sportinfo.js?v=20261113c";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113d";
+import * as C from "../js/common.js?v=20261113d";
+import { applySportInfo } from "../js/sportinfo.js?v=20261113d";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -51,6 +51,8 @@ let lastTap = 0;
 
 // ---------------------------------------------------------------- helpers
 const tn = id => (teams[id] && teams[id].name) || "TBC";
+// a side of a match: the team, or for knockouts not decided yet the slot label ("1st Pool A", "Winner Semi-final 1")
+const tnm = (m, s) => { const id = s === "a" ? m.teamA : m.teamB; return (teams[id] && teams[id].name) || (s === "a" ? m.labA : m.labB) || "TBC"; };
 // pair / player names shown under the team (sports without a numbered roster, e.g. badminton "Ali / Abu")
 const tp = id => (KIND === "goals" && DETAILS[S]) ? "" : String((teams[id] && teams[id].players) || "").split(/\r?\n/).filter(Boolean).join(" / ");
 // Category = e.g. "MIX DOUBLE". Older teams had the category typed into "group".
@@ -62,7 +64,7 @@ const cats = () => [...new Set([...Object.values(teams).map(catOf), ...Object.va
   .filter(Boolean))].sort((a, b) => a.localeCompare(b));
 const normCat = c => { c = (c || "").trim(); return cats().find(x => x.toLowerCase() === c.toLowerCase()) || c; };
 const sameCat = (a, b) => (a || "").trim().toLowerCase() === (b || "").trim().toLowerCase();
-const sideName = (m, s) => tn(s === "a" ? m.teamA : m.teamB);
+const sideName = (m, s) => tnm(m, s);
 const matchRef = id => ref(db, `sports/${S}/matches/${id}`);
 const arrMatches = () => Object.entries(matches).map(([id, m]) => ({ id, ...m })).sort(C.byNo);
 const lockFresh = m => m.lock && (C.now() - (m.lock.at || 0) < LOCK_STALE);
@@ -156,7 +158,7 @@ function renderUnsent() {
     if (!m || !u || !u.m || sameScore(m, u.m)) { delete all[id]; changed = true; continue; }
     const sc = x => { const v = view(S, { ...m, ...x }, C.now()); return `${v.big[0]}–${v.big[1]}${v.small ? ` (${UNIT.toLowerCase()}s ${v.small[0]}–${v.small[1]})` : ""}`; };
     const gone = {}; for (const f of SCORE_FIELDS) gone[f] = null;
-    rows.push(`<div class="urow"><div><b>#${esc(m.no)} ${esc(tn(m.teamA))} vs ${esc(tn(m.teamB))}</b>
+    rows.push(`<div class="urow"><div><b>#${esc(m.no)} ${esc(tnm(m, "a"))} vs ${esc(tnm(m, "b"))}</b>
       <small>On this phone: <b>${sc({ ...gone, ...u.m })}</b> · Saved online: <b>${sc({})}</b>${(m.updatedAt || 0) !== (u.base || 0) ? " · ⚠ changed on another device since" : ""}</small></div>
       <button class="small primary" data-usend="${id}">Send now</button><button class="small" data-udrop="${id}">Discard</button></div>`);
   }
@@ -287,6 +289,7 @@ function startData() {
     matches = v.matches || {};
     render();
     renderUnsent();
+    autoFillKO();
   }, err => toast("No access: " + err.message, 4000));
   C.onValue(annRef(), snap => { ann = snap.val(); renderAnnBar(); }, () => {});
   setInterval(renderAnnBar, 20000);   // drops an expired announcement from view
@@ -550,7 +553,7 @@ const A = {
     const m = matches[curId];
     const v = view(S, m, C.now());
     const msg = v.winner ? `${sideName(m, v.winner)} wins` : "Draw";
-    if (!confirm(`Confirm final result?\n\n${tn(m.teamA)} ${v.sc[0]} – ${v.sc[1]} ${tn(m.teamB)}\n${msg}`)) return;
+    if (!confirm(`Confirm final result?\n\n${tnm(m, "a")} ${v.sc[0]} – ${v.sc[1]} ${tnm(m, "b")}\n${msg}`)) return;
     return act(mm => {
       const vv = view(S, mm, C.now());
       mm.status = "done"; mm.winner = vv.winner || ""; mm.endedAt = C.now();
@@ -675,7 +678,7 @@ const A = {
   penalties() {
     const m = matches[curId];
     const cur = m.pen ? `${m.pen.a}-${m.pen.b}` : "";
-    const s = prompt(`Penalty shoot-out score (${tn(m.teamA)} - ${tn(m.teamB)}), e.g. 4-3.\nLeave empty to remove.`, cur);
+    const s = prompt(`Penalty shoot-out score (${tnm(m, "a")} - ${tnm(m, "b")}), e.g. 4-3.\nLeave empty to remove.`, cur);
     if (s == null) return;
     if (!s.trim()) return act(mm => { mm.pen = null; }, "penalties removed");
     const mt = s.trim().match(/^(\d+)\s*[-:]\s*(\d+)$/);
@@ -711,8 +714,8 @@ function headerHTML(m) {
   const items = [];
   const st = m.status || "scheduled";
   if (st !== "done") {
-    items.push(`<button data-a="wo" data-s="a">Walkover – ${esc(tn(m.teamA))} wins</button>`);
-    items.push(`<button data-a="wo" data-s="b">Walkover – ${esc(tn(m.teamB))} wins</button>`);
+    items.push(`<button data-a="wo" data-s="a">Walkover – ${esc(tnm(m, "a"))} wins</button>`);
+    items.push(`<button data-a="wo" data-s="b">Walkover – ${esc(tnm(m, "b"))} wins</button>`);
   }
   if (KIND === "goals" && st === "live") {
     items.push(`<button data-a="setClock">Set clock time…</button>`);
@@ -726,7 +729,7 @@ function headerHTML(m) {
   items.push(`<button data-a="release">Release match (let another device score)</button>`);
   return `<div class="shead">
     <button class="ghost" data-a="back">← Matches</button>
-    <div class="info"><b>${esc(tn(m.teamA))} vs ${esc(tn(m.teamB))}</b>
+    <div class="info"><b>${esc(tnm(m, "a"))} vs ${esc(tnm(m, "b"))}</b>
       <div class="muted">#${esc(m.no)}${m.court ? " · Court " + esc(m.court) : ""}${m.round ? " · " + esc(m.round) : ""}${m.event ? " · " + esc(m.event) : ""}</div></div>
     <details class="menu" id="menu"><summary>More ▾</summary><div class="items">${items.join("")}</div></details>
   </div>`;
@@ -762,7 +765,7 @@ function renderScore() {
     html += `<div class="banner ok">FINAL${m.wo ? " (walkover)" : ""}: ${w}${m.wo ? "" : ` · ${v.sc[0]} – ${v.sc[1]}`}${v.hist ? `<div class="muted" style="font-weight:400">${esc(v.hist)}</div>` : ""}</div>`;
     const nx = nextOnCourt(m);
     html += nx
-      ? `<button class="primary nextbtn" data-a="next" data-id="${nx.id}"><span>Next${m.court ? " on Court " + esc(m.court) : ""}: #${esc(nx.no)}${nx.time ? " · " + esc(nx.time) : ""}<small style="color:inherit;opacity:.85">${esc(tn(nx.teamA))} vs ${esc(tn(nx.teamB))}${lockedByOther(nx) ? " · 🔒 " + esc(nx.lock.name) : ""}</small></span><span class="ar">→</span></button>`
+      ? `<button class="primary nextbtn" data-a="next" data-id="${nx.id}"><span>Next${m.court ? " on Court " + esc(m.court) : ""}: #${esc(nx.no)}${nx.time ? " · " + esc(nx.time) : ""}<small style="color:inherit;opacity:.85">${esc(tnm(nx, "a"))} vs ${esc(tnm(nx, "b"))}${lockedByOther(nx) ? " · 🔒 " + esc(nx.lock.name) : ""}</small></span><span class="ar">→</span></button>`
       : `<button class="nextbtn" data-a="back"><span>No more matches${m.court ? " on Court " + esc(m.court) : ""}<small>Back to the match list</small></span><span class="ar">←</span></button>`;
   }
 
@@ -772,8 +775,8 @@ function renderScore() {
         <button class="primary" data-a="start" ${mine ? "" : "disabled"} style="padding:18px 30px;font-size:18px">Start match</button></div>`;
     } else {
       html += `<div class="card" style="text-align:center"><h3>${KIND === "darts" ? "Who throws first?" : "Who serves first?"}</h3>
-        <div class="gbtns"><button class="ga" data-a="start" data-s="a" ${mine ? "" : "disabled"}>${esc(tn(m.teamA))}</button>
-        <button class="gb" data-a="start" data-s="b" ${mine ? "" : "disabled"}>${esc(tn(m.teamB))}</button></div>
+        <div class="gbtns"><button class="ga" data-a="start" data-s="a" ${mine ? "" : "disabled"}>${esc(tnm(m, "a"))}</button>
+        <button class="gb" data-a="start" data-s="b" ${mine ? "" : "disabled"}>${esc(tnm(m, "b"))}</button></div>
         <p class="muted">Format: ${KIND === "darts" ? `best of ${f.bestOf} legs, ${f.start}` : `best of ${f.bestOf}, ${f.points} points${f.cap ? " (max " + f.cap + ")" : ""}`}</p></div>`;
     }
   }
@@ -901,7 +904,7 @@ function onScoreClick(e) {
       curId = null; clearInterval(heartbeat); clearInterval(ticker);
       return releaseLock(id).then(() => openMatch(to));
     }
-    case "start": return A.start(s);
+    case "start": { const m = matches[curId] || {}; if (!m.teamA || !m.teamB) return toast("Teams not decided yet – they are filled in when the earlier matches finish (or choose them in Setup → Edit).", 4500); return A.start(s); }
     case "unstart": return A.unstart();
     case "finish": return A.finish();
     case "reopen": return A.reopen();
@@ -1004,7 +1007,7 @@ function renderSetup() {
   const arr = arrMatches();
   $("#setupMatches").innerHTML = arr.length ? `<table><tr><th>#</th><th>Time</th><th>Court</th><th>Round</th><th>Match</th><th>Status</th><th></th></tr>` +
     arr.map(m => `<tr><td>${esc(m.no)}</td><td>${esc(m.time)}</td><td>${esc(m.court)}</td><td>${esc(m.round)}${m.event ? "<br><span class=muted>" + esc(m.event) + "</span>" : ""}</td>
-      <td>${esc(tn(m.teamA))} <span class="muted">vs</span> ${esc(tn(m.teamB))}</td><td>${esc(m.status || "scheduled")}</td>
+      <td>${esc(tnm(m, "a"))} <span class="muted">vs</span> ${esc(tnm(m, "b"))}</td><td>${esc(m.status || "scheduled")}</td>
       <td style="text-align:right;white-space:nowrap"><button class="small" data-me="${m.id}">Edit</button> <button class="small danger" data-md="${m.id}">Delete</button></td></tr>`).join("") + `</table>`
     : `<p class="muted">No matches yet.</p>`;
   $$("[data-me]").forEach(b => b.onclick = () => editMatch(b.dataset.me));
@@ -1066,6 +1069,7 @@ function renderTeams() {
       <span class="muted" style="font-size:13px">${by[c].length} team${by[c].length > 1 ? "s" : ""}</span>
       ${by[c].length >= 3 ? `<button class="small ghost" data-draw="${esc(c)}">🎲 Draw pools</button>` : ""}
       ${by[c].length >= 2 ? `<button class="small ghost" data-fx="${esc(c)}">📋 Matches</button>` : ""}
+      ${by[c].length >= 2 ? `<button class="small ghost" data-ko="${esc(c)}">🏆 Knockout</button>` : ""}
       ${c !== "No category" ? `<button class="small ghost" data-addcat="${esc(c)}">+ Add here</button>` : ""}</div>
       <table class="teams" style="margin-top:8px">${rows}</table></div>`;
   }).join("") : `<div class="card muted">No teams yet. Add the first one above.</div>`;
@@ -1076,6 +1080,7 @@ function renderTeams() {
   $$("[data-tcancel]").forEach(b => b.onclick = () => { editingTeam = null; renderTeams(); });
   $$("[data-draw]").forEach(b => b.onclick = () => openDraw(b.dataset.draw));
   $$("[data-fx]").forEach(b => b.onclick = () => openFixtures(b.dataset.fx));
+  $$("[data-ko]").forEach(b => b.onclick = () => openKO(b.dataset.ko));
   $$("[data-addcat]").forEach(b => b.onclick = () => {
     $("#tCat").value = b.dataset.addcat; $("#teamFormCard").scrollIntoView({ behavior: "smooth" }); $("#tName").focus();
   });
@@ -1195,8 +1200,9 @@ $("#btnSaveMatch").onclick = async () => {
     round: $("#fRound").value.trim(), group: $("#fGroup").value.trim().toUpperCase(), event: normCat($("#fEvent").value),
     teamA: $("#fA").value, teamB: $("#fB").value, fmt: readFmt()
   };
-  if (!fields.teamA || !fields.teamB) return toast("Choose both teams");
-  if (fields.teamA === fields.teamB) return toast("Team A and B must be different");
+  const slotted = editingId && matches[editingId] && (matches[editingId].slotA || matches[editingId].slotB);
+  if ((!fields.teamA || !fields.teamB) && !slotted) return toast("Choose both teams");
+  if (fields.teamA && fields.teamA === fields.teamB) return toast("Team A and B must be different");
   if (editingId) {
     const old = matches[editingId];
     if (old.status === "live" && (old.teamA !== fields.teamA || old.teamB !== fields.teamB) && !confirm("This match is live. Change the teams anyway?")) return;
@@ -1217,7 +1223,7 @@ $("#btnSaveMatch").onclick = async () => {
 
 async function deleteMatch(id) {
   const m = matches[id];
-  if (!confirm(`Delete match #${m.no}: ${tn(m.teamA)} vs ${tn(m.teamB)}?${m.status !== "scheduled" ? "\n\nIt already has scores!" : ""}`)) return;
+  if (!confirm(`Delete match #${m.no}: ${tnm(m, "a")} vs ${tnm(m, "b")}?${m.status !== "scheduled" ? "\n\nIt already has scores!" : ""}`)) return;
   await C.remove(matchRef(id));
   publish(id, null);
   log(id, m, "match deleted");
@@ -1318,7 +1324,7 @@ function renderTC() {
       <span></span><button class="small primary" id="btnQF">Fill</button></div>` : ""}
     <div class="qhead"><span>#</span><span>Match</span><span>Time</span><span>Court</span></div>
     ${list.map(m => { const lock = (m.status || "scheduled") !== "scheduled";
-      return `<div class="qrow"><span class="n">${esc(m.no)}</span><span class="t">${esc(tn(m.teamA))}<small>vs ${esc(tn(m.teamB))}${lock ? " · " + esc(m.status) : ""}</small></span>
+      return `<div class="qrow"><span class="n">${esc(m.no)}</span><span class="t">${esc(tnm(m, "a"))}<small>vs ${esc(tnm(m, "b"))}${lock ? " · " + esc(m.status) : ""}</small></span>
         <input data-tid="${m.id}" data-f="time" class="${m.time ? "f" : ""}" value="${esc(m.time || "")}" placeholder="time" ${lock ? "disabled" : ""}>
         <input data-tid="${m.id}" data-f="court" class="${m.court ? "f" : ""}" value="${esc(m.court || "")}" placeholder="–" ${lock ? "disabled" : ""}></div>`; }).join("")}`;
   $$("[data-tcc]", el).forEach(b => b.onclick = () => { tcCat = b.dataset.tcc; renderTC(); });
@@ -1359,7 +1365,7 @@ const rnd = n => { const a = new Uint32Array(1); crypto.getRandomValues(a); retu
 const catTeams = c => Object.entries(teams).filter(([, t]) => (catOf(t) || "No category") === c);
 function drawMatches(c) {
   const ids = new Set(catTeams(c).map(([id]) => id));
-  return Object.entries(matches).filter(([, m]) => ids.has(m.teamA) || ids.has(m.teamB));
+  return Object.entries(matches).filter(([, m]) => ids.has(m.teamA) || ids.has(m.teamB) || ((m.slotA || m.slotB) && sameCat(m.event, c)));
 }
 function openDraw(c) {
   drawCat = c; drawRes = null; clearInterval(drawTimer);
@@ -1563,6 +1569,140 @@ $("#fxSave").onclick = async () => {
   log("", { no: "" }, `${fx.rows.length} matches created for ${fx.cat}`);
   toast(`${fx.rows.length} matches created. Set the times in Setup.`, 4500);
   fx = null; $("#fxModal").classList.add("hide");
+};
+
+// ---------------------------------------------------------------- knockout (semi-finals / final) filled in automatically
+// A knockout match keeps where each side comes from: slotA / slotB =
+//   "P|<group key>|<place>"  e.g. "P|FUTSAL LELAKI – POOL A|1"  (1st of that pool, once all its matches are confirmed)
+//   "W|<match id>" / "L|<match id>"  (winner / loser of that match)
+// labA / labB is the text shown until the team is known. Any scorer phone that is open fills the team in.
+const ord = n => n + (n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th");
+function poolTable(key) {
+  const ms = Object.values(matches).filter(m => String(m.group || "").toUpperCase() === key);
+  if (!ms.length || ms.some(m => m.status !== "done")) return null;
+  const recs = {}; ms.forEach((m, i) => recs[i] = publicRecord(S, m, teams));
+  const tbl = standings(recs)[key] || standings(recs)[ms[0].group] || [];
+  const ids = Object.entries(teams).filter(([, t]) => keyOf(t) === key);
+  return tbl.map(r => (ids.find(([, t]) => t.name === r.team) || [])[0]).filter(Boolean);
+}
+function resolveSlot(slot) {
+  const [k, a, b] = String(slot || "").split("|");
+  if (k === "P") { const t = poolTable(a); return t ? t[(+b || 1) - 1] || null : null; }
+  if (k === "W" || k === "L") {
+    const x = matches[a];
+    if (!x || x.status !== "done" || !x.winner || !x.teamA || !x.teamB) return null;
+    const win = x.winner === "a" ? x.teamA : x.teamB, lose = x.winner === "a" ? x.teamB : x.teamA;
+    return k === "W" ? win : lose;
+  }
+  return null;
+}
+let koBusy = false;
+async function autoFillKO() {
+  if (koBusy || !auth.currentUser) return;
+  const upd = {}, pubs = [];
+  for (const [id, m] of Object.entries(matches)) {
+    if (m.status && m.status !== "scheduled") continue;
+    const nm = { ...m };
+    for (const s of ["A", "B"]) {
+      if (!m["slot" + s] || m["team" + s]) continue;
+      const t = resolveSlot(m["slot" + s]);
+      if (t) { upd[`${id}/team${s}`] = t; nm["team" + s] = t; }
+    }
+    if (nm.teamA !== m.teamA || nm.teamB !== m.teamB) { upd[`${id}/updatedAt`] = C.now(); pubs.push([id, nm]); }
+  }
+  if (!pubs.length) return;
+  koBusy = true;
+  try {
+    await C.update(ref(db, `sports/${S}/matches`), upd);
+    pubs.forEach(([id, m]) => publish(id, m));
+    pubs.forEach(([id, m]) => { if (m.teamA && m.teamB) log(id, m, `${m.round}: ${tn(m.teamA)} vs ${tn(m.teamB)} (filled in automatically)`); });
+    toast(pubs.map(([, m]) => `${m.round}: ${tnm(m, "a")} vs ${tnm(m, "b")}`).join(" · "), 5000);
+  } catch (e) { console.warn(e); }
+  koBusy = false;
+}
+
+let ko = null;
+function koPlans(c) {
+  const pools = Object.keys(groupNow(catTeams(c))).sort();
+  const cnt = p => catTeams(c).filter(([, t]) => poolOf(t) === p).length;
+  const K = p => (c === "No category" ? "" : c.toUpperCase() + (p ? " – POOL " + p : "")) || p;
+  const P = (p, n) => ({ slot: `P|${K(p)}|${n}`, lab: `${ord(n)} ${p ? "Pool " + p : c}` });
+  const plans = [];
+  if (pools.length === 2) {
+    const [x, y] = pools;
+    if (cnt(x) >= 2 && cnt(y) >= 2) plans.push({ id: "sf", name: `Semi-finals (1${x} v 2${y}, 1${y} v 2${x}) + Final`, sf: [[P(x, 1), P(y, 2)], [P(y, 1), P(x, 2)]] });
+    plans.push({ id: "f", name: `Final only (1${x} v 1${y})`, f: [P(x, 1), P(y, 1)], third: [P(x, 2), P(y, 2)] });
+  } else if (pools.length === 4) {
+    const [a, b, d, e] = pools;
+    plans.push({ id: "sf", name: `Semi-finals (1${a} v 1${b}, 1${d} v 1${e}) + Final`, sf: [[P(a, 1), P(b, 1)], [P(d, 1), P(e, 1)]] });
+  } else if (pools.length <= 1) {
+    const p = pools[0] || "", n = pools.length ? cnt(p) : catTeams(c).length;
+    if (n >= 4) plans.push({ id: "sf", name: "Semi-finals (1st v 4th, 2nd v 3rd) + Final", sf: [[P(p, 1), P(p, 4)], [P(p, 2), P(p, 3)]] });
+    if (n >= 2) plans.push({ id: "f", name: "Final only (1st v 2nd)", f: [P(p, 1), P(p, 2)], third: n >= 4 ? [P(p, 3), P(p, 4)] : null });
+  }
+  return plans;
+}
+function openKO(c) {
+  const plans = koPlans(c);
+  ko = { cat: c, plans };
+  $("#koTitle").textContent = `🏆 Knockout – ${c}`;
+  const existing = Object.values(matches).filter(m => (m.slotA || m.slotB) && sameCat(m.event, c === "No category" ? "" : c));
+  $("#koSub").textContent = existing.length ? `This category already has ${existing.length} knockout match${existing.length > 1 ? "es" : ""}. New ones are added after them.` :
+    "Teams are filled in automatically when the pool matches are all confirmed, and the final when both semis are done.";
+  $("#koPlan").innerHTML = plans.map((p, i) => `<option value="${i}">${esc(p.name)}</option>`).join("");
+  $("#koBody").classList.toggle("hide", !plans.length);
+  $("#koNone").classList.toggle("hide", !!plans.length);
+  $("#koNone").textContent = "Automatic knockouts work with 1, 2 or 4 pools. With other setups, add the semi-finals and final yourself in Setup → Add match.";
+  $("#koSave").classList.toggle("hide", !plans.length);
+  renderKO();
+  $("#koModal").classList.remove("hide");
+}
+function koList() {
+  const p = ko.plans[+$("#koPlan").value || 0]; if (!p) return [];
+  const third = $("#koThird").checked, rows = [];
+  if (p.sf) {
+    rows.push({ round: "Semi-final 1", a: p.sf[0][0], b: p.sf[0][1] }, { round: "Semi-final 2", a: p.sf[1][0], b: p.sf[1][1] });
+    if (third) rows.push({ round: "3rd place", a: { ref: 0, k: "L", lab: "Loser Semi-final 1" }, b: { ref: 1, k: "L", lab: "Loser Semi-final 2" } });
+    rows.push({ round: "Final", a: { ref: 0, k: "W", lab: "Winner Semi-final 1" }, b: { ref: 1, k: "W", lab: "Winner Semi-final 2" } });
+  } else {
+    if (third && p.third) rows.push({ round: "3rd place", a: p.third[0], b: p.third[1] });
+    rows.push({ round: "Final", a: p.f[0], b: p.f[1] });
+  }
+  return rows;
+}
+function renderKO() {
+  const p = ko.plans[+$("#koPlan").value || 0];
+  $("#koThirdWrap").classList.toggle("hide", !p || (!p.sf && !p.third));
+  const start = nextNo();
+  $("#koList").innerHTML = koList().map((r, i) => `<div class="korow"><span class="no">#${start + i}</span><b>${esc(r.round)}</b>
+    <span>${esc(r.a.lab)} <span class="muted">vs</span> ${esc(r.b.lab)}</span></div>`).join("");
+}
+$("#koPlan").onchange = renderKO;
+$("#koThird").onchange = renderKO;
+$("#koClose").onclick = () => { ko = null; $("#koModal").classList.add("hide"); };
+$("#koSave").onclick = async () => {
+  const rows = koList(); if (!rows.length) return;
+  const cat = ko.cat === "No category" ? "" : ko.cat, court = $("#koCourt").value.trim();
+  let no = nextNo();
+  const ids = rows.map(() => C.push(ref(db, `sports/${S}/matches`)).key);
+  const side = x => x.ref != null ? { slot: `${x.k}|${ids[x.ref]}`, lab: x.lab } : x;
+  const upd = {}, pubs = {};
+  rows.forEach((r, i) => {
+    const a = side(r.a), b = side(r.b);
+    const m = { no: String(no++), time: "", court, round: r.round, group: "", event: cat, teamA: "", teamB: "",
+      slotA: a.slot, slotB: b.slot, labA: a.lab, labB: b.lab, fmt: FORMATS[S], status: "scheduled", createdAt: C.now(), updatedAt: C.now() };
+    upd[ids[i]] = m; pubs[ids[i]] = publicRecord(S, m, teams);
+  });
+  $("#koSave").disabled = true;
+  try {
+    await C.update(ref(db, `sports/${S}/matches`), upd);
+    await C.update(ref(db, `pub/${S}/m`), pubs);
+  } catch (e) { toast("Couldn't save – check the connection"); $("#koSave").disabled = false; return; }
+  $("#koSave").disabled = false;
+  log("", { no: "" }, `${rows.length} knockout matches created for ${ko.cat}`);
+  toast(`${rows.map(r => r.round).join(", ")} created. Teams fill in by themselves.`, 5000);
+  ko = null; $("#koModal").classList.add("hide");
+  autoFillKO();
 };
 
 // ---------------------------------------------------------------- next step card
@@ -1901,7 +2041,7 @@ $("#fbSend").onclick = async () => {
     await track(C.push(ref(db, "feedback"), {
       type: fbType, msg: msg.slice(0, 500), sport: S, page: SP.name + " scorer", by: NAME || "?",
       acct: (auth.currentUser && auth.currentUser.email) || "", dev,
-      team: m ? `#${m.no} ${tn(m.teamA)} vs ${tn(m.teamB)}` : "", at: C.serverTimestamp()
+      team: m ? `#${m.no} ${tnm(m, "a")} vs ${tnm(m, "b")}` : "", at: C.serverTimestamp()
     }));
     $("#fbModal").classList.add("hide");
     toast("Thanks! Feedback sent ✓");

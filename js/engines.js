@@ -305,7 +305,7 @@ export function publicRecord(sport, m, teams) {
   const rec = {
     no: m.no ?? "", ct: m.court ?? "", rd: m.round ?? "", ev: m.event ?? "", gr: m.group ?? "",
     tm: m.time ?? "",
-    a: t(m.teamA).name || "TBC", b: t(m.teamB).name || "TBC",
+    a: t(m.teamA).name || m.labA || "TBC", b: t(m.teamB).name || m.labB || "TBC",
     as: t(m.teamA).short || "", bs: t(m.teamB).short || "",
     // pair / player names for sports without a roster (e.g. "Ali / Abu" in badminton doubles)
     pa: DETAILS[sport] ? "" : String(t(m.teamA).players || "").split(/\r?\n/).filter(Boolean).join(" / "),
