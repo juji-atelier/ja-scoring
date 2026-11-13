@@ -1,11 +1,11 @@
-import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261114b";
-import { clockMs, mmss, catColor } from "../js/engines.js?v=20261114b";
-import * as C from "../js/common.js?v=20261114b";
-import { applySportInfo } from "../js/sportinfo.js?v=20261114b";
-import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261114b";
-import { bowlingStandings } from "../js/bowling-data.js?v=20261114b";
-import { firebaseConfig } from "../config.js?v=20261114b";
-import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261114b";
+import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261114c";
+import { clockMs, mmss, catColor } from "../js/engines.js?v=20261114c";
+import * as C from "../js/common.js?v=20261114c";
+import { applySportInfo } from "../js/sportinfo.js?v=20261114c";
+import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261114c";
+import { bowlingStandings } from "../js/bowling-data.js?v=20261114c";
+import { firebaseConfig } from "../config.js?v=20261114c";
+import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261114c";
 const { $, esc, ref } = C;
 
 const P = new URLSearchParams(location.search);
@@ -227,7 +227,7 @@ function render() { renderView(); fx(); fitText(); }
 const qrCard = document.createElement("div");
 qrCard.className = "qrc";
 qrCard.innerHTML = `<div class="qrf"><div class="qri"></div><i class="c1"></i><i class="c2"></i><i class="c3"></i><i class="c4"></i></div>
-  <div class="qrt"><div class="qk cond"><i class="dot"></i>LIVE SCORES</div><b class="cond">Don't miss a moment</b><span>📱 Point your camera here</span></div>`;
+  <div class="qrt"><div class="qk cond"><i class="dot"></i>LIVE SCORES</div><b class="cond">Don't miss a moment</b></div>`;
 let qrFor = "";
 function placeQR(sp) {
   const col = $("#main .rcol");
