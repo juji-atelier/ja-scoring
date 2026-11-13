@@ -1,11 +1,11 @@
 // Public live-score page. Uses plain HTTPS polling (no live connection),
 // so hundreds of spectators stay inside Firebase's free limits.
-import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261113w";
-import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261113w";
-import { standings, clockMs, mmss, catColor } from "../js/engines.js?v=20261113w";
-import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261113w";
-import { cfgOf, shown, isDone, KEEP } from "../js/livecfg.js?v=20261113w";
-import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261113w";
+import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261113x";
+import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261113x";
+import { standings, clockMs, mmss, catColor } from "../js/engines.js?v=20261113x";
+import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261113x";
+import { cfgOf, shown, isDone, KEEP } from "../js/livecfg.js?v=20261113x";
+import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261113x";
 
 const FAST_MS = 5000;     // live matches: small live-only list (pub/<sport>/live)
 const QUIET_MS = 8000;    // nothing live: the live list is empty, so this costs almost nothing
@@ -139,6 +139,10 @@ function renderHeader() {
 
 const list = () => Object.entries(data).map(([id, r]) => ({ id, ...r }));
 const byNo = (x, y) => (Number(x.no) || 9999) - (Number(y.no) || 9999);
+// in the order things will actually be played: start time, then court/table, then number
+const tMin = s => { const m = String(s || "").trim().match(/^(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm)?$/i);
+  if (!m) return 1e9; let h = +m[1]; if (m[3]) { const pm = /pm/i.test(m[3]); if (pm && h < 12) h += 12; if (!pm && h === 12) h = 0; } return h * 60 + +(m[2] || 0); };
+const byPlay = (x, y) => tMin(x.tm) - tMin(y.tm) || (Number(x.ct) || 99) - (Number(y.ct) || 99) || byNo(x, y);
 
 const low = x => String(x || "").toLowerCase();
 const isMe = name => !!followed() && low(name) === low(followed());
@@ -192,6 +196,29 @@ function row(r, s, lead, tagOn = true) {
     <span class="n ${isMe(r[s]) ? "me" : ""}">${mark(r[s])}${tag ? `<span class="tag">${esc(tag)}</span>` : ""}${r["p" + s] ? `<span class="pl">${esc(r["p" + s])}</span>` : ""}</span>
     <span class="s">${small ?? ""}</span><span class="b cond">${fl ? `<i class="plus1">+1</i>` : ""}${big ?? ""}</span></div>`;
 }
+// Up next, compact: one heading per start time, the matches of that time side by side (one per
+// court/table), each just the two names. Big cards with a 0-0 line said little and took a screen
+// each; this fits a whole day without a "+ more".
+function nextHTML(list) {
+  const many = cats().length > 1;
+  let out = "", last = null, open = false;
+  for (const r of [...list].sort(byPlay)) {
+    const k = r.tm || "";
+    if (k !== last) {
+      if (open) out += "</div></div>";
+      out += `<div class="nxg"><div class="nxh">${esc(k || "Time to be confirmed")}</div><div class="nxl">`;
+      last = k; open = true;
+    }
+    const rd = r.rd && !/^group stage$/i.test(r.rd) ? r.rd : "";
+    const tag = [many ? r.ev : "", rd].filter(Boolean).join(" \u00b7 ");
+    const cc = r.ev ? `--cc:${catColor(r.ev, cats())}` : "";
+    out += `<div class="nx ${isMe(r.a) || isMe(r.b) ? "me" : ""}" style="${cc}">${r.ct ? `<span class="ctb">${esc(courtWord())} ${esc(r.ct)}</span>` : ""}
+      <div class="nt"><span>${isMe(r.a) ? "\u2605 " : ""}${mark(r.a)}</span><i>vs</i><span>${isMe(r.b) ? "\u2605 " : ""}${mark(r.b)}</span></div>
+      ${tag ? `<span class="nr">${esc(tag)}</span>` : ""}</div>`;
+  }
+  return out + (open ? "</div></div>" : "");
+}
+
 function card(r) {
   const v = r.v || {};
   let st = r.st === "live" ? esc(v.stx || "Live") : r.st === "done" ? "Final" : esc(r.tm || "");
@@ -275,8 +302,7 @@ function render() {
     const nowS = Date.now() + clockSkew;
     const fresh = done.filter(r => r.t && nowS - r.t < 10 * 60000).slice(0, 3);
     if (fresh.length) h += `<h2>Just finished</h2>` + fresh.map(finCard).join("");
-    h += `<h2>Up next</h2>` + (next.length ? next.slice(0, 12).map(card).join("") : `<div class="empty">No more scheduled matches.</div>`);
-    if (next.length > 12) h += `<div class="empty">+ ${next.length - 12} more</div>`;
+    h += `<h2>Up next</h2>` + (next.length ? nextHTML(next) : `<div class="empty">No more scheduled matches.</div>`);
   } else if (sub === "results") {
     h += `<h2>Results</h2>` + (done.length ? done.map(card).join("") : `<div class="empty">No results yet.</div>`);
   } else {
