@@ -1,13 +1,28 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113l";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113m";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113l";
-import * as C from "../js/common.js?v=20261113l";
-import { applySportInfo } from "../js/sportinfo.js?v=20261113l";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113m";
+import * as C from "../js/common.js?v=20261113m";
+import { applySportInfo } from "../js/sportinfo.js?v=20261113m";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
 const S = (new URLSearchParams(location.search).get("sport") || "").toLowerCase();
 const SP = SPORTS[S];
+const CW = (SP && SP.court) || "Court";      // Table / Court / Lane / Pitch / Board
+const cw = CW.toLowerCase();
+// the markup is written with "Court" – put this sport's word in its place
+function applyCourtWord() {
+  if (CW === "Court") return;
+  const set = (sel, f) => { const e = document.querySelector(sel); if (e) f(e); };
+  set('label[for="fCourt"]', e => e.textContent = CW + " / table");
+  set('label[for="koCourt"]', e => e.textContent = CW);
+  set('label[for="inName"]', e => e.textContent = "Your name / " + cw);
+  set("#inName", e => e.placeholder = "e.g. Ali \u2013 " + CW + " 1");
+  set("#fCourt", e => e.placeholder = "e.g. 1");
+  set("#annText", e => e.placeholder = `e.g. Calling JKR and JPN to ${CW} 2`);
+  set("#fxTurnWrap", e => { const t = e.lastChild; if (t && t.nodeType === 3) t.textContent = ` Pools take turns (A, B, A, B\u2026) \u2013 best when they share one ${cw}`; });
+}
+applyCourtWord();
 if (!SP) {
   document.body.innerHTML = `<div style="font-family:system-ui;padding:32px;max-width:520px;margin:auto">
     <h2>Invalid scorer link</h2><p>Ask the organiser for your sport's scorer link.</p></div>`;
@@ -379,7 +394,7 @@ function renderList() {
   const courts = [...new Set(inCat.map(m => String(m.court ?? "")).filter(Boolean))]
     .sort((a, b) => (Number(a) || 0) - (Number(b) || 0) || a.localeCompare(b));
   if (courtFilter && !courts.includes(courtFilter)) courtFilter = "";
-  $("#courtChips").innerHTML = (courts.length > 1 ? [["", "All courts"], ...courts.map(c => [c, "Court " + c])] : [])
+  $("#courtChips").innerHTML = (courts.length > 1 ? [["", "All " + cw + "s"], ...courts.map(c => [c, CW + " " + c])] : [])
     .map(([c, l]) => `<button data-court="${esc(c)}" class="${c === courtFilter ? "on" : ""}">${esc(l)}</button>`).join("");
   $$("#courtChips button").forEach(b => b.onclick = () => {
     courtFilter = b.dataset.court; store("ja_court_" + S, courtFilter || null); renderList();
@@ -1019,7 +1034,7 @@ function renderSetup() {
 
   // matches table
   const arr = arrMatches();
-  $("#setupMatches").innerHTML = arr.length ? `<table><tr><th>#</th><th>Time</th><th>Court</th><th>Round</th><th>Match</th><th>Status</th><th></th></tr>` +
+  $("#setupMatches").innerHTML = arr.length ? `<table><tr><th>#</th><th>Time</th><th>${esc(CW)}</th><th>Round</th><th>Match</th><th>Status</th><th></th></tr>` +
     arr.map(m => `<tr><td>${esc(m.no)}</td><td>${esc(m.time)}</td><td>${esc(m.court)}</td><td>${esc(m.round)}${m.event ? "<br><span class=muted>" + esc(m.event) + "</span>" : ""}</td>
       <td>${esc(tnm(m, "a"))} <span class="muted">vs</span> ${esc(tnm(m, "b"))}</td><td>${esc(m.status || "scheduled")}</td>
       <td style="text-align:right;white-space:nowrap"><button class="small" data-me="${m.id}">Edit</button> <button class="small danger" data-md="${m.id}">Delete</button></td></tr>`).join("") + `</table>`
@@ -1351,7 +1366,7 @@ function renderProgress(el, withTodo) {
   let h = `<div class="steps">${step(1, "Teams", st.teams ? st.teams + " added" : "none yet", st.t1)}${step(2, "Matches", st.matches ? st.matches + " made" : "none yet", st.t2)}${step(3, "Times & courts", st.matches ? (st.missing ? st.missing + " left" : "all set") : "–", st.t3)}${step(4, "Ready", st.ready ? "let's go!" : "", st.ready)}</div>`;
   if (withTodo && now === 1) h += `<div class="todo"><h4>Next: add your teams</h4><p>Add each team (or pair) under its category.</p><button class="primary small" data-go="teams">Go to Teams →</button></div>`;
   else if (withTodo && now === 2 && !st.noMatch) h += `<div class="todo"><h4>Next: add matches</h4><p>Use Setup → Generate round-robin, Paste the schedule, or Add match.</p><button class="primary small" data-go="setup">Go to Setup →</button></div>`;
-  else if (withTodo && now === 3) h += `<div class="todo"><h4>Next: set time &amp; court for ${st.missing} match${st.missing > 1 ? "es" : ""}</h4><p>Fill them all on one screen – or let Quick fill do it.</p><button class="primary small" data-go="tc">Set times &amp; courts →</button></div>`;
+  else if (withTodo && now === 3) h += `<div class="todo"><h4>Next: set time &amp; ${esc(cw)} for ${st.missing} match${st.missing > 1 ? "es" : ""}</h4><p>Fill them all on one screen – or let Quick fill do it.</p><button class="primary small" data-go="tc">Set times &amp; ${esc(cw)}s →</button></div>`;
   el.innerHTML = h;
   $$("[data-go]", el).forEach(b => b.onclick = () => {
     const g = b.dataset.go;
@@ -1435,12 +1450,12 @@ function renderTC() {
       <label>Every</label><input id="qfEvery" inputmode="numeric" value="${store("ja_qfevery_" + S) || 25}" placeholder="min">
       <label>Rest<small style="display:block;text-transform:none;letter-spacing:0">min per team</small></label><input id="qfRest" inputmode="numeric" value="${store("ja_qfrest_" + S) ?? 5}" placeholder="0">
       <span class="full muted" style="font-size:12px">Every = minutes from one match start to the next on a court. Rest = extra minutes a team gets before its next match – matches are re-ordered (and re-numbered) to give it.</span>
-      ${need.map(b => `<label>Court${buckets.length > 1 ? `<small style="display:block;text-transform:none;letter-spacing:0">${esc(b)}</small>` : ""}</label>
+      ${need.map(b => `<label>${esc(CW)}${buckets.length > 1 ? `<small style="display:block;text-transform:none;letter-spacing:0">${esc(b)}</small>` : ""}</label>
         <input data-qfc="${esc(b)}" value="" placeholder="e.g. 1">`).join("")}
       ${need.length < buckets.length ? `<span class="full muted" style="font-size:12px">${need.length ? "The other matches keep" : "Every match keeps"} the court already set on it – only the times are filled.</span>` : ""}
       ${need.length && buckets.length > 1 ? `<span class="full muted" style="font-size:12px">Different courts play at the same time. Knockout matches start after the pool matches.</span>` : ""}
       <span></span><button class="small primary" id="btnQF">Fill</button></div>` : ""}
-    <div class="qhead"><span>#</span><span>Match</span><span>Time</span><span>Court</span></div>
+    <div class="qhead"><span>#</span><span>Match</span><span>Time</span><span>${esc(CW)}</span></div>
     ${list.map(m => { const lock = (m.status || "scheduled") !== "scheduled";
       return `<div class="qrow"><span class="n">${esc(m.no)}</span><span class="t">${esc(tnm(m, "a"))}<small>vs ${esc(tnm(m, "b"))}${lock ? " · " + esc(m.status) : ""}</small></span>
         <input data-tid="${m.id}" data-f="time" class="${m.time ? "f" : ""}" value="${esc(m.time || "")}" placeholder="time" ${lock ? "disabled" : ""}>
@@ -1625,7 +1640,7 @@ function openFixtures(c) {
   $("#fxSub").textContent = (keys.length > 1 || keys[0] ? keys.map(p => `Pool ${p || "–"}: ${pools[p].length} teams`).join(" · ") : `${catTeams(c).length} teams`) +
     (ms.length ? ` · ${ms.length} match${ms.length > 1 ? "es" : ""} already made – new ones are added after them.` : "");
   const saved = (() => { try { return JSON.parse(store("ja_fxct_" + S) || "{}"); } catch (e) { return {}; } })();
-  $("#fxCourts").innerHTML = keys.map(p => `<div><label>Court for ${p ? "Pool " + esc(p) : "these matches"}</label>
+  $("#fxCourts").innerHTML = keys.map(p => `<div><label>${esc(CW)} for ${p ? "Pool " + esc(p) : "these matches"}</label>
     <input data-fxct="${esc(p)}" value="${esc(saved[c + "|" + p] || "")}" placeholder="e.g. 1 or Court A"></div>`).join("");
 
   $$("[data-fxct]").forEach(i => i.oninput = () => {
@@ -1685,7 +1700,7 @@ function renderFx() {
     if (warn && !/Different pools/.test(warn)) bad++;
     return `<div class="fxrow ${warn ? "bad" : ""}"><span class="no">#${start + i}</span>
       <select data-fxa="${i}">${opts(r.a)}</select><span class="vs">vs</span><select data-fxb="${i}">${opts(r.b)}</select>
-      <input class="ct" data-fxc="${i}" value="${esc(r.court || "")}" placeholder="Court">
+      <input class="ct" data-fxc="${i}" value="${esc(r.court || "")}" placeholder="${esc(CW)}">
       <button type="button" class="small ghost danger x" data-fxx="${i}" title="Remove">✕</button>
       ${warn ? `<small>${esc(warn)}</small>` : ""}</div>`;
   }).join("") || `<p class="muted">No matches in the list. Tap “Fill all” or “+ Add a match”.</p>`;
@@ -1966,12 +1981,12 @@ function renderGuide() {
       <p>Every tap you make goes <b>straight to the big screen and the public QR page</b>. Take your time – mistakes can always be undone.</p></div>
     ${sec("1 · Log in", `<ol>
       <li>Open the ${esc(SP.name)} scorer link from the organiser.</li>
-      <li>Type <b>your name and court</b>, e.g. <i>Ali – Court 1</i>. This shows who is scoring which match.</li>
+      <li>Type <b>your name and ${esc(cw)}</b>, e.g. <i>Ali – ${esc(CW)} 1</i>. This shows who is scoring which match.</li>
       <li>Enter the ${esc(SP.name)} password and tap <b>Log in</b>. Each court uses its own phone; everyone can use the same password.</li>
       <li>The small dot at the top is <b>green</b> when online. If it turns <b>red</b>, keep scoring – it will sync when the signal is back.</li>
       <li>Need another scorer? On the Matches tab tap <b>📲 Share this scorer page</b> – they can scan the QR or get the link on WhatsApp. Tell them the password yourself.</li></ol>`, true)}
     ${sec("2 · Find your match", `<ol>
-      <li>Go to the <b>Matches</b> tab. Tap your <b>category</b> (e.g. MIX DOUBLE) and your <b>court</b> at the top to see only your matches. The phone remembers this.</li>
+      <li>Go to the <b>Matches</b> tab. Tap your <b>category</b> (e.g. MIX DOUBLE) and your <b>${esc(cw)}</b> at the top to see only your matches. The phone remembers this.</li>
       <li>Matches are listed as <b>Live now</b>, <b>Up next</b> and <b>Finished</b>.</li>
       <li>Tap the match to open it. It is now <b>locked to your phone</b> 🔒 so nobody else can change it by accident.</li></ol>`)}
     ${sec("3 · Score the match", scoring, true)}
@@ -2025,7 +2040,7 @@ const hhmm = t => new Date(t).toLocaleTimeString([], { hour: "numeric", minute: 
 const ANN_QUICK = [
   "Next match starts in 5 minutes",
   "Short break – play resumes in 10 minutes",
-  "Calling teams to Court ",
+  "Calling teams to " + CW + " ",
   "Matches are running late – thank you for waiting",
   "Final match of the day is now on",
   "Results and prize giving coming soon",
