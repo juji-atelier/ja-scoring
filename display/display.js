@@ -1,11 +1,11 @@
-import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261113f";
-import { clockMs, mmss, catColor } from "../js/engines.js?v=20261113f";
-import * as C from "../js/common.js?v=20261113f";
-import { applySportInfo } from "../js/sportinfo.js?v=20261113f";
-import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261113f";
-import { bowlingStandings } from "../js/bowling-data.js?v=20261113f";
-import { firebaseConfig } from "../config.js?v=20261113f";
-import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261113f";
+import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261113g";
+import { clockMs, mmss, catColor } from "../js/engines.js?v=20261113g";
+import * as C from "../js/common.js?v=20261113g";
+import { applySportInfo } from "../js/sportinfo.js?v=20261113g";
+import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261113g";
+import { bowlingStandings } from "../js/bowling-data.js?v=20261113g";
+import { firebaseConfig } from "../config.js?v=20261113g";
+import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261113g";
 const { $, esc, ref } = C;
 
 const P = new URLSearchParams(location.search);
@@ -281,7 +281,7 @@ function renderView() {
     if (live.length && courts.length >= 2 && courts.length <= 6) {
       // every court keeps its own spot: live match, or what is next on that court
       const cols = courts.length <= 4 ? 2 : 3;
-      const sz = cols === 2 ? "--nm:2.2vw;--big:3.8vw" : "--nm:1.6vw;--big:2.7vw";
+      const sz = cols === 2 ? "--nm:calc(2.2*var(--u));--big:calc(3.8*var(--u))" : "--nm:calc(1.6*var(--u));--big:calc(2.7*var(--u))";
       const tile = c => {
         const lv = live.find(r => String(r.ct) === c);
         if (lv) return cardHTML(lv);
@@ -292,12 +292,12 @@ function renderView() {
       left = `<h2><span class="live">LIVE</span> ${esc(SP.name)}</h2><div class="grid courts" style="--cols:${cols};${sz}">${courts.map(tile).join("")}</div>`;
     } else if (live.length) {
       const n = live.length, cols = n === 1 ? 1 : n <= 4 ? 2 : 3;
-      const sz = cols === 1 ? "--nm:3.6vw;--big:7vw" : cols === 2 ? "--nm:2.2vw;--big:3.8vw" : "--nm:1.6vw;--big:2.7vw";
+      const sz = cols === 1 ? "--nm:calc(3.6*var(--u));--big:calc(7*var(--u))" : cols === 2 ? "--nm:calc(2.2*var(--u));--big:calc(3.8*var(--u))" : "--nm:calc(1.6*var(--u));--big:calc(2.7*var(--u))";
       left = `<h2><span class="live">LIVE</span> ${esc(SP.name)}</h2><div class="grid" style="--cols:${cols};${sz}">${live.map(cardHTML).join("")}</div>`;
     } else if (next.length) {
-      left = `<h2>Up next · ${esc(SP.name)}</h2><div class="grid" style="--cols:2;--nm:1.9vw;--big:3vw">${next.slice(0, 6).map(cardHTML).join("")}</div>`;
+      left = `<h2>Up next · ${esc(SP.name)}</h2><div class="grid" style="--cols:2;--nm:calc(1.9*var(--u));--big:calc(3*var(--u))">${next.slice(0, 6).map(cardHTML).join("")}</div>`;
     } else if (done.length) {
-      left = `<h2>Results · ${esc(SP.name)}</h2><div class="grid" style="--cols:2;--nm:1.9vw;--big:3.2vw">${done.slice(0, 6).map(cardHTML).join("")}</div>`;
+      left = `<h2>Results · ${esc(SP.name)}</h2><div class="grid" style="--cols:2;--nm:calc(1.9*var(--u));--big:calc(3.2*var(--u))">${done.slice(0, 6).map(cardHTML).join("")}</div>`;
     } else {
       left = `<h2>${esc(SP.name)}</h2><div class="empty">Matches will appear here soon.</div>`;
     }
