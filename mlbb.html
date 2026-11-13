@@ -7,8 +7,8 @@
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 <meta name="theme-color" content="#F6F4F2">
 <title>Mobile Legends · Live Standings</title>
-<link rel="stylesheet" href="css/theme.css?v=20261114i">
-<script src="js/theme.js?v=20261114i"></script>
+<link rel="stylesheet" href="css/theme.css?v=20261114j">
+<script src="js/theme.js?v=20261114j"></script>
 <style>
 :root{--sport:#f59e0b;--ga:#D23A3A;--gb:#2F6FE0}
 *{box-sizing:border-box}
@@ -111,7 +111,7 @@ html[data-theme="dark"] body::after{background:radial-gradient(closest-side, col
 .hero:before{content:"";position:absolute;right:-2.5%;top:50%;height:104%;width:auto;aspect-ratio:140/79;transform:translateY(-50%) rotate(-6deg);background:#fff;opacity:.09;pointer-events:none;-webkit-mask:url(img/ja.svg) center/contain no-repeat;mask:url(img/ja.svg) center/contain no-repeat}
 @media(max-width:600px){.hero:before{width:200px;height:114px;right:-40px;opacity:.08}}
 </style>
-<script src="js/splash.js?v=20261114i"></script>
+<script src="js/splash.js?v=20261114j"></script>
 </head>
 <body>
 <header class="hd"><div class="wrap">
@@ -140,9 +140,9 @@ html[data-theme="dark"] body::after{background:radial-gradient(closest-side, col
 const ML_VENUE = "Centralized Meeting Room, Block E, Tingkat 1, Bangunan KWSP";
 // Mobile Legends standings for the HQ Games live page.
 // Data: Firebase  mlbb/live  — written by the JA ESPORT console (Group Stage tab).
-import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "./config.js?v=20261114i";
-import { renderSportGrid, sportItems, fetchLiveCounts } from "./js/sportnav.js?v=20261114i";
-import { cfgOf, shown, isDone, mlHas, mlEffective, KEEP } from "./js/livecfg.js?v=20261114i";
+import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "./config.js?v=20261114j";
+import { renderSportGrid, sportItems, fetchLiveCounts } from "./js/sportnav.js?v=20261114j";
+import { cfgOf, shown, isDone, mlHas, mlEffective, KEEP } from "./js/livecfg.js?v=20261114j";
 const BASE = String(firebaseConfig.databaseURL || "").replace(/\/$/, "");
 const POLL_MS = 12000;
 const $ = s => document.querySelector(s);
