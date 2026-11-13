@@ -1,8 +1,8 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113g";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113h";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113g";
-import * as C from "../js/common.js?v=20261113g";
-import { applySportInfo } from "../js/sportinfo.js?v=20261113g";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113h";
+import * as C from "../js/common.js?v=20261113h";
+import { applySportInfo } from "../js/sportinfo.js?v=20261113h";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -1066,10 +1066,19 @@ function renderTeams() {
   Object.entries(teams).forEach(([id, t]) => (by[catOf(t) || "No category"] = by[catOf(t) || "No category"] || []).push([id, t]));
   const keys = Object.keys(by).sort((a, b) => (a === "No category") - (b === "No category") || a.localeCompare(b));
   $("#teamCats").innerHTML = keys.length ? keys.map(c => {
-    const rows = by[c].sort((a, b) => poolOf(a[1]).localeCompare(poolOf(b[1])) || ((+a[1].seed || 99) - (+b[1].seed || 99)) || a[1].name.localeCompare(b[1].name)).map(([id, t]) => {
+    const sorted = by[c].sort((a, b) => poolOf(a[1]).localeCompare(poolOf(b[1])) || ((+a[1].seed || 99) - (+b[1].seed || 99)) || a[1].name.localeCompare(b[1].name));
+    // a heading row where the pool changes, so Pool A and Pool B read as two blocks and not one
+    // long list. Only when the category uses pools at all.
+    const usesPools = sorted.some(([, t]) => poolOf(t));
+    const nPool = {};
+    sorted.forEach(([, t]) => { const p = poolOf(t) || ""; nPool[p] = (nPool[p] || 0) + 1; });
+    const rows = sorted.map(([id, t], i) => {
+      const p = poolOf(t) || "";
+      const head = usesPools && (i === 0 || (poolOf(sorted[i - 1][1]) || "") !== p)
+        ? `<tr class="tgrp"><td colspan="2">${p ? "Pool " + esc(p) : "Not in a pool"} <span>${nPool[p]} team${nPool[p] > 1 ? "s" : ""}</span></td></tr>` : "";
       if (id === editingTeam) {
         const d = draft || { ...t, category: catOf(t), group: poolOf(t) };
-        return `<tr class="tedit"><td colspan="2"><div class="tegrid">
+        const body = `<tr class="tedit"><td colspan="2"><div class="tegrid">
             <div><label>Category</label><input id="teCat" list="catList" value="${esc(d.category || "")}"></div>
             <div><label>Team name</label><input id="teName" value="${esc(d.name)}"></div>
             <div><label>Short name</label><input id="teShort" value="${esc(d.short || "")}" placeholder="optional"></div>
@@ -1078,11 +1087,12 @@ function renderTeams() {
           <div style="margin-top:8px">${playersField("tePlayers", d.players)}</div>
           <div class="row" style="margin-top:10px"><button class="small primary" data-tsave="${id}">Save</button><button class="small ghost" data-tcancel>Cancel</button></div>
         </td></tr>`;
+        return head + body;
       }
       const pool = poolOf(t) ? ` <span class="badge">${t.seed ? esc(poolOf(t) + t.seed) : "Pool " + esc(poolOf(t))}</span>` : "";
       const np = ROSTER ? parsePlayers(t.players).length : 0;
       const pl = ROSTER ? (np ? np + " players" : "") : (tp(id) || (isOld(t) ? t.short : ""));
-      return `<tr><td><b>${esc(t.name)}</b>${pool}${pl ? `<br><span class="muted" style="font-size:13px">${esc(pl)}</span>` : ""}</td>
+      return head + `<tr><td><b>${esc(t.name)}</b>${pool}${pl ? `<br><span class="muted" style="font-size:13px">${esc(pl)}</span>` : ""}</td>
         <td style="text-align:right;white-space:nowrap"><button class="small" data-te="${id}">Edit</button> <button class="small danger" data-td="${id}">Delete</button></td></tr>`;
     }).join("");
     return `<div class="card"><div class="row" style="align-items:center"><h3 style="flex:1;margin:0">${esc(c)}</h3>

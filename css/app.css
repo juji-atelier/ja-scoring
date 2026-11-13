@@ -135,6 +135,11 @@ th{color:var(--mute);font-weight:600;font-size:11px;text-transform:uppercase;let
 
 /* team list (Setup) */
 table.teams td{vertical-align:middle}
+table.teams tr.tgrp td{padding:14px 8px 6px;border-bottom:2px solid var(--line);color:var(--mute);
+  font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+table.teams tr.tgrp:first-child td{padding-top:4px}
+table.teams tr.tgrp td span{font-weight:600;letter-spacing:0;text-transform:none;opacity:.8}
+table.teams tr.tgrp td span::before{content:"· "}
 tr.tedit td{background:var(--acc-soft);border-radius:12px}
 .tegrid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px}
 .tegrid label{margin-top:0}
