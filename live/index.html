@@ -17,8 +17,8 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#F6F4F2">
 <title>Live Scores</title>
-<link rel="stylesheet" href="../css/theme.css?v=20261114g">
-<script src="../js/theme.js?v=20261114g"></script>
+<link rel="stylesheet" href="../css/theme.css?v=20261114h">
+<script src="../js/theme.js?v=20261114h"></script>
 <style>
 :root{--sport:var(--acc);--text:var(--ink);--muted:var(--mute)}
 *{box-sizing:border-box}
@@ -217,6 +217,22 @@ html[data-theme="dark"] body::after{background:radial-gradient(closest-side, col
 .bk .br.me .bn{color:var(--acc)}
 .bk .bm:has(.br.me){border-color:var(--acc)}
 
+
+/* ---------- laptop / desktop: sticky left column, wide match area ---------- */
+@media (min-width:1100px){
+  .wrap{max-width:1360px;padding:0 28px}
+  .page{display:grid;grid-template-columns:330px minmax(0,1fr);gap:28px;align-items:start}
+  .side{position:sticky;top:66px;max-height:calc(100vh - 66px);overflow:auto;scrollbar-width:none;padding-bottom:12px}
+  .side::-webkit-scrollbar{display:none}
+  .side .hero{margin:18px 0 12px;padding:20px 22px}
+  .side .hero h1{font-size:30px}
+  .side .sgrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .page main{padding-top:6px}
+  .page .sub{margin-top:18px}
+  .nxl{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+  #body table{width:100%}
+}
+@media (min-width:1500px){ .wrap{max-width:1500px} .page{grid-template-columns:360px minmax(0,1fr)} }
 </style>
 <script>/* Splash plays on open and on refresh; skipped on Back/Forward and when hopping here from another page of this site */
 try{var n=performance.getEntriesByType("navigation")[0],t=n?n.type:"navigate",seen=sessionStorage.getItem("ja-splash"),own=document.referrer.indexOf(location.origin+"/")===0;sessionStorage.setItem("ja-splash","1");if(t==="back_forward"||(t==="navigate"&&own&&seen))document.documentElement.classList.add("nosplash")}catch(e){}</script>
@@ -231,9 +247,11 @@ try{var n=performance.getEntriesByType("navigation")[0],t=n?n.type:"navigate",se
   <img class="logo-org" src="../img/sabah-electricity.png" alt="Sabah Electricity">
   <div data-theme-toggle></div>
 </div></header>
-<div class="wrap">
+<div class="wrap page">
+  <aside class="side">
   <section class="hero"><h1>Live Scores</h1><p>Scores update automatically — no need to refresh.</p><div class="note" id="note" hidden></div></section>
   <nav id="tabs"></nav>
+  </aside>
   <main>
     <div class="sub" id="sub">
       <button data-v="live" class="on">Live &amp; next</button>
@@ -249,6 +267,6 @@ try{var n=performance.getEntriesByType("navigation")[0],t=n?n.type:"navigate",se
   </main>
 </div>
 <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
-<script type="module" src="live.js?v=20261114g"></script>
+<script type="module" src="live.js?v=20261114h"></script>
 </body>
 </html>
