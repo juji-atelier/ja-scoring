@@ -1,8 +1,8 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113b";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113c";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor } from "../js/engines.js?v=20261113b";
-import * as C from "../js/common.js?v=20261113b";
-import { applySportInfo } from "../js/sportinfo.js?v=20261113b";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor } from "../js/engines.js?v=20261113c";
+import * as C from "../js/common.js?v=20261113c";
+import { applySportInfo } from "../js/sportinfo.js?v=20261113c";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -1231,16 +1231,7 @@ async function genRR(g, court, ask = true) {
     .sort((a, b) => ((+a[1].seed || 99) - (+b[1].seed || 99)) || a[1].name.localeCompare(b[1].name)).map(([id]) => id);
   const t0 = teams[ids[0]] || {};
   if (ids.length < 2) { toast("Need at least 2 teams"); return false; }
-  // circle method so teams rest between matches
-  const list = ids.length % 2 ? [...ids, null] : [...ids];
-  const pairs = [];
-  for (let r = 0; r < list.length - 1; r++) {
-    for (let i = 0; i < list.length / 2; i++) {
-      const x = list[i], y = list[list.length - 1 - i];
-      if (x && y) pairs.push([x, y]);
-    }
-    list.splice(1, 0, list.pop());
-  }
+  const pairs = rrPairs(ids);   // A1 v A2, A3 v A4 first; teams rest between matches
   if (ask && !confirm(`Create ${pairs.length} matches for ${g}?`)) return false;
   let no = nextNo();
   const upd = {}, pubs = {};
@@ -1476,10 +1467,11 @@ $("#drClose").onclick = () => {
 // ---------------------------------------------------------------- match builder (after the draw, or any time)
 // Court per pool, pools taking turns, auto-filled list that can be edited, or a fully manual list.
 let fx = null;   // { cat, rows: [{a, b, court}] }
-const rrPairs = ids => {   // circle method: rounds where nobody plays twice
-  const list = ids.length % 2 ? [...ids, null] : [...ids], out = [];
-  for (let r = 0; r < list.length - 1; r++) {
-    for (let i = 0; i < list.length / 2; i++) { const x = list[i], y = list[list.length - 1 - i]; if (x && y) out.push(r % 2 ? [y, x] : [x, y]); }
+const rrPairs = ids => {   // circle method: rounds where nobody plays twice; round 1 = 1v2, 3v4, 5v6…
+  const n = ids.length % 2 ? ids.length + 1 : ids.length, seeds = [...ids, null].slice(0, n), list = new Array(n), out = [];
+  for (let i = 0; i < n / 2; i++) { list[i] = seeds[2 * i]; list[n - 1 - i] = seeds[2 * i + 1]; }
+  for (let r = 0; r < n - 1; r++) {
+    for (let i = 0; i < n / 2; i++) { const x = list[i], y = list[n - 1 - i]; if (x && y) out.push(r % 2 ? [y, x] : [x, y]); }
     list.splice(1, 0, list.pop());
   }
   return out;
