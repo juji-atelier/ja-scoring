@@ -1,8 +1,8 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113n";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113o";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113n";
-import * as C from "../js/common.js?v=20261113n";
-import { applySportInfo } from "../js/sportinfo.js?v=20261113n";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113o";
+import * as C from "../js/common.js?v=20261113o";
+import { applySportInfo } from "../js/sportinfo.js?v=20261113o";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -373,7 +373,7 @@ function matchCard(m, st) {
   return `<button class="mcard m2 ${st}" data-open="${m.id}" style="--c:${col}">
     <div class="mtop">${st === "live" ? `<span class="badge live">LIVE</span>` : ""}${m.event ? `<span class="mcat">${esc(m.event)}</span>` : ""}
       <span>#${esc(m.no)}${m.time ? " · " + esc(m.time) : ""}</span>${round ? `<span>${esc(round)}</span>` : ""}
-      <span style="flex:1"></span>${lk}${m.court ? `<span class="mct">C${esc(m.court)}</span>` : ""}</div>
+      <span style="flex:1"></span>${lk}${m.court ? `<span class="mct">${esc(CW)} ${esc(m.court)}</span>` : ""}</div>
     ${row("a", m.teamA, sa)}${row("b", m.teamB, sb)}
     ${v && v.hist ? `<div class="muted" style="font-size:13px;margin-top:4px">${esc(v.hist)}</div>` : ""}
   </button>`;
