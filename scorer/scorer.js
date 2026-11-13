@@ -1,8 +1,8 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113i";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113j";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113i";
-import * as C from "../js/common.js?v=20261113i";
-import { applySportInfo } from "../js/sportinfo.js?v=20261113i";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113j";
+import * as C from "../js/common.js?v=20261113j";
+import { applySportInfo } from "../js/sportinfo.js?v=20261113j";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -1672,16 +1672,16 @@ function renderFx() {
   $("#fxSave").textContent = fx.rows.length ? `Create ${fx.rows.length} match${fx.rows.length > 1 ? "es" : ""}` : "Create matches";
   $("#fxSave").disabled = !fx.rows.length || bad > 0;
 }
-// Tables for a room with more than one of them. "6" means tables 1 to 6, "1-4" means 1,2,3,4,
-// and "1,2,5" or "A,B" is taken as typed.
-const tableList = raw => {
-  const s = String(raw || "").trim();
-  if (!s) return [];
-  if (/^\d+$/.test(s)) return Array.from({ length: Math.min(20, +s) }, (_, i) => String(i + 1));
-  const m = s.match(/^(\d+)\s*[-\u2013]\s*(\d+)$/);
-  if (m) { const out = []; for (let i = Math.min(+m[1], +m[2]); i <= Math.max(+m[1], +m[2]) && out.length < 20; i++) out.push(String(i)); return out; }
-  return s.split(/[,\/]/).map(x => x.trim()).filter(Boolean).slice(0, 20);
-};
+// The room has n tables, numbered 1..n. Tables another category is already using are left to
+// it, so the men's pools can take 1-4 and the women's 5-6 without anyone being told to.
+function roomTables(n) {
+  const mine = fx.cat === "No category" ? "" : fx.cat;
+  const used = new Set(Object.values(matches).filter(m => !sameCat(m.event || "", mine))
+    .map(m => String(m.court || "").trim()).filter(Boolean));
+  const all = Array.from({ length: n }, (_, i) => String(i + 1));
+  const free = all.filter(t => !used.has(t));
+  return free.length ? free : all;
+}
 // Deal the tables out down the list. A round ends when the tables run out, or when the next
 // match needs a team that is already playing in this round — so nobody is sent to two tables
 // at once, and matches that can run side by side never share one.
@@ -1697,12 +1697,13 @@ function spreadTables(list) {
 }
 $("#fxSpread").onclick = () => {
   if (!fx || !fx.rows.length) return toast("Fill the match list first");
-  const list = tableList($("#fxTables").value);
-  if (!list.length) return toast("How many tables? e.g. 6, or 1-4");
-  store("ja_fxtb_" + S, $("#fxTables").value.trim());
-  const rounds = spreadTables(list);
+  const n = +$("#fxTables").value;
+  if (!n) return toast("Choose how many tables the room has");
+  store("ja_fxtb_" + S, String(n));
+  const rounds = spreadTables(roomTables(n));
   renderFx();
-  toast(`Table ${list.join(", ")} · ${rounds} round${rounds > 1 ? "s" : ""} of play`, 4000);
+  const got = [...new Set(fx.rows.map(r => r.court).filter(Boolean))];
+  toast(`Table ${got.join(", ")} · ${rounds} round${rounds > 1 ? "s" : ""} of play`, 4000);
 };
 $("#fxFill").onclick = () => { if (fx.rows.length && !confirm("Replace the list with all pool matches?")) return; fillFx(); };
 $("#fxTurns").onchange = () => { if (fx) fillFx(); };
