@@ -13,10 +13,10 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="HQ Scorer" id="appTitle">
 <meta name="theme-color" content="#F6F4F2">
-<script src="../js/hints.js?v=20261113h"></script>
-<script src="../js/theme.js?v=20261113h"></script>
+<script src="../js/hints.js?v=20261113i"></script>
+<script src="../js/theme.js?v=20261113i"></script>
 <title>Scorer · JA Scoring</title>
-<link rel="stylesheet" href="../css/app.css?v=20261113h">
+<link rel="stylesheet" href="../css/app.css?v=20261113i">
 </head>
 <body>
 <header class="top">
@@ -205,6 +205,8 @@
     <p class="muted" style="margin-top:0" id="fxSub"></p>
     <div class="fxcourts" id="fxCourts"></div>
     <label class="ckline" id="fxTurnWrap"><input type="checkbox" id="fxTurns" checked> Pools take turns (A, B, A, B…) – best when they share one court</label>
+    <div class="fxtables"><label for="fxTables">Tables / courts</label><input id="fxTables" placeholder="e.g. 6 or 1-4">
+      <button type="button" class="small ghost" id="fxSpread">⚡ Spread across tables</button></div>
     <div class="row" style="margin-top:10px;flex-wrap:wrap">
       <button type="button" id="fxFill">⚡ Fill all – everyone plays everyone</button>
       <button type="button" class="ghost" id="fxEmpty">Clear list</button>
@@ -300,7 +302,7 @@
 <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
 <div id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script type="module" src="scorer.js?v=20261113h"></script>
+<script type="module" src="scorer.js?v=20261113i"></script>
 <script src="../js/feedback.js?v=20261111a"></script>
 </body>
 </html>

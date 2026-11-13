@@ -1,8 +1,8 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113h";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113i";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113h";
-import * as C from "../js/common.js?v=20261113h";
-import { applySportInfo } from "../js/sportinfo.js?v=20261113h";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113i";
+import * as C from "../js/common.js?v=20261113i";
+import { applySportInfo } from "../js/sportinfo.js?v=20261113i";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -1630,6 +1630,7 @@ function openFixtures(c) {
     fx.rows.forEach(r => { if (poolOf(teams[r.a]) === p) r.court = i.value.trim(); });
     renderFx();
   });
+  $("#fxTables").value = store("ja_fxtb_" + S) || "";
   if (!ms.length) fillFx(); else renderFx();
   $("#fxModal").classList.remove("hide");
 }
@@ -1671,6 +1672,38 @@ function renderFx() {
   $("#fxSave").textContent = fx.rows.length ? `Create ${fx.rows.length} match${fx.rows.length > 1 ? "es" : ""}` : "Create matches";
   $("#fxSave").disabled = !fx.rows.length || bad > 0;
 }
+// Tables for a room with more than one of them. "6" means tables 1 to 6, "1-4" means 1,2,3,4,
+// and "1,2,5" or "A,B" is taken as typed.
+const tableList = raw => {
+  const s = String(raw || "").trim();
+  if (!s) return [];
+  if (/^\d+$/.test(s)) return Array.from({ length: Math.min(20, +s) }, (_, i) => String(i + 1));
+  const m = s.match(/^(\d+)\s*[-\u2013]\s*(\d+)$/);
+  if (m) { const out = []; for (let i = Math.min(+m[1], +m[2]); i <= Math.max(+m[1], +m[2]) && out.length < 20; i++) out.push(String(i)); return out; }
+  return s.split(/[,\/]/).map(x => x.trim()).filter(Boolean).slice(0, 20);
+};
+// Deal the tables out down the list. A round ends when the tables run out, or when the next
+// match needs a team that is already playing in this round — so nobody is sent to two tables
+// at once, and matches that can run side by side never share one.
+function spreadTables(list) {
+  let playing = new Set(), i = 0, rounds = 1;
+  for (const r of fx.rows) {
+    if (i >= list.length || (r.a && playing.has(r.a)) || (r.b && playing.has(r.b))) { playing = new Set(); i = 0; rounds++; }
+    r.court = list[i++];
+    if (r.a) playing.add(r.a);
+    if (r.b) playing.add(r.b);
+  }
+  return rounds;
+}
+$("#fxSpread").onclick = () => {
+  if (!fx || !fx.rows.length) return toast("Fill the match list first");
+  const list = tableList($("#fxTables").value);
+  if (!list.length) return toast("How many tables? e.g. 6, or 1-4");
+  store("ja_fxtb_" + S, $("#fxTables").value.trim());
+  const rounds = spreadTables(list);
+  renderFx();
+  toast(`Table ${list.join(", ")} · ${rounds} round${rounds > 1 ? "s" : ""} of play`, 4000);
+};
 $("#fxFill").onclick = () => { if (fx.rows.length && !confirm("Replace the list with all pool matches?")) return; fillFx(); };
 $("#fxTurns").onchange = () => { if (fx) fillFx(); };
 $("#fxEmpty").onclick = () => { fx.rows = []; renderFx(); };

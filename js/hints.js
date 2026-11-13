@@ -26,6 +26,9 @@
     ["#teGroup", "Group letter for the standings table, such as A. Leave it empty if this team only plays knockout matches."],
     ["#tePlayers", "One player per line: number then name, such as “10 Ali bin Abu”. Once a team has a list, you can tap who scored instead of typing the name. Optional."],
 
+    // ---------------- scorer: match builder
+    ["#fxTables", "#fxTitle", "How many tables, courts or lanes this category can use at the same time. Type 6 for tables 1 to 6, or 1-4 to use only those. “Spread across tables” then fills the Court box of every match so that matches which can be played at the same moment land on different tables. If another category plays in the same room, give it the other tables, e.g. 5-6."],
+
     // ---------------- scorer: add match
     ["#fNo", "Match number from the schedule. It sets the order matches appear in, and is shown as #1, #2 and so on."],
     ["#fTime", "Start time from the schedule, such as 9:00 AM. Leave it empty if the match has no fixed time."],

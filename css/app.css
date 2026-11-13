@@ -133,6 +133,10 @@ th{color:var(--mute);font-weight:600;font-size:11px;text-transform:uppercase;let
 }
 @media (max-width:520px){.grid3{grid-template-columns:1fr 1fr}}
 
+.fxtables{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0 2px}
+.fxtables label{margin:0;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--mute)}
+.fxtables input{max-width:130px}
+
 /* team list (Setup) */
 table.teams td{vertical-align:middle}
 table.teams tr.tgrp td{padding:14px 8px 6px;border-bottom:2px solid var(--line);color:var(--mute);
