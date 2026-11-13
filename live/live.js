@@ -1,10 +1,10 @@
 // Public live-score page. Uses plain HTTPS polling (no live connection),
 // so hundreds of spectators stay inside Firebase's free limits.
-import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261113o";
-import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261113o";
-import { standings, clockMs, mmss, catColor } from "../js/engines.js?v=20261113o";
-import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261113o";
-import { cfgOf, shown, isDone, KEEP } from "../js/livecfg.js?v=20261113o";
+import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261113p";
+import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261113p";
+import { standings, clockMs, mmss, catColor } from "../js/engines.js?v=20261113p";
+import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261113p";
+import { cfgOf, shown, isDone, KEEP } from "../js/livecfg.js?v=20261113p";
 
 const FAST_MS = 5000;     // live matches: small live-only list (pub/<sport>/live)
 const QUIET_MS = 8000;    // nothing live: the live list is empty, so this costs almost nothing
@@ -146,8 +146,8 @@ function mark(txt) {
   const i = low(txt).indexOf(q); if (i < 0) return t;
   return esc(txt.slice(0, i)) + "<mark>" + esc(txt.slice(i, i + q.length)) + "</mark>" + esc(txt.slice(i + q.length));
 }
-// C1 for a court, T1 for a table, L1 for a lane, B1 for a board
-const courtLetter = () => ((SPORTS[sport] && SPORTS[sport].court) || "Court")[0];
+// spelled out for the people in the hall: "Table 1", not "T1"
+const courtWord = () => (SPORTS[sport] && SPORTS[sport].court) || "Court";
 const teamNames = () => [...new Set(list().flatMap(r => [r.a, r.b]).filter(n => n && n !== "TBC"))].sort((x, y) => x.localeCompare(y));
 // short names (e.g. "JKR") from the published matches, so either can be searched
 const shortOf = () => { const o = {}; list().forEach(r => { if (r.as) o[r.a] = r.as; if (r.bs) o[r.b] = r.bs; }); return o; };
@@ -201,7 +201,7 @@ function card(r) {
   if (r.st === "live" && v.big) { const [x, y] = v.big.map(Number); lead = x > y ? "a" : y > x ? "b" : ""; }
   const fl = flashAt[r.id] && Date.now() - flashAt[r.id].at < 3000;
   const cc = r.ev ? `--cc:${catColor(r.ev, cats())};--ccd:${catColor(r.ev, cats(), true)}` : "";
-  return `<div class="m ${r.st === "live" ? "live" : ""} ${fl ? "flash" : ""} ${r.ev ? "hascat" : ""}" style="${cc}"><div class="meta">${r.ct ? `<span class="ctb">${courtLetter()}${esc(r.ct)}</span>` : ""}${r.ev ? `<span class="evc">${esc(r.ev)}</span>` : ""}${rd ? `<span>${esc(rd)}</span>` : ""}${pt ? `<span class="ptb">${esc(pt)}</span>` : ""}<span class="st">${st}</span></div>
+  return `<div class="m ${r.st === "live" ? "live" : ""} ${fl ? "flash" : ""} ${r.ev ? "hascat" : ""}" style="${cc}"><div class="meta">${r.ct ? `<span class="ctb">${esc(courtWord())} ${esc(r.ct)}</span>` : ""}${r.ev ? `<span class="evc">${esc(r.ev)}</span>` : ""}${rd ? `<span>${esc(rd)}</span>` : ""}${pt ? `<span class="ptb">${esc(pt)}</span>` : ""}<span class="st">${st}</span></div>
     ${row(r, "a", lead, false)}${row(r, "b", lead, false)}${v.hist ? `<div class="h">${esc(v.hist)}</div>` : ""}${events(r)}</div>`;
 }
 // 🏆 a result from the last 10 minutes
@@ -209,7 +209,7 @@ function finCard(r) {
   const sc = r.wo ? "by walkover" : `${(r.sc || [])[0]}–${(r.sc || [])[1]}`;
   const head = r.w ? `🏆 ${esc(r.w === "a" ? r.a : r.b)} wins ${r.wo ? "(walkover)" : r.w === "a" ? sc : `${(r.sc || [])[1]}–${(r.sc || [])[0]}`}` : `Draw ${sc}`;
   const v = r.v || {};
-  return `<div class="fin"><div class="bn">${head}</div><div class="bd"><b>${esc(r.a)}</b> vs <b>${esc(r.b)}</b>${v.hist ? " · " + esc(v.hist) : ""}${r.ev ? " · " + esc(r.ev) : ""}${r.ct ? " · " + courtLetter() + esc(r.ct) : ""}</div></div>`;
+  return `<div class="fin"><div class="bn">${head}</div><div class="bd"><b>${esc(r.a)}</b> vs <b>${esc(r.b)}</b>${v.hist ? " · " + esc(v.hist) : ""}${r.ev ? " · " + esc(r.ev) : ""}${r.ct ? " · " + esc(courtWord()) + " " + esc(r.ct) : ""}</div></div>`;
 }
 // goal scorers and cards under a match (only when the scorer recorded them)
 const ICON = { g: "⚽", og: "⚽", y: "🟨", r: "🟥" };
