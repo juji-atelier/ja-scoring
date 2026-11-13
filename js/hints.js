@@ -20,7 +20,7 @@
     ["#vLogin #inPw", "The password the organiser gave you for this sport. It is not your staff or e-mail password."],
 
     // ---------------- scorer: teams
-    ["#teamBulk", "#teamsTitle", "One team per line: Name | Short name | Group. Example: Jabatan Kerja Raya | JKR | A. Short name and group may be left out — type just the name and press Add teams."],
+    ["#teamBulk", "#teamsTitle", "One team per line: Name | Players | Short name | Pool. Example: Flick & Strike | Ali & Abu | FNS | A. Everything after the name may be left out — type just the name and press Add teams. A draw code like A1 becomes Pool A, no. 1."],
     ["#teName", "Full team name, exactly as it should appear on the big screen."],
     ["#teShort", "A few letters used where there is no room for the full name, such as JKR. Optional."],
     ["#teGroup", "Group letter for the standings table, such as A. Leave it empty if this team only plays knockout matches."],
@@ -31,7 +31,7 @@
     ["#fTime", "Start time from the schedule, such as 9:00 AM. Leave it empty if the match has no fixed time."],
     ["#fCourt", "Which court, table, lane or pitch the match is played on, such as 1. Scorers can then show only their own court."],
     ["#fRound", "Stage of the tournament: Group A, Quarter Final, Semi Final, Final, 3rd Place. Writing “Final” lets the system show the champion by itself."],
-    ["#fGroup", "Group letter for the standings table, such as A. Leave it empty for knockout matches — they do not belong in a group table."],
+    ["#fGroup", "Group letter for the standings table, such as A. Type the letter only — from A1 just the A is kept. Leave it empty for knockout matches — they do not belong in a group table."],
     ["#fEvent", "Category, such as Men's Doubles or Women's Team. Leave it empty if this sport has only one category."],
     ["#fA", "Pick the first team. If the list is empty, add the teams above first."],
     ["#fB", "Pick the team they play against. It must be a different team."],

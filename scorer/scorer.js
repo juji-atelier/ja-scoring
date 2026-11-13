@@ -60,6 +60,19 @@ const isOld = t => !!t && t.category == null && !!t.group && t.group.length > 2;
 const catOf = t => (t ? (t.category != null ? t.category : (isOld(t) ? t.group : "")) : "") || "";
 const poolOf = t => (t ? (t.category != null ? (t.group || "") : (isOld(t) ? "" : (t.group || ""))) : "");
 const keyOf = t => { const c = catOf(t), p = poolOf(t); return (c ? c + (p ? " – POOL " + p : "") : p).toUpperCase(); };
+// A pool is the letter only ("A"); the number after it is the team's place inside that pool
+// (its seed). People copying a paper draw often type the whole code ("A1") into the Pool box,
+// which would leave every team alone in a pool of its own, so split it: "A1" -> A + 1.
+const POOLCODE = /^([A-Z]+)\s*[-.\u00b7]?\s*(\d{1,2})$/;
+const splitPool = raw => {
+  const s = String(raw || "").trim().toUpperCase().replace(/\s+/g, " ");
+  const m = s.match(POOLCODE);
+  return m ? { group: m[1], seed: +m[2] } : { group: s, seed: null };
+};
+// A match's "Group" box holds the pool only, never the place inside it.
+const poolLetters = raw => splitPool(raw).group;
+// Teams still holding a whole draw code in the Pool box.
+const miscodedPools = () => Object.entries(teams).filter(([, t]) => t.seed == null && POOLCODE.test(poolOf(t)));
 const cats = () => [...new Set([...Object.values(teams).map(catOf), ...Object.values(matches).map(m => m.event || "")]
   .filter(Boolean))].sort((a, b) => a.localeCompare(b));
 const normCat = c => { c = (c || "").trim(); return cats().find(x => x.toLowerCase() === c.toLowerCase()) || c; };
@@ -290,6 +303,7 @@ function startData() {
     render();
     renderUnsent();
     autoFillKO();
+    autoTidyPools();
   }, err => toast("No access: " + err.message, 4000));
   C.onValue(annRef(), snap => { ann = snap.val(); renderAnnBar(); }, () => {});
   setInterval(renderAnnBar, 20000);   // drops an expired announcement from view
@@ -1034,10 +1048,16 @@ function renderTeams() {
   }
   if (!$("#tCat").value) $("#tCat").value = store("ja_tcat_" + S) || "";
   const old = Object.entries(teams).filter(([, t]) => isOld(t));
+  const mis = old.length ? [] : miscodedPools();
+  const misEg = mis.length ? splitPool(poolOf(mis[0][1])) : null;
   $("#teamFix").innerHTML = old.length ? `<div class="banner warn">${old.length} team(s) were added with the category in the old “Group” box.
     <div style="font-weight:400;margin-top:4px">“Fix now” moves it into Category, and copies the Short name into Players (if Players is empty). Nothing else changes.</div>
-    <button class="small primary" id="btnFixTeams" style="margin-top:8px">Fix now</button></div>` : "";
+    <button class="small primary" id="btnFixTeams" style="margin-top:8px">Fix now</button></div>`
+    : mis.length ? `<div class="banner warn">${mis.length} team(s) have the whole draw code in the Pool box, such as ${esc(poolOf(mis[0][1]))}.
+    <div style="font-weight:400;margin-top:4px">The Pool box takes the letter only — the number is the team's place inside that pool. “Fix now” turns ${esc(poolOf(mis[0][1]))} into Pool ${esc(misEg.group)}, no. ${misEg.seed}, so the teams sharing a letter become one pool and Round-robin can pair them. Nothing else changes.</div>
+    <button class="small primary" id="btnFixPools" style="margin-top:8px">Fix now</button></div>` : "";
   if (old.length) $("#btnFixTeams").onclick = fixOldTeams;
+  else if (mis.length) $("#btnFixPools").onclick = () => tidyPools(mis);
 
   const draft = editingTeam && $("#teName") ? { name: $("#teName").value, category: $("#teCat").value, players: $("#tePlayers").value,
     short: $("#teShort").value, group: $("#tePool").value } : null;
@@ -1053,7 +1073,7 @@ function renderTeams() {
             <div><label>Category</label><input id="teCat" list="catList" value="${esc(d.category || "")}"></div>
             <div><label>Team name</label><input id="teName" value="${esc(d.name)}"></div>
             <div><label>Short name</label><input id="teShort" value="${esc(d.short || "")}" placeholder="optional"></div>
-            <div><label>Pool</label><input id="tePool" value="${esc(d.group || "")}" placeholder="optional"></div>
+            <div><label>Pool</label><input id="tePool" value="${esc(d.group || "")}" placeholder="optional, A / B"></div>
           </div>
           <div style="margin-top:8px">${playersField("tePlayers", d.players)}</div>
           <div class="row" style="margin-top:10px"><button class="small primary" data-tsave="${id}">Save</button><button class="small ghost" data-tcancel>Cancel</button></div>
@@ -1096,7 +1116,8 @@ async function addTeam() {
   const category = normCat($("#tCat").value), name = $("#tName").value.trim();
   if (!name) { toast("Type the team name"); $("#tName").focus(); return; }
   if (nameTaken(name, category)) { toast("That team is already in this category"); return; }
-  const val = { name, category, players: readPlayers($("#tPlayers").value), short: $("#tShort").value.trim(), group: $("#tPool").value.trim().toUpperCase() };
+  const p = splitPool($("#tPool").value);
+  const val = { name, category, players: readPlayers($("#tPlayers").value), short: $("#tShort").value.trim(), group: p.group, seed: p.seed };
   try { await C.set(C.push(ref(db, `sports/${S}/teams`)), val); } catch (e) { toast("Couldn't save – check the connection"); return; }
   store("ja_tcat_" + S, category || null);
   $("#tName").value = ""; $("#tPlayers").value = ""; $("#tShort").value = "";
@@ -1114,10 +1135,11 @@ $("#btnAddTeams").onclick = async () => {
   const upd = {}, seen = new Set();
   let added = 0;
   for (const l of lines) {
-    const [name, players, short] = l.split("|").map(x => (x || "").trim());
+    const [name, players, short, pool] = l.split("|").map(x => (x || "").trim());
     if (!name || seen.has(name.toLowerCase()) || nameTaken(name, category)) continue;
     seen.add(name.toLowerCase());
-    upd[C.push(ref(db, `sports/${S}/teams`)).key] = { name, category, players: ROSTER ? "" : (players || ""), short: short || "", group: $("#tPool").value.trim().toUpperCase() };
+    const p = splitPool(pool || $("#tPool").value);
+    upd[C.push(ref(db, `sports/${S}/teams`)).key] = { name, category, players: ROSTER ? "" : (players || ""), short: short || "", group: p.group, seed: p.seed };
     added++;
   }
   if (!added) return toast("Those teams already exist");
@@ -1140,13 +1162,51 @@ async function fixOldTeams() {
   republishAll().catch(() => {});
 }
 
+// Move a whole draw code out of the Pool box: "A1" -> group A, seed 1, for the given teams.
+// Matches already built with the long code are pointed back at the pool letter too, so the
+// standings table and the matches agree.
+async function tidyPools(list) {
+  if (!list || !list.length) return;
+  const upd = {};
+  for (const [id, t] of list) {
+    const p = splitPool(poolOf(t));
+    upd[`teams/${id}/group`] = p.group;
+    upd[`teams/${id}/seed`] = p.seed;
+  }
+  for (const [id, m] of Object.entries(matches)) {
+    const g = poolLetters(m.group || "");
+    if (m.group && g !== m.group) upd[`matches/${id}/group`] = g;
+  }
+  try { await C.update(ref(db, `sports/${S}`), upd); } catch (e) { toast("Couldn't save – check the connection"); return; }
+  const pools = [...new Set(list.map(([, t]) => splitPool(poolOf(t)).group))].sort();
+  toast(`${list.length} team(s) sorted into Pool ${pools.join(" / ")}`, 4000);
+  republishAll().catch(() => {});
+}
+
+// Runs once per session, and only when every miscoded team sits alone in its pool: a pool with
+// one team in it is never a real pool, so there is nothing a scorer could have meant by it.
+// Anything less clear-cut is left to the banner in the Teams tab.
+let poolsTidied = false;
+function autoTidyPools() {
+  if (poolsTidied) return;
+  const bad = miscodedPools();
+  if (!bad.length) return;
+  const n = {};
+  Object.values(teams).forEach(t => { const k = keyOf(t); if (k) n[k] = (n[k] || 0) + 1; });
+  if (!bad.every(([, t]) => n[keyOf(t)] === 1)) return;
+  poolsTidied = true;
+  tidyPools(bad).catch(() => {});
+}
+
 async function saveTeam(id) {
   if (!id || !teams[id]) return;
   const name = $("#teName").value.trim(), category = normCat($("#teCat").value);
   if (!name) { toast("Team name can't be empty"); $("#teName").focus(); return; }
   if (nameTaken(name, category, id)) { toast("Another team in this category has that name"); $("#teName").focus(); return; }
-  const val = { name, category, players: readPlayers($("#tePlayers").value), short: $("#teShort").value.trim(), group: $("#tePool").value.trim().toUpperCase() };
-  val.seed = (val.group && val.group === poolOf(teams[id]) && sameCat(category, catOf(teams[id]))) ? (teams[id].seed || null) : null;
+  const p = splitPool($("#tePool").value);
+  const val = { name, category, players: readPlayers($("#tePlayers").value), short: $("#teShort").value.trim(), group: p.group };
+  val.seed = p.seed != null ? p.seed
+    : ((val.group && val.group === poolOf(teams[id]) && sameCat(category, catOf(teams[id]))) ? (teams[id].seed || null) : null);
   try {
     await C.update(ref(db, `sports/${S}/teams/${id}`), val);
   } catch (e) { toast("Couldn't save – check the connection"); return; }
@@ -1197,7 +1257,7 @@ function editMatch(id) {
 $("#btnSaveMatch").onclick = async () => {
   const fields = {
     no: $("#fNo").value.trim(), time: $("#fTime").value.trim(), court: $("#fCourt").value.trim(),
-    round: $("#fRound").value.trim(), group: $("#fGroup").value.trim().toUpperCase(), event: normCat($("#fEvent").value),
+    round: $("#fRound").value.trim(), group: poolLetters($("#fGroup").value), event: normCat($("#fEvent").value),
     teamA: $("#fA").value, teamB: $("#fB").value, fmt: readFmt()
   };
   const slotted = editingId && matches[editingId] && (matches[editingId].slotA || matches[editingId].slotB);
@@ -2126,7 +2186,7 @@ function parsePaste(txt) {
   const seen = new Set();
   return rows.map(c => {
     const [no = "", time = "", court = "", a = "", b = "", round = "", group = "", event = ""] = c;
-    const r = { no, time, court, a, b, round, group: group.toUpperCase(), event, ta: findTeam(a), tb: findTeam(b), problems: [], skip: false };
+    const r = { no, time, court, a, b, round, group: poolLetters(group), event, ta: findTeam(a), tb: findTeam(b), problems: [], skip: false };
     if (!a || !b) r.problems.push("needs Team A and Team B");
     else if (normName(a) === normName(b)) r.problems.push("same team twice");
     if (no && (usedNos.has(String(no)) || seen.has(String(no)))) { r.skip = true; r.problems.push(`match #${no} already exists – skipped`); }
@@ -2177,7 +2237,7 @@ $("#btnPasteAdd").onclick = async () => {
   for (const r of ok) {
     const a = teamId(r.a), b = teamId(r.b);
     // group: from the Group column; otherwise "Group X" in Round; otherwise both teams' shared group (group stage only)
-    let g = r.group || ((r.round.match(/^group\s+(\w+)/i) || [])[1] || "").toUpperCase();
+    let g = r.group || poolLetters((r.round.match(/^group\s+(\w+)/i) || [])[1] || "");
     if (!g && !/final|semi|quarter|3rd|third|place/i.test(r.round) && teams[a].group && teams[a].group === teams[b].group) g = teams[a].group;
     const id = C.push(ref(db, `sports/${S}/matches`)).key;
     const m = { no: r.no || String(no++), time: r.time, court: r.court, round: r.round || (g ? "Group " + g : ""), group: g, event: r.event,
