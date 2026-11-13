@@ -1,8 +1,8 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113m";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113n";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113m";
-import * as C from "../js/common.js?v=20261113m";
-import { applySportInfo } from "../js/sportinfo.js?v=20261113m";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113n";
+import * as C from "../js/common.js?v=20261113n";
+import { applySportInfo } from "../js/sportinfo.js?v=20261113n";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -14,7 +14,10 @@ const cw = CW.toLowerCase();
 function applyCourtWord() {
   if (CW === "Court") return;
   const set = (sel, f) => { const e = document.querySelector(sel); if (e) f(e); };
-  set('label[for="fCourt"]', e => e.textContent = CW + " / table");
+  // this one's label has no "for", so it is found through the field's own row
+  const fc = document.querySelector("#fCourt"), fcl = fc && fc.parentElement.querySelector("label");
+  if (fcl) fcl.textContent = CW;
+  set('label[for="fxTables"]', e => e.textContent = CW + "s in the room");
   set('label[for="koCourt"]', e => e.textContent = CW);
   set('label[for="inName"]', e => e.textContent = "Your name / " + cw);
   set("#inName", e => e.placeholder = "e.g. Ali \u2013 " + CW + " 1");
