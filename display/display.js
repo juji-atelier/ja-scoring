@@ -1,11 +1,11 @@
-import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261114a";
-import { clockMs, mmss, catColor } from "../js/engines.js?v=20261114a";
-import * as C from "../js/common.js?v=20261114a";
-import { applySportInfo } from "../js/sportinfo.js?v=20261114a";
-import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261114a";
-import { bowlingStandings } from "../js/bowling-data.js?v=20261114a";
-import { firebaseConfig } from "../config.js?v=20261114a";
-import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261114a";
+import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261114b";
+import { clockMs, mmss, catColor } from "../js/engines.js?v=20261114b";
+import * as C from "../js/common.js?v=20261114b";
+import { applySportInfo } from "../js/sportinfo.js?v=20261114b";
+import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261114b";
+import { bowlingStandings } from "../js/bowling-data.js?v=20261114b";
+import { firebaseConfig } from "../config.js?v=20261114b";
+import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261114b";
 const { $, esc, ref } = C;
 
 const P = new URLSearchParams(location.search);
@@ -226,7 +226,8 @@ function render() { renderView(); fx(); fitText(); }
 // live page straight on the sport being shown. If the QR library can't load, there is simply no card.
 const qrCard = document.createElement("div");
 qrCard.className = "qrc";
-qrCard.innerHTML = `<div class="qri"></div><div class="qrt"><b>Live scores</b><span>Scan with your phone camera</span></div>`;
+qrCard.innerHTML = `<div class="qrf"><div class="qri"></div><i class="c1"></i><i class="c2"></i><i class="c3"></i><i class="c4"></i></div>
+  <div class="qrt"><div class="qk cond"><i class="dot"></i>LIVE SCORES</div><b class="cond">Don't miss a moment</b><span>📱 Point your camera here</span></div>`;
 let qrFor = "";
 function placeQR(sp) {
   const col = $("#main .rcol");
@@ -256,7 +257,7 @@ function placeQR(sp) {
 // left blank, so rather than cut a name off with an ellipsis, step its size down until it fits
 // its own box. Only ever shrinks, never past 60%, and below that the old ellipsis still applies,
 // so the worst case is what the screen did before.
-const FIT_SEL = ".trow .nm, .bw-n, .list .it .t, .aw-n";   // the boxes that hold a name on one line
+const FIT_SEL = ".trow .nm, .bw-n, .list .it .t, .aw-n, .qrc .qrt b";   // the boxes that hold a name on one line
 function fitText(root) {
   for (const el of (root || document).querySelectorAll(FIT_SEL)) {
     el.style.fontSize = "";                                   // back to the size the CSS asks for

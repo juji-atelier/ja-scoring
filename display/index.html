@@ -7,8 +7,8 @@
 <link rel="icon" type="image/png" sizes="192x192" href="../img/icon-192.png">
 <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
 <title>Big Screen · JA Scoring</title>
-<link rel="stylesheet" href="../css/theme.css?v=20261114a">
-<script src="../js/theme.js?v=20261114a"></script>
+<link rel="stylesheet" href="../css/theme.css?v=20261114b">
+<script src="../js/theme.js?v=20261114b"></script>
 <style>
 :root{--u:min(1vw,1.7778vh);--sport:#B3162D;--bg:#16181D;--card:#23262E;--line:#343844;--text:#F2F3F5;--muted:#9A9FAA;--gold:#D2AC70}
 *{box-sizing:border-box}
@@ -37,12 +37,32 @@ main.solo{grid-template-columns:1fr}
    space above it and are cut at the last item that fits, never drawn under the card */
 .rcol{display:flex;flex-direction:column;min-height:0}
 .rcol .rl{flex:1;min-height:0;overflow:hidden}
-.qrc{flex:none;display:flex;align-items:center;gap:calc(1*var(--u));margin-top:calc(1*var(--u));padding:calc(.8*var(--u));
-  background:var(--card);border:1px solid var(--line);border-radius:calc(1*var(--u))}
-.qrc .qri{flex:none;width:calc(8.6*var(--u));height:calc(8.6*var(--u));padding:calc(.45*var(--u));background:#fff;border-radius:calc(.6*var(--u))}
+.qrc{flex:none;position:relative;overflow:hidden;display:flex;align-items:center;gap:calc(1.3*var(--u));margin-top:calc(1*var(--u));
+  padding:calc(.9*var(--u)) calc(1.1*var(--u));border-radius:calc(1.1*var(--u));
+  background:linear-gradient(125deg,color-mix(in srgb,var(--sport) 55%,var(--card)) 0%,color-mix(in srgb,var(--sport) 18%,var(--card)) 45%,var(--card) 100%);
+  border:1px solid color-mix(in srgb,var(--sport) 60%,var(--line));box-shadow:0 calc(.5*var(--u)) calc(1.6*var(--u)) #0006}
+/* the code sits in a white tile inside a viewfinder: four corner marks in the sport colour */
+.qrc .qrf{position:relative;flex:none;padding:calc(.55*var(--u))}
+.qrc .qri{width:calc(8.4*var(--u));height:calc(8.4*var(--u));padding:calc(.45*var(--u));background:#fff;border-radius:calc(.5*var(--u))}
 .qrc .qri canvas,.qrc .qri img{width:100%!important;height:100%!important;image-rendering:pixelated}
-.qrc .qrt b{display:block;font-size:calc(1.5*var(--u));font-weight:900;letter-spacing:.02em}
-.qrc .qrt span{display:block;font-size:calc(1*var(--u));color:var(--muted);margin-top:calc(.2*var(--u))}
+.qrc .qrf i{position:absolute;width:calc(1.4*var(--u));height:calc(1.4*var(--u));border:calc(.28*var(--u)) solid #fff}
+.qrc .qrf .c1{top:0;left:0;border-right:0;border-bottom:0;border-radius:calc(.5*var(--u)) 0 0 0}
+.qrc .qrf .c2{top:0;right:0;border-left:0;border-bottom:0;border-radius:0 calc(.5*var(--u)) 0 0}
+.qrc .qrf .c3{bottom:0;left:0;border-right:0;border-top:0;border-radius:0 0 0 calc(.5*var(--u))}
+.qrc .qrf .c4{bottom:0;right:0;border-left:0;border-top:0;border-radius:0 0 calc(.5*var(--u)) 0}
+.qrc .qrt{min-width:0}
+.qrc .qk{display:flex;align-items:center;gap:calc(.45*var(--u));font-size:calc(1*var(--u));font-weight:800;letter-spacing:.16em;color:#fff;opacity:.9}
+.qrc .qk .dot{width:calc(.7*var(--u));height:calc(.7*var(--u));border-radius:50%;background:#FF4D63;box-shadow:0 0 0 0 #FF4D63aa}
+.qrc .qrt b{display:block;margin-top:calc(.25*var(--u));font-size:calc(1.85*var(--u));line-height:1.1;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden}
+.qrc .qrt span{display:block;margin-top:calc(.45*var(--u));font-size:calc(1*var(--u));color:#ffffffb8;font-weight:600}
+/* lively mode: a soft shine sweeps the card, the corner marks breathe, the live dot pings - none of it over the code itself */
+body.fx .qrc::after{content:"";position:absolute;top:0;bottom:0;left:0;width:40%;pointer-events:none;
+  background:linear-gradient(100deg,transparent,#ffffff22,transparent);transform:translateX(-120%);animation:qrshine 6s ease-in-out infinite}
+body.fx .qrc .qrf i{animation:qrbreathe 2.4s ease-in-out infinite}
+body.fx .qrc .qk .dot{animation:qrping 1.6s ease-out infinite}
+@keyframes qrshine{0%,55%{transform:translateX(-120%)}100%{transform:translateX(320%)}}
+@keyframes qrbreathe{0%,100%{opacity:1;scale:1}50%{opacity:.55;scale:.86}}
+@keyframes qrping{0%{box-shadow:0 0 0 0 #FF4D63aa}100%{box-shadow:0 0 0 calc(.9*var(--u)) #FF4D6300}}
 .col h2{margin:0 0 calc(.8*var(--u));font-size:calc(1.3*var(--u));letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:800;display:flex;align-items:center;gap:calc(.6*var(--u))}
 .col h2 .live{background:#E0364F;color:#fff;border-radius:calc(.3*var(--u));padding:calc(.1*var(--u)) calc(.6*var(--u));font-size:calc(1*var(--u));letter-spacing:.1em;animation:pulse 1.6s infinite}
 @keyframes pulse{50%{opacity:.55}}
@@ -209,6 +229,6 @@ body.fx .aw-wrap{position:relative;z-index:1}
   <div class="tick"><div class="lbl cond">RESULTS</div><div class="mq"><span id="ticker"></span></div><div class="ja"><span class="jamark"></span>JUJI-ATELIER</div></div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script type="module" src="display.js?v=20261114a"></script>
+<script type="module" src="display.js?v=20261114b"></script>
 </body>
 </html>
