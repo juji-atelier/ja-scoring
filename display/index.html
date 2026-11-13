@@ -7,8 +7,8 @@
 <link rel="icon" type="image/png" sizes="192x192" href="../img/icon-192.png">
 <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
 <title>Big Screen · JA Scoring</title>
-<link rel="stylesheet" href="../css/theme.css?v=20261114c">
-<script src="../js/theme.js?v=20261114c"></script>
+<link rel="stylesheet" href="../css/theme.css?v=20261114d">
+<script src="../js/theme.js?v=20261114d"></script>
 <style>
 :root{--u:min(1vw,1.7778vh);--sport:#B3162D;--bg:#16181D;--card:#23262E;--line:#343844;--text:#F2F3F5;--muted:#9A9FAA;--gold:#D2AC70}
 *{box-sizing:border-box}
@@ -50,7 +50,11 @@ main.solo{grid-template-columns:1fr}
 .qrc .qrf .c2{top:0;right:0;border-left:0;border-bottom:0;border-radius:0 calc(.5*var(--u)) 0 0}
 .qrc .qrf .c3{bottom:0;left:0;border-right:0;border-top:0;border-radius:0 0 0 calc(.5*var(--u))}
 .qrc .qrf .c4{bottom:0;right:0;border-left:0;border-top:0;border-radius:0 0 calc(.5*var(--u)) 0}
-.qrc .qrt{min-width:0}
+.qrc .qrt{min-width:0;position:relative;z-index:1}
+.qrc .qrf{z-index:1}
+/* the JA mark, large and faint behind the text - the same watermark as the live page header */
+.qrc::before{content:"";position:absolute;right:-4%;top:50%;height:118%;aspect-ratio:140/79;transform:translateY(-50%) rotate(-6deg);
+  background:#fff;opacity:.08;pointer-events:none;-webkit-mask:url(../img/ja.svg) center/contain no-repeat;mask:url(../img/ja.svg) center/contain no-repeat}
 .qrc .qk{display:flex;align-items:center;gap:calc(.45*var(--u));font-size:calc(1*var(--u));font-weight:800;letter-spacing:.16em;color:#fff;opacity:.9}
 .qrc .qk .dot{width:calc(.7*var(--u));height:calc(.7*var(--u));border-radius:50%;background:#FF4D63;box-shadow:0 0 0 0 #FF4D63aa}
 .qrc .qrt b{display:block;margin-top:calc(.25*var(--u));font-size:calc(1.85*var(--u));line-height:1.1;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden}
@@ -229,6 +233,6 @@ body.fx .aw-wrap{position:relative;z-index:1}
   <div class="tick"><div class="lbl cond">RESULTS</div><div class="mq"><span id="ticker"></span></div><div class="ja"><span class="jamark"></span>JUJI-ATELIER</div></div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script type="module" src="display.js?v=20261114c"></script>
+<script type="module" src="display.js?v=20261114d"></script>
 </body>
 </html>
