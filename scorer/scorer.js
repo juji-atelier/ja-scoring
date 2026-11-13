@@ -1,8 +1,8 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113j";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113k";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113j";
-import * as C from "../js/common.js?v=20261113j";
-import { applySportInfo } from "../js/sportinfo.js?v=20261113j";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113k";
+import * as C from "../js/common.js?v=20261113k";
+import { applySportInfo } from "../js/sportinfo.js?v=20261113k";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -1624,20 +1624,42 @@ function openFixtures(c) {
   const saved = (() => { try { return JSON.parse(store("ja_fxct_" + S) || "{}"); } catch (e) { return {}; } })();
   $("#fxCourts").innerHTML = keys.map(p => `<div><label>Court for ${p ? "Pool " + esc(p) : "these matches"}</label>
     <input data-fxct="${esc(p)}" value="${esc(saved[c + "|" + p] || "")}" placeholder="e.g. 1 or Court A"></div>`).join("");
-  $("#fxTurnWrap").classList.toggle("hide", keys.length < 2);
+
   $$("[data-fxct]").forEach(i => i.oninput = () => {
     const p = i.dataset.fxct;
     fx.rows.forEach(r => { if (poolOf(teams[r.a]) === p) r.court = i.value.trim(); });
     renderFx();
   });
   $("#fxTables").value = store("ja_fxtb_" + S) || "";
+  const savedMode = store("ja_fxmode_" + S) || "pool";
+  $$('#fxMode input').forEach(i => i.checked = i.value === savedMode);
+  applyFxMode();
   if (!ms.length) fillFx(); else renderFx();
   $("#fxModal").classList.remove("hide");
 }
+// Two ways to use the room, and only one of them on screen at a time: a pool keeps one table
+// all day (a court per pool), or the pools share the room's tables and play side by side.
+const fxMode = () => ($$('#fxMode input').find(i => i.checked) || {}).value || "pool";
+function applyFxMode() {
+  const m = fxMode();
+  $$("#fxMode label").forEach(l => l.classList.toggle("on", l.dataset.m === m));
+  $("#fxCourts").classList.toggle("hide", m !== "pool");
+  $("#fxTablesWrap").classList.toggle("hide", m !== "spread");
+  // taking turns is what makes side-by-side play possible, so it is not optional there
+  $("#fxTurnWrap").classList.toggle("hide", m === "spread" || !fx || Object.keys(fxPools()).length < 2);
+  if (m === "spread" && !$("#fxTurns").checked) { $("#fxTurns").checked = true; fillFx(); }
+  if (fx && fx.rows.length) {
+    // empty in spread mode until the button is pressed; back on the pool's own court otherwise
+    fx.rows.forEach(r => r.court = m === "spread" ? "" : courtOf(poolOf(teams[r.a]) || ""));
+    renderFx();
+  }
+}
+$$('#fxMode input').forEach(i => i.onchange = () => { store("ja_fxmode_" + S, fxMode()); applyFxMode(); });
 const courtOf = p => { const i = $$("[data-fxct]").find(x => x.dataset.fxct === p); return i ? i.value.trim() : ""; };
 function fillFx() {
   const pools = fxPools(), keys = Object.keys(pools).sort();
-  const per = keys.map(p => rrPairs(pools[p]).map(([a, b]) => ({ a, b, court: courtOf(p) })));
+  const spread = fxMode() === "spread";
+  const per = keys.map(p => rrPairs(pools[p]).map(([a, b]) => ({ a, b, court: spread ? "" : courtOf(p) })));
   let rows = [];
   if ($("#fxTurns").checked && keys.length > 1) {
     for (let i = 0; per.some(l => i < l.length); i++) per.forEach(l => { if (l[i]) rows.push(l[i]); });
