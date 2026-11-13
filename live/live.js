@@ -1,11 +1,11 @@
 // Public live-score page. Uses plain HTTPS polling (no live connection),
 // so hundreds of spectators stay inside Firebase's free limits.
-import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261113x";
-import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261113x";
-import { standings, clockMs, mmss, catColor } from "../js/engines.js?v=20261113x";
-import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261113x";
-import { cfgOf, shown, isDone, KEEP } from "../js/livecfg.js?v=20261113x";
-import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261113x";
+import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261113y";
+import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261113y";
+import { standings, clockMs, mmss, catColor } from "../js/engines.js?v=20261113y";
+import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261113y";
+import { cfgOf, shown, isDone, KEEP } from "../js/livecfg.js?v=20261113y";
+import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261113y";
 
 const FAST_MS = 5000;     // live matches: small live-only list (pub/<sport>/live)
 const QUIET_MS = 8000;    // nothing live: the live list is empty, so this costs almost nothing
@@ -200,7 +200,8 @@ function row(r, s, lead, tagOn = true) {
 // court/table), each just the two names. Big cards with a 0-0 line said little and took a screen
 // each; this fits a whole day without a "+ more".
 function nextHTML(list) {
-  const many = cats().length > 1;
+  // the category only when this sport really has more than one (cats() lists one entry per match)
+  const many = new Set(cats().filter(Boolean)).size > 1;
   let out = "", last = null, open = false;
   for (const r of [...list].sort(byPlay)) {
     const k = r.tm || "";
@@ -212,9 +213,10 @@ function nextHTML(list) {
     const rd = r.rd && !/^group stage$/i.test(r.rd) ? r.rd : "";
     const tag = [many ? r.ev : "", rd].filter(Boolean).join(" \u00b7 ");
     const cc = r.ev ? `--cc:${catColor(r.ev, cats())}` : "";
-    out += `<div class="nx ${isMe(r.a) || isMe(r.b) ? "me" : ""}" style="${cc}">${r.ct ? `<span class="ctb">${esc(courtWord())} ${esc(r.ct)}</span>` : ""}
-      <div class="nt"><span>${isMe(r.a) ? "\u2605 " : ""}${mark(r.a)}</span><i>vs</i><span>${isMe(r.b) ? "\u2605 " : ""}${mark(r.b)}</span></div>
-      ${tag ? `<span class="nr">${esc(tag)}</span>` : ""}</div>`;
+    // court and pool on a top line, so the two names get the whole width of the box
+    out += `<div class="nx ${isMe(r.a) || isMe(r.b) ? "me" : ""}" style="${cc}">
+      <div class="nh">${r.ct ? `<span class="ctb">${esc(courtWord())} ${esc(r.ct)}</span>` : ""}${tag ? `<span class="nr">${esc(tag)}</span>` : ""}</div>
+      <div class="nt"><span>${isMe(r.a) ? "\u2605 " : ""}${mark(r.a)}</span><i>vs</i><span>${isMe(r.b) ? "\u2605 " : ""}${mark(r.b)}</span></div></div>`;
   }
   return out + (open ? "</div></div>" : "");
 }

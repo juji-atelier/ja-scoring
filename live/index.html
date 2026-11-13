@@ -17,8 +17,8 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#F6F4F2">
 <title>Live Scores</title>
-<link rel="stylesheet" href="../css/theme.css?v=20261113x">
-<script src="../js/theme.js?v=20261113x"></script>
+<link rel="stylesheet" href="../css/theme.css?v=20261113y">
+<script src="../js/theme.js?v=20261113y"></script>
 <style>
 :root{--sport:var(--acc);--text:var(--ink);--muted:var(--mute)}
 *{box-sizing:border-box}
@@ -165,20 +165,23 @@ html[data-theme="dark"] body::after{background:radial-gradient(closest-side, col
 /* ---------- up next, compact ---------- */
 .nxg{margin:0 0 6px}
 .nxh{font-weight:800;font-size:14px;margin:14px 0 6px;color:var(--ink)}
-.nxl{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}
-.nx{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--cc,var(--line));
-  border-radius:12px;padding:9px 12px;min-width:0}
-.nx .ctb{background:var(--ink);color:var(--bg);border-radius:6px;padding:1px 7px;font-weight:900;font-size:11px;white-space:nowrap}
-.nx .nt{flex:1;min-width:0;display:flex;flex-direction:column;font-weight:700;font-size:14px;line-height:1.25}
-.nx .nt span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.nx .nt i{font-style:normal;font-size:10.5px;color:var(--mute);font-weight:600;line-height:1.1}
-.nx .nr{font-size:11px;color:var(--mute);text-align:right;max-width:40%}
+/* one box per court, sharing the row: two courts = two halves, six tables = three per row */
+.nxl{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:8px}
+.nx{display:flex;flex-direction:column;gap:6px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--cc,var(--line));
+  border-radius:12px;padding:10px 14px;min-width:0}
+.nx .nh{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.nx .ctb{background:var(--ink);color:var(--bg);border-radius:6px;padding:1px 8px;font-weight:900;font-size:11px;white-space:nowrap}
+.nx .nr{font-size:11px;color:var(--mute);text-align:right}
+.nx .nt{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:8px;font-weight:800;font-size:15px;line-height:1.3}
+.nx .nt span{overflow-wrap:anywhere}
+.nx .nt i{font-style:normal;font-size:11px;color:var(--mute);font-weight:600;line-height:1.2}
 .nx.me{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
 @media (max-width:600px){
   .nxl{grid-template-columns:1fr 1fr;gap:6px}
-  .nx{flex-direction:column;align-items:flex-start;gap:4px;padding:8px 10px}
-  .nx .nt{font-size:13px;width:100%}
-  .nx .nr{max-width:none;text-align:left;font-size:10.5px}
+  .nx{padding:8px 10px;gap:4px}
+  .nx .nh{flex-wrap:wrap;gap:4px}
+  .nx .nt{font-size:13.5px;flex-direction:column;align-items:flex-start}
+  .nx .nr{font-size:10.5px}
 }
 /* ---------- knockout bracket ---------- */
 .bk{margin:6px 0 22px}
@@ -246,6 +249,6 @@ try{var n=performance.getEntriesByType("navigation")[0],t=n?n.type:"navigate",se
   </main>
 </div>
 <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
-<script type="module" src="live.js?v=20261113x"></script>
+<script type="module" src="live.js?v=20261113y"></script>
 </body>
 </html>
