@@ -7,8 +7,8 @@
 <link rel="icon" type="image/png" sizes="192x192" href="../img/icon-192.png">
 <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
 <title>Big Screen · JA Scoring</title>
-<link rel="stylesheet" href="../css/theme.css?v=20261113z">
-<script src="../js/theme.js?v=20261113z"></script>
+<link rel="stylesheet" href="../css/theme.css?v=20261114a">
+<script src="../js/theme.js?v=20261114a"></script>
 <style>
 :root{--u:min(1vw,1.7778vh);--sport:#B3162D;--bg:#16181D;--card:#23262E;--line:#343844;--text:#F2F3F5;--muted:#9A9FAA;--gold:#D2AC70}
 *{box-sizing:border-box}
@@ -33,6 +33,16 @@ body.transparent,html:has(body.transparent){background:transparent}
 /* main */
 main{padding:calc(1.4*var(--u)) calc(2*var(--u));display:grid;grid-template-columns:1fr calc(26*var(--u));gap:calc(1.4*var(--u));min-height:0}
 main.solo{grid-template-columns:1fr}
+/* right-hand column: the lists on top, the QR card pinned to the bottom; the lists only get the
+   space above it and are cut at the last item that fits, never drawn under the card */
+.rcol{display:flex;flex-direction:column;min-height:0}
+.rcol .rl{flex:1;min-height:0;overflow:hidden}
+.qrc{flex:none;display:flex;align-items:center;gap:calc(1*var(--u));margin-top:calc(1*var(--u));padding:calc(.8*var(--u));
+  background:var(--card);border:1px solid var(--line);border-radius:calc(1*var(--u))}
+.qrc .qri{flex:none;width:calc(8.6*var(--u));height:calc(8.6*var(--u));padding:calc(.45*var(--u));background:#fff;border-radius:calc(.6*var(--u))}
+.qrc .qri canvas,.qrc .qri img{width:100%!important;height:100%!important;image-rendering:pixelated}
+.qrc .qrt b{display:block;font-size:calc(1.5*var(--u));font-weight:900;letter-spacing:.02em}
+.qrc .qrt span{display:block;font-size:calc(1*var(--u));color:var(--muted);margin-top:calc(.2*var(--u))}
 .col h2{margin:0 0 calc(.8*var(--u));font-size:calc(1.3*var(--u));letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:800;display:flex;align-items:center;gap:calc(.6*var(--u))}
 .col h2 .live{background:#E0364F;color:#fff;border-radius:calc(.3*var(--u));padding:calc(.1*var(--u)) calc(.6*var(--u));font-size:calc(1*var(--u));letter-spacing:.1em;animation:pulse 1.6s infinite}
 @keyframes pulse{50%{opacity:.55}}
@@ -198,6 +208,7 @@ body.fx .aw-wrap{position:relative;z-index:1}
   <div class="ann" id="ann" hidden></div>
   <div class="tick"><div class="lbl cond">RESULTS</div><div class="mq"><span id="ticker"></span></div><div class="ja"><span class="jamark"></span>JUJI-ATELIER</div></div>
 </div>
-<script type="module" src="display.js?v=20261113z"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script type="module" src="display.js?v=20261114a"></script>
 </body>
 </html>

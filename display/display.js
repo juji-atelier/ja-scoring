@@ -1,11 +1,11 @@
-import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261113z";
-import { clockMs, mmss, catColor } from "../js/engines.js?v=20261113z";
-import * as C from "../js/common.js?v=20261113z";
-import { applySportInfo } from "../js/sportinfo.js?v=20261113z";
-import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261113z";
-import { bowlingStandings } from "../js/bowling-data.js?v=20261113z";
-import { firebaseConfig } from "../config.js?v=20261113z";
-import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261113z";
+import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261114a";
+import { clockMs, mmss, catColor } from "../js/engines.js?v=20261114a";
+import * as C from "../js/common.js?v=20261114a";
+import { applySportInfo } from "../js/sportinfo.js?v=20261114a";
+import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261114a";
+import { bowlingStandings } from "../js/bowling-data.js?v=20261114a";
+import { firebaseConfig } from "../config.js?v=20261114a";
+import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261114a";
 const { $, esc, ref } = C;
 
 const P = new URLSearchParams(location.search);
@@ -221,6 +221,36 @@ function listHTML(arr, kind) {
 
 function render() { renderView(); fx(); fitText(); }
 
+// ---------------- QR to the live page, bottom of the right-hand column
+// One persistent card, moved into each new render; the code is drawn once per sport and opens the
+// live page straight on the sport being shown. If the QR library can't load, there is simply no card.
+const qrCard = document.createElement("div");
+qrCard.className = "qrc";
+qrCard.innerHTML = `<div class="qri"></div><div class="qrt"><b>Live scores</b><span>Scan with your phone camera</span></div>`;
+let qrFor = "";
+function placeQR(sp) {
+  const col = $("#main .rcol");
+  if (!col || typeof QRCode === "undefined") return;
+  const url = location.origin + location.pathname.replace(/display\/.*$/, "live/") + "?sport=" + encodeURIComponent(sp);
+  if (url !== qrFor) {
+    const box = qrCard.querySelector(".qri");
+    box.innerHTML = "";
+    try { new QRCode(box, { text: url, width: 320, height: 320, colorDark: "#111317", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M }); qrFor = url; }
+    catch (e) { return; }
+  }
+  col.appendChild(qrCard);
+  // Room for the card comes out of "Up next" first (the big cards already show what is coming),
+  // and only then, if it really must, out of "Latest results" - whole items, never cut in half.
+  requestAnimationFrame(() => {
+    const rl = col.querySelector(".rl"); if (!rl) return;
+    const fits = () => rl.scrollHeight <= rl.clientHeight + 1;
+    for (const L of rl.querySelectorAll(".list")) {
+      const its = [...L.querySelectorAll(".it")];
+      while (!fits() && its.length > 1) its.pop().style.display = "none";
+    }
+  });
+}
+
 // ---------------- long names on a big screen
 // Team names come from the scorer ("FLICK & STRIKE DX") and the optional Short name is usually
 // left blank, so rather than cut a name off with an ellipsis, step its size down until it fits
@@ -341,7 +371,9 @@ function renderView() {
     }
     const right = `<h2>Up next</h2>${listHTML(next.slice(live.length ? 0 : 6, (live.length ? 0 : 6) + 6), "next")}
       <h2>Latest results</h2>${listHTML(done.slice(0, 6), "done")}`;
-    main.innerHTML = `<div class="col">${left}</div><div class="col">${right}</div>`;
+    // the lists live in their own box above the QR card, so they can never run underneath it
+    main.innerHTML = `<div class="col">${left}</div><div class="col rcol"><div class="rl">${right}</div></div>`;
+    placeQR(sp);
   }
   renderTicker();
   renderAnn();
