@@ -1,11 +1,11 @@
-import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261113e";
-import { clockMs, mmss, catColor } from "../js/engines.js?v=20261113e";
-import * as C from "../js/common.js?v=20261113e";
-import { applySportInfo } from "../js/sportinfo.js?v=20261113e";
-import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261113e";
-import { bowlingStandings } from "../js/bowling-data.js?v=20261113e";
-import { firebaseConfig } from "../config.js?v=20261113e";
-import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261113e";
+import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261113f";
+import { clockMs, mmss, catColor } from "../js/engines.js?v=20261113f";
+import * as C from "../js/common.js?v=20261113f";
+import { applySportInfo } from "../js/sportinfo.js?v=20261113f";
+import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261113f";
+import { bowlingStandings } from "../js/bowling-data.js?v=20261113f";
+import { firebaseConfig } from "../config.js?v=20261113f";
+import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261113f";
 const { $, esc, ref } = C;
 
 const P = new URLSearchParams(location.search);

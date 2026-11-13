@@ -1,8 +1,8 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113e";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261113f";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113e";
-import * as C from "../js/common.js?v=20261113e";
-import { applySportInfo } from "../js/sportinfo.js?v=20261113e";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261113f";
+import * as C from "../js/common.js?v=20261113f";
+import { applySportInfo } from "../js/sportinfo.js?v=20261113f";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -1307,6 +1307,40 @@ const bucketOf = m => {
   const p = (String(m.group || "").match(/POOL\s+(\w+)$/i) || [])[1];
   return p ? "Pool " + p.toUpperCase() : "Matches";
 };
+// Quick fill timetable. Each court is its own queue. On every court the next match is the one that
+// can start soonest: its teams must have had `rest` minutes since their last match, knockouts wait
+// for all pool matches (+ rest), a final waits for its semis. Ties keep the match-number order.
+function planTimes(sched, start, every, rest, courtOfB, bucketOf) {
+  const at = {}, laneOf = {}, teamFree = {}, free = {};
+  sched.forEach(m => { const b = bucketOf(m); laneOf[m.id] = (courtOfB[b] || "") || "·" + b; });
+  const left = [...sched];
+  const isKO = m => bucketOf(m) === "Knockout";
+  const earliest = m => {
+    let e = start;
+    for (const t of [m.teamA, m.teamB]) if (t && teamFree[t] != null) e = Math.max(e, teamFree[t]);
+    if (isKO(m)) {
+      if (left.some(x => !isKO(x))) return Infinity;
+      const pe = Math.max(start, ...sched.filter(x => !isKO(x)).map(x => at[x.id] + every));
+      e = Math.max(e, pe + (sched.some(x => !isKO(x)) ? rest : 0));
+      for (const sl of [m.slotA, m.slotB]) { const [k, r] = String(sl || "").split("|");
+        if (k === "W" || k === "L") { if (at[r] == null) return Infinity; e = Math.max(e, at[r] + every + rest); } }
+    }
+    return e;
+  };
+  while (left.length) {
+    let best = null;
+    for (const m of left) {
+      const t = Math.max(free[laneOf[m.id]] ?? start, earliest(m));
+      if (!best || t < best.t) best = { m, t };   // ties keep list order
+    }
+    if (!best || best.t === Infinity) break;
+    const { m, t } = best;
+    at[m.id] = t; free[laneOf[m.id]] = t + every;
+    for (const x of [m.teamA, m.teamB]) if (x) teamFree[x] = t + every + rest;
+    left.splice(left.indexOf(m), 1);
+  }
+  return { at, laneOf };
+}
 function renderTC() {
   const el = $("#tcCard");
   if (!el) return;
@@ -1327,6 +1361,8 @@ function renderTC() {
     ${sched.length ? `<div class="qfill"><span class="full">⚡ Quick fill all ${sched.length} at once</span>
       <label>Start</label><input id="qfStart" value="${firstT != null ? fmtT(firstT) : "9:00 AM"}">
       <label>Every</label><input id="qfEvery" inputmode="numeric" value="${store("ja_qfevery_" + S) || 25}" placeholder="min">
+      <label>Rest<small style="display:block;text-transform:none;letter-spacing:0">min per team</small></label><input id="qfRest" inputmode="numeric" value="${store("ja_qfrest_" + S) ?? 5}" placeholder="0">
+      <span class="full muted" style="font-size:12px">Every = minutes from one match start to the next on a court. Rest = extra minutes a team gets before its next match – matches are re-ordered (and re-numbered) to give it.</span>
       ${buckets.map(b => `<label>Court${buckets.length > 1 ? `<small style="display:block;text-transform:none;letter-spacing:0">${esc(b)}</small>` : ""}</label>
         <input data-qfc="${esc(b)}" value="${esc((sched.find(m => bucketOf(m) === b && m.court) || {}).court || "")}" placeholder="e.g. 1">`).join("")}
       ${buckets.length > 1 ? `<span class="full muted" style="font-size:12px">Different courts play at the same time. Knockout matches start after the pool matches.</span>` : ""}
@@ -1355,24 +1391,23 @@ function renderTC() {
     const courtOfB = {}; $$("[data-qfc]", el).forEach(i => courtOfB[i.dataset.qfc] = i.value.trim());
     if (start == null) return toast("Start time like 9:00 AM");
     if (!(every > 0)) return toast("Minutes between matches, e.g. 25");
-    if (sched.some(m => m.time || m.court) && !confirm(`Fill times and courts for all ${sched.length} ${tcCat} matches?\nTimes already typed will be replaced.`)) return;
+    if (sched.some(m => m.time || m.court) && !confirm(`Fill times and courts for all ${sched.length} ${tcCat} matches?\nTimes already typed will be replaced, and the matches may be re-ordered and re-numbered.`)) return;
     store("ja_qfevery_" + S, String(every));
-    // each court is its own queue; knockouts wait for the pool matches, a final waits for its semis
-    const free = {}, at = {}, out = {};
-    const poolEnd = () => Math.max(start, ...sched.filter(m => bucketOf(m) !== "Knockout").map(m => (at[m.id] ?? start - every) + every));
-    for (const m of sched) {
-      const b = bucketOf(m), court = courtOfB[b] || "", lane = court || "·" + b;
-      let earliest = start;
-      if (b === "Knockout") {
-        earliest = poolEnd();
-        for (const sl of [m.slotA, m.slotB]) { const [k, ref2] = String(sl || "").split("|"); if ((k === "W" || k === "L") && at[ref2] != null) earliest = Math.max(earliest, at[ref2] + every); }
-      }
-      const t = Math.max(free[lane] ?? start, earliest);
-      at[m.id] = t; free[lane] = t + every;
-      out[m.id] = { time: fmtT(t), ...(court ? { court } : {}) };
-    }
+    const rest = Math.max(0, Number($("#qfRest").value) || 0);
+    store("ja_qfrest_" + S, String(rest));
+    const { at, laneOf } = planTimes(sched, start, every, rest, courtOfB, bucketOf);
+    if (sched.some(m => at[m.id] == null)) return toast("Couldn't fit every match – check the knockout matches");
+    // # follows the playing order: hand the same numbers out again in time order
+    const byTime = [...sched].sort((x, y) => at[x.id] - at[y.id] || laneOf[x.id].localeCompare(laneOf[y.id]) || C.byNo(x, y));
+    const nums = sched.map(m => m.no).filter(n => /^\d+$/.test(String(n))).map(Number).sort((x, y) => x - y);
+    const renum = nums.length === sched.length && new Set(nums).size === nums.length;
+    const out = {};
+    byTime.forEach((m, i) => {
+      const court = courtOfB[bucketOf(m)] || "";
+      out[m.id] = { time: fmtT(at[m.id]), ...(court ? { court } : {}), ...(renum ? { no: String(nums[i]) } : {}) };
+    });
     const upd = {};
-    sched.forEach(m => { upd[`${m.id}/time`] = out[m.id].time; if (out[m.id].court) upd[`${m.id}/court`] = out[m.id].court; upd[`${m.id}/updatedAt`] = C.now(); });
+    sched.forEach(m => { Object.entries(out[m.id]).forEach(([k, v]) => upd[`${m.id}/${k}`] = v); upd[`${m.id}/updatedAt`] = C.now(); });
     try { await C.update(ref(db, `sports/${S}/matches`), upd); } catch (e) { toast("Couldn't save – check the connection"); return; }
     sched.forEach(m => publish(m.id, { ...m, ...out[m.id] }));
     log("", { no: "" }, `times filled for ${tcCat}`);
