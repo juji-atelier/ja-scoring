@@ -33,7 +33,7 @@ export const EVENT_DEFAULTS = {
 //        It is only wording: the value saved on a match is still just "1", "2"…
 // venue: only when the sport is NOT at the main venue above.
 export const SPORTS = {
-  karom:       { name: "Karom",        short: "Karom",     color: "#a16207", day: "Sat 14 Nov", engine: "rally", court: "Table", unit: "Game", venue: "Centralized Meeting Room, Block E, Tingkat 1, Bangunan KWSP" },
+  karom:       { name: "Karom",        short: "Karom",     color: "#a16207", day: "Sat 14 Nov", engine: "rally", court: "Table", unit: "Set", venue: "Centralized Meeting Room, Block E, Tingkat 1, Bangunan KWSP" },
   sepaktakraw: { name: "Sepak Takraw", short: "Takraw",    color: "#e11d48", day: "Sat 14 Nov", engine: "rally", court: "Court", unit: "Set" },
   badminton:   { name: "Badminton",    short: "Badminton", color: "#2563eb", day: "Sat 14 Nov", engine: "rally", court: "Court", unit: "Game" },
   bolasepak:   { name: "Bola Sepak",   short: "Football",  color: "#15803d", day: "Sat 14 Nov", engine: "goals", court: "Pitch", unit: "Half", venue: "Padang Sukma Likas (Ragbi A)" },

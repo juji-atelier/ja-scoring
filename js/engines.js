@@ -20,7 +20,9 @@ export const FORMATS = {
   bolasepak:   { periods: 2, minutes: 20, fouls: false },
   bolatampar:  { bestOf: 3, points: 25, cap: 0, decPoints: 15, decCap: 0, serve: "winner", unit: "Set" },
   pickleball:  { bestOf: 3, points: 11, cap: 0, serve: "winner" },                 // rally scoring, win by 2
-  karom:       { bestOf: 3, points: 25, cap: 25, serve: "none" }                   // first to 25, no serving side
+  // Karom is scored by whole sets: the scorer taps the side that won the set, no points inside it.
+  // points:1 / cap:1 means one tap ends a set; best of 3 sets, so first to 2 wins.
+  karom:       { bestOf: 3, points: 1, cap: 1, serve: "none", unit: "Set" }
 };
 // Goal sports: which optional details the scorer can record (goal scorers need a player list on the team).
 export const DETAILS = { futsal: { cards: true }, bolasepak: { cards: true }, bolajaring: { cards: false } };
@@ -212,12 +214,19 @@ export function view(sport, m, now = Date.now()) {
     const d = deriveRally(m, f);
     const unit = f.unit || unitOf(sport);
     const U = unit.toUpperCase();
+    // setsOnly (karom): one tap wins a whole set, so the big number IS the set score –
+    // there is no running point score to show, and every tap would be "set point".
+    const setsOnly = Number(f.points) === 1;
     for (const x of ["a", "b"]) if (d.point[x] === "GAME POINT") d.point[x] = U + " POINT";
     return {
-      kind, big: d.winner ? [d.won[0], d.won[1]] : d.cur, small: d.won, smallLabel: unit + "s",
+      kind, big: d.winner || setsOnly ? [d.won[0], d.won[1]] : d.cur,
+      small: setsOnly ? null : d.won, smallLabel: setsOnly ? "" : unit + "s",
       serve: m.status === "live" && f.serve !== "none" ? d.srv : null,
       status: d.winner ? "Final" : (m.status === "live" ? `${unit} ${d.gameNo}` + (d.deciding ? " (decider)" : "") : ""),
-      tag: d.point, hist: d.games.map(g => g.join("-")).join("  ·  "),
+      tag: setsOnly ? { a: null, b: null } : d.point,
+      // setsOnly: the big number already IS the set score, so there is no per-set
+      // history worth repeating on the big screen (the scorer's own screen names them)
+      hist: setsOnly ? "" : d.games.map(g => g.join("-")).join("  ·  "),
       winner: d.winner, sc: d.won, bigIsFinal: !!d.winner
     };
   }

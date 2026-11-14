@@ -1,9 +1,9 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261114k";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261114n";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261114k";
-import * as C from "../js/common.js?v=20261114k";
-import { applySportInfo } from "../js/sportinfo.js?v=20261114k";
-import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261114k";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261114n";
+import * as C from "../js/common.js?v=20261114n";
+import { applySportInfo } from "../js/sportinfo.js?v=20261114n";
+import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261114n";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -906,6 +906,46 @@ const A = {
   }
 };
 
+// ---------------------------------------------------------------- which table/court a match is on
+// The table is often only known when the teams sit down, so it can be set (or changed)
+// from the match screen itself, not only in Setup.
+const matchCourt = m => String((m && m.court) || "").trim();
+
+// Quick buttons: 1..n, where n is the tables set in Setup → fixtures, any table already
+// in use, and at least 6 – plus anything typed by hand that isn't a plain number.
+function courtChoices() {
+  const used = [...new Set(Object.values(matches).map(matchCourt).filter(Boolean))];
+  const n = Math.min(12, Math.max(6, Number(store("ja_fxtb_" + S)) || 0, ...used.map(c => Number(c) || 0)));
+  const list = Array.from({ length: n }, (_, i) => String(i + 1));
+  used.forEach(c => { if (!list.includes(c)) list.push(c); });
+  return list;
+}
+function courtPickHTML(m, mine) {
+  const cur = matchCourt(m);
+  const btn = (v, lab, cls) => `<button data-a="court" data-v="${esc(v)}" class="${cls || ""}${v && v === cur ? " on" : ""}" ${mine ? "" : "disabled"}>${esc(lab)}</button>`;
+  return `<div class="chips ctpick"><span class="lab">${esc(CW)}</span>${courtChoices().map(v => btn(v, v)).join("")}
+    <button data-a="courtAsk" ${mine ? "" : "disabled"}>Other…</button>${cur ? btn("", "Clear", "ghost") : ""}</div>`;
+}
+async function setCourt(v) {
+  const id = curId, m = matches[id];
+  if (!m) return;
+  const court = String(v == null ? "" : v).trim().slice(0, 12);
+  if (court === matchCourt(m)) return;
+  try {
+    await track(C.update(ref(db, `sports/${S}/matches/${id}`), { court, updatedAt: C.now() }));
+    publish(id, { ...m, court });
+    log(id, m, court ? `${CW} ${court}` : `${CW} cleared`);
+    toast(court ? `${CW} ${court} \u2713` : `${CW} cleared`);
+  } catch (e) { return toast("Couldn't save \u2013 check the connection", 4000); }
+  if (curId === id) renderScore();
+}
+function askCourt() {
+  const m = matches[curId];
+  if (!m) return;
+  const v = prompt(`${CW} for #${m.no} \u2013 ${tnm(m, "a")} vs ${tnm(m, "b")}:`, matchCourt(m));
+  if (v !== null) setCourt(v);
+}
+
 // ---------------------------------------------------------------- scoring screen
 function swapped() { return store("ja_swap_" + curId) === "1"; }
 
@@ -929,7 +969,8 @@ function headerHTML(m) {
   return `<div class="shead">
     <button class="ghost" data-a="back">← Matches</button>
     <div class="info"><b>${esc(tnm(m, "a"))} vs ${esc(tnm(m, "b"))}</b>
-      <div class="muted">#${esc(m.no)}${m.court ? " · Court " + esc(m.court) : ""}${m.round ? " · " + esc(m.round) : ""}${m.event ? " · " + esc(m.event) : ""}</div></div>
+      <div class="muted">#${esc(m.no)}${m.round ? " · " + esc(m.round) : ""}${m.event ? " · " + esc(m.event) : ""}
+        <button class="ctchip${matchCourt(m) ? "" : " none"}" data-a="courtAsk" title="Set the ${esc(cw)}">${matchCourt(m) ? esc(CW) + " " + esc(matchCourt(m)) : "+ " + esc(CW)}</button></div></div>
     <details class="menu" id="menu"><summary>More ▾</summary><div class="items">${items.join("")}</div></details>
   </div>`;
 }
@@ -958,14 +999,16 @@ function renderScore() {
 
   if (!mine) html += `<div class="banner warn">${m.lock ? esc(m.lock.name) + " has control of this match." : "You don't have control of this match."}
     <button class="small" data-a="take" style="margin-left:8px">Take control</button></div>`;
+  // the table is picked here: before the match starts, and while it runs if nobody set one
+  if (st === "scheduled" || (st === "live" && !matchCourt(m))) html += courtPickHTML(m, mine);
   if (st === "done") {
     const v = view(S, m, C.now());
     const w = m.winner ? `${esc(sideName(m, m.winner))} wins` : "Draw";
     html += `<div class="banner ok">FINAL${m.wo ? " (walkover)" : ""}: ${w}${m.wo ? "" : ` · ${v.sc[0]} – ${v.sc[1]}`}${v.hist ? `<div class="muted" style="font-weight:400">${esc(v.hist)}</div>` : ""}</div>`;
     const nx = nextOnCourt(m);
     html += nx
-      ? `<button class="primary nextbtn" data-a="next" data-id="${nx.id}"><span>Next${m.court ? " on Court " + esc(m.court) : ""}: #${esc(nx.no)}${nx.time ? " · " + esc(nx.time) : ""}<small style="color:inherit;opacity:.85">${esc(tnm(nx, "a"))} vs ${esc(tnm(nx, "b"))}${lockedByOther(nx) ? " · 🔒 " + esc(nx.lock.name) : ""}</small></span><span class="ar">→</span></button>`
-      : `<button class="nextbtn" data-a="back"><span>No more matches${m.court ? " on Court " + esc(m.court) : ""}<small>Back to the match list</small></span><span class="ar">←</span></button>`;
+      ? `<button class="primary nextbtn" data-a="next" data-id="${nx.id}"><span>Next${matchCourt(m) ? " on " + esc(CW) + " " + esc(matchCourt(m)) : ""}: #${esc(nx.no)}${nx.time ? " · " + esc(nx.time) : ""}<small style="color:inherit;opacity:.85">${esc(tnm(nx, "a"))} vs ${esc(tnm(nx, "b"))}${lockedByOther(nx) ? " · 🔒 " + esc(nx.lock.name) : ""}</small></span><span class="ar">→</span></button>`
+      : `<button class="nextbtn" data-a="back"><span>No more matches${matchCourt(m) ? " on " + esc(CW) + " " + esc(matchCourt(m)) : ""}<small>Back to the match list</small></span><span class="ar">←</span></button>`;
   }
 
   if (st === "scheduled") {
@@ -996,25 +1039,28 @@ function renderScore() {
 function rallyBody(m, f, mine, order) {
   const d = deriveRally(m, f);
   const live = m.status === "live";
+  // karom: one tap wins a whole set, so there is no point score inside a set
+  const setsOnly = Number(f.points) === 1;
   let h = "";
   if (live && d.winner) h += `<div class="banner ok">${esc(sideName(m, d.winner))} has won ${d.won[0]}–${d.won[1]}.
       <button class="small primary" data-a="finish" style="margin-left:8px">Confirm result</button>
       <span class="muted" style="font-weight:400"> or Undo if the last point was wrong.</span></div>`;
   else if (live && d.interval) h += `<div class="banner warn">Interval — ${d.rules.points === 21 || d.rules.points === 15 ? Math.ceil(d.rules.points / 2) : "half"} points reached${d.deciding ? ". Change ends." : "."}</div>`;
-  else if (live) h += `<div class="ptitle">${UNIT} ${d.gameNo}${d.deciding ? " · decider" : ""} · to ${d.rules.points}${d.rules.cap ? " (max " + d.rules.cap + ")" : ""}</div>`;
-  if (live && !d.winner) {
+  else if (live) h += `<div class="ptitle">${UNIT} ${d.gameNo}${d.deciding ? " · decider" : ""}${setsOnly ? ` · best of ${f.bestOf}` : ` · to ${d.rules.points}${d.rules.cap ? " (max " + d.rules.cap + ")" : ""}`}</div>`;
+  if (live && !d.winner && !setsOnly) {
     const ps = ["a", "b"].filter(x => d.point[x]);
     if (ps.length) h += `<div class="gpban ${d.point[ps[0]] === "MATCH POINT" ? "mp" : ""}">${esc(d.point[ps[0]].replace("GAME", UNIT.toUpperCase()))}<small>${esc(sideName(m, ps[0]))} · one more point wins the ${d.point[ps[0]] === "MATCH POINT" ? "match" : UNIT.toLowerCase()}</small></div>`;
   }
   h += `<div class="court">` + order.map(s => sideBox(m, s, {
     button: true, disabled: !mine || !live || !!d.winner,
-    big: d.winner ? d.won[s === "a" ? 0 : 1] : d.cur[s === "a" ? 0 : 1],
-    small: `${UNIT}s won: ${d.won[s === "a" ? 0 : 1]}`,
-    serving: live && !d.winner && f.serve !== "none" && d.srv === s, tag: live ? d.point[s] : null,
-    hint: live && !d.winner ? "Tap to add a point" : ""
+    big: d.winner || setsOnly ? d.won[s === "a" ? 0 : 1] : d.cur[s === "a" ? 0 : 1],
+    small: setsOnly ? "" : `${UNIT}s won: ${d.won[s === "a" ? 0 : 1]}`,
+    serving: live && !d.winner && f.serve !== "none" && d.srv === s, tag: live && !setsOnly ? d.point[s] : null,
+    hint: live && !d.winner ? (setsOnly ? `Tap to win ${UNIT.toLowerCase()} ${d.gameNo}` : "Tap to add a point") : ""
   })).join("") + `</div>`;
-  if (live) h += `<div class="controls"><button data-a="undoRally" ${mine && m.rallies ? "" : "disabled"}>↶ Undo last point</button></div>`;
-  if (d.games.length) h += `<div class="hist">${UNIT}s: ${d.games.map(g => g.join("–")).join(" · ")}</div>`;
+  if (live) h += `<div class="controls"><button data-a="undoRally" ${mine && m.rallies ? "" : "disabled"}>↶ Undo last ${setsOnly ? UNIT.toLowerCase() : "point"}</button></div>`;
+  if (d.games.length) h += `<div class="hist">${UNIT}s: ${d.games.map((g, i) =>
+    setsOnly ? `${i + 1} ${esc(tnm(m, g[0] > g[1] ? "a" : "b"))}` : g.join("–")).join(" · ")}</div>`;
   return h;
 }
 
@@ -1110,6 +1156,8 @@ function onScoreClick(e) {
     case "wo": return A.walkover(s);
     case "bigscreen": return window.open(BIG_URL, "_blank", "noopener");
     case "announce": return openAnn();
+    case "court": return setCourt(b.dataset.v);
+    case "courtAsk": return askCourt();
     case "swap": store("ja_swap_" + curId, swapped() ? null : "1"); return renderScore();
     case "release": { const id = curId; curId = null; clearInterval(heartbeat); clearInterval(ticker); goTab("list"); return releaseLock(id); }
     case "undoRally": return A.undoRally();
