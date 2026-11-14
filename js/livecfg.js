@@ -24,6 +24,20 @@ export const cfgOf = settings => {
 export const shown = (cfg, id) => !(cfg && cfg.show && cfg.show[id] === false);
 export const isDone = (cfg, id) => !!(cfg && cfg.done && cfg.done[id]);
 
+// The PIC can confirm their own sport is over from the scorer page: pub/<sport>/done = { at, by }.
+// (A scorer may write only under pub/<sport>, never settings.) Admin's Completed tick writes the
+// same flag, so the two stay in step and either one counts as Completed everywhere.
+export async function fetchPubDone(base, ids) {
+  const out = {};
+  await Promise.all(ids.map(async id => {
+    try { const r = await fetch(`${base}/pub/${id}/done.json`, { cache: "no-store" }); const j = r.ok ? await r.json() : null; if (j) out[id] = true; }
+    catch (e) {}
+  }));
+  return out;
+}
+// cfg with the sports a PIC (or Admin) marked done through pub/<sport>/done added in
+export const withPubDone = (cfg, map) => ({ ...cfg, done: { ...(cfg.done || {}), ...(map || {}) } });
+
 const vals = x => (x && typeof x === "object" ? Object.values(x) : []);
 // does the Mobile Legends console data hold anything worth showing?
 export function mlHas(D) {

@@ -1,11 +1,13 @@
-import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261115d";
-import { clockMs, mmss, catColor, standings } from "../js/engines.js?v=20261115d";
-import * as C from "../js/common.js?v=20261115d";
-import { applySportInfo } from "../js/sportinfo.js?v=20261115d";
-import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261115d";
-import { bowlingStandings } from "../js/bowling-data.js?v=20261115d";
-import { firebaseConfig } from "../config.js?v=20261115d";
-import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261115d";
+import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261115e";
+import { clockMs, mmss, catColor, standings } from "../js/engines.js?v=20261115e";
+import * as C from "../js/common.js?v=20261115e";
+import { applySportInfo } from "../js/sportinfo.js?v=20261115e";
+import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261115e";
+import { bowlingStandings } from "../js/bowling-data.js?v=20261115e";
+import { firebaseConfig } from "../config.js?v=20261115e";
+import { cfgOf, isDone, mlEffective, sportEffective, KEEP, withPubDone } from "../js/livecfg.js?v=20261115e";
+// Completed: Admin's tick (settings) or the PIC's own confirmation (pub/<sport>/done)
+const cfgNow = () => withPubDone(cfgOf(settings), Object.fromEntries(Object.keys(SPORTS).filter(id => pub[id] && pub[id].done).map(id => [id, true])));
 const { $, esc, ref } = C;
 
 const P = new URLSearchParams(location.search);
@@ -48,9 +50,9 @@ const boardWanted = id => FORCE_SPORT ? FORCE_SPORT === id : ((disp().mode === "
 // Mobile Legends: the console's data, or the copy kept in Admin → Live score (completed / console cleared)
 // Bowling marked Completed: its kept final standings
 const bdata = id => {
-  if (id === "mlbb") return mlEffective(boardData.mlbb, (pub[KEEP] || {}).mlbb, cfgOf(settings)).D || {};
+  if (id === "mlbb") return mlEffective(boardData.mlbb, (pub[KEEP] || {}).mlbb, cfgNow()).D || {};
   const k = (pub[KEEP] || {})[id];
-  return isDone(cfgOf(settings), id) && k && k.d ? k.d : (boardData[id] || {});
+  return isDone(cfgNow(), id) && k && k.d ? k.d : (boardData[id] || {});
 };
 function boardRecs(id) {
   if (id !== "mlbb") return [];
@@ -82,7 +84,7 @@ C.onValue(ref(C.db, "bowling2026/ann"), s => { bowlAnn = s.val(); renderAnn(); }
 const ANN_SRC = { bowling: BOARDS.bowling };   // name follows Admin
 
 // a sport marked Completed in Admin → Live score shows its kept final results
-const pubOf = sp => sportEffective(pub[sp], (pub[KEEP] || {})[sp], cfgOf(settings), sp).P;
+const pubOf = sp => sportEffective(pub[sp], (pub[KEEP] || {})[sp], cfgNow(), sp).P;
 const recs = sp => Object.entries(pubOf(sp).m || {}).map(([id, r]) => ({ id, ...r }));
 const byNo = (x, y) => (Number(x.no) || 9999) - (Number(y.no) || 9999);
 // "9:30 AM" -> minutes; untimed matches sort after timed ones
@@ -323,9 +325,8 @@ function renderRot() {
 // alternates between the matches and the tables; other sports are unaffected.
 const TABLE_SLIDE = new Set(["badminton"]);
 let slideOn = false, slideIx = 0, slideAt = 0, slideN = 1, slideSp = "", podiumSeen = false;
-// DRAFT: a podium slide (cup + confetti) for a sport marked Completed. Only on a screen opened
-// with &draft=podium, so the live screens stay as they are until it is approved.
-const PODIUM_SLIDE = P.get("draft") === "podium";
+// the champions' podium (cup + confetti) as the last slide, once a sport is Completed
+const PODIUM_SLIDE = true;
 
 // champions the same way the live page finds them: a "Final" match per category; or, for a sport
 // played in groups only, each group's table once Admin has marked the sport Completed
@@ -340,8 +341,7 @@ function champsOf(sp, all) {
     const t = fin.find(r => isThird(r) && (r.ev || "") === ev);
     return { ev, cat: ev, champ: nm(f, f.w), runner: nm(f, f.w === "a" ? "b" : "a"), third: t ? nm(t, t.w) : "" };
   }).filter(Boolean);
-  const done = settings.live && settings.live.done && settings.live.done[sp];
-  if (!done) return [];
+  if (!isDone(cfgNow(), sp)) return [];
   const t = standings(all);
   return Object.keys(t).sort().filter(g => t[g].length >= 2 && t[g][0].p > 0)
     .map(g => ({ ev: g, cat: (all.find(r => r.gr === g) || {}).ev || "", champ: t[g][0].team, runner: t[g][1].team, third: t[g][2] ? t[g][2].team : "" }));
@@ -460,7 +460,7 @@ function renderView() {
     // then (draft) the champions' podium once the sport is Completed
     const slides = ["matches"];
     if (TABLE_SLIDE.has(sp) && done.length > 0 && all.some(r => r.gr)) slides.push("tables");
-    const champs = PODIUM_SLIDE ? champsOf(sp, all) : [];
+    const champs = PODIUM_SLIDE && isDone(cfgNow(), sp) ? champsOf(sp, all) : [];
     if (champs.length) slides.push("podium");
     if (sp !== slideSp) { slideSp = sp; slideIx = 0; slideAt = Date.now(); }
     // draft preview: open straight onto the podium the first time it is there

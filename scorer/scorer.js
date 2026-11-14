@@ -1,9 +1,9 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261115d";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261115e";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261115d";
-import * as C from "../js/common.js?v=20261115d";
-import { applySportInfo } from "../js/sportinfo.js?v=20261115d";
-import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261115d";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261115e";
+import * as C from "../js/common.js?v=20261115e";
+import { applySportInfo } from "../js/sportinfo.js?v=20261115e";
+import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261115e";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -331,6 +331,9 @@ function startData() {
     autoTidyPools();
   }, err => toast("No access: " + err.message, 4000));
   C.onValue(annRef(), snap => { ann = snap.val(); renderAnnBar(); }, () => {});
+  // "tournament done": the PIC's own flag and Admin's Completed tick
+  C.onValue(ref(db, `pub/${S}/done`), snap => { doneP = snap.val(); renderFinBar(); }, () => {});
+  C.onValue(ref(db, `settings/live/done/${S}`), snap => { doneA = !!snap.val(); renderFinBar(); }, () => {});
   setInterval(renderAnnBar, 20000);   // drops an expired announcement from view
 }
 
@@ -524,6 +527,7 @@ async function exportShare(list) {
 
 function renderList() {
   renderProgress($("#progress"), true);
+  renderFinBar();
   renderNextStep($("#nextStep"));
   const all = arrMatches();
   const mc = m => m.event || "";
@@ -2162,6 +2166,39 @@ $("#koSave").onclick = async () => {
 };
 
 // ---------------------------------------------------------------- next step card
+// ---------------------------------------------------------------- "is the tournament done?"
+// Once every match is finished, a big bar asks the PIC to confirm. Confirming writes
+// pub/<sport>/done, which every page reads as Completed (same as Admin's tick - Admin's tick
+// writes this flag too): the champions' podium, cup and confetti go up on the big screen and live page.
+let doneP = null, doneA = false;
+const finSkipKey = "ja_finskip_" + S;
+function renderFinBar() {
+  const el = $("#finBar"); if (!el) return;
+  const ms = Object.values(matches), n = ms.length, fin = ms.filter(m => m.status === "done").length;
+  const doneNow = !!doneP || doneA;
+  if (doneNow) {
+    const who = doneP && doneP.by ? doneP.by : "Admin";
+    el.innerHTML = `<div class="finbar ok"><div class="fb-t"><b>🏆 ${esc(SP.name)} is completed</b>
+      <span>The champions' podium and cup are showing on the big screen and the live page.${who ? ` Confirmed by ${esc(who)}.` : ""}</span></div>
+      ${doneA ? `<span class="fb-note">Ticked in Admin</span>` : `<button class="small" data-fin="undo">Undo</button>`}</div>`;
+  } else if (n && fin === n && store(finSkipKey) !== String(n)) {
+    el.innerHTML = `<div class="finbar ask"><div class="fb-cup">🏆</div><div class="fb-t">
+      <b>All ${n} ${esc(SP.name)} matches are finished. Is the tournament over?</b>
+      <span>Confirm and the champions go up on the big screen and the live page – podium, cup and confetti. If a final or more matches are still to come, choose Not yet.</span></div>
+      <div class="fb-b"><button class="primary" data-fin="yes">Yes, tournament done – show the cup</button><button class="ghost" data-fin="no">Not yet</button></div></div>`;
+  } else el.innerHTML = "";
+  $$("[data-fin]", el).forEach(b => b.onclick = async () => {
+    const a = b.dataset.fin;
+    if (a === "no") { store(finSkipKey, String(n)); return renderFinBar(); }
+    b.disabled = true;
+    try {
+      if (a === "yes") { await track(C.set(ref(db, `pub/${S}/done`), { at: C.now(), by: NAME || "PIC" })); toast("🏆 Completed – the cup is up on the big screen", 4000); }
+      if (a === "undo") { if (!confirm(`Undo? ${SP.name} goes back to live and the podium comes down.`)) { b.disabled = false; return; }
+        await track(C.set(ref(db, `pub/${S}/done`), null)); store(finSkipKey, null); toast("Back to live"); }
+    } catch (e) { b.disabled = false; toast("Not saved – check the connection", 4000); }
+  });
+}
+
 // A category (or pool) with teams but no matches yet → offer to create them in one tap.
 const skipKey = "ja_skiprr_" + S;
 const skipped = () => { try { return JSON.parse(store(skipKey) || "[]"); } catch (e) { return []; } };

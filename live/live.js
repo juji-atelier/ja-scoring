@@ -1,11 +1,11 @@
 // Public live-score page. Uses plain HTTPS polling (no live connection),
 // so hundreds of spectators stay inside Firebase's free limits.
-import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261115d";
-import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261115d";
-import { standings, clockMs, mmss, catColor } from "../js/engines.js?v=20261115d";
-import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261115d";
-import { cfgOf, shown, isDone, KEEP } from "../js/livecfg.js?v=20261115d";
-import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261115d";
+import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261115e";
+import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261115e";
+import { standings, clockMs, mmss, catColor } from "../js/engines.js?v=20261115e";
+import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261115e";
+import { cfgOf, shown, isDone, KEEP, withPubDone } from "../js/livecfg.js?v=20261115e";
+import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261115e";
 
 const FAST_MS = 5000;     // live matches: small live-only list (pub/<sport>/live)
 const QUIET_MS = 8000;    // nothing live: the live list is empty, so this costs almost nothing
@@ -108,7 +108,12 @@ async function poll() {
       if (noSportsLeft()) return;
       if (!shown(cfg, sport)) { location.hash = ""; switchSport(pickDefault()); return; }
     }
-    if (Date.now() - countsAt > 60000) { countsAt = Date.now(); liveCounts = await fetchLiveCounts(BASE, Object.keys(SPORTS), cfg); }
+    if (Date.now() - countsAt > 60000) {
+      countsAt = Date.now(); liveCounts = await fetchLiveCounts(BASE, Object.keys(SPORTS), cfg);
+      // a PIC confirming their sport done shows up here: merge it, and reload this sport if it changed
+      const was = JSON.stringify(cfg); cfg = withPubDone(cfgOf(settings), liveCounts._done);
+      if (JSON.stringify(cfg) !== was) fullAt = 0;
+    }
     renderTabs();
   } catch (e) {
     $("#upd").textContent = "Connection problem – retrying…";
@@ -129,7 +134,7 @@ async function loadSettings() {
   }
   applySportInfo(settings.sportInfo);
   const was = JSON.stringify(cfg);
-  cfg = cfgOf(settings);
+  cfg = withPubDone(cfgOf(settings), liveCounts._done);   // + sports the PIC marked done (fetched with the live counts)
   if (JSON.stringify(cfg) !== was) { fullAt = 0; countsAt = 0; }   // completed / shown changed: reload this sport
   renderHeader();
 }

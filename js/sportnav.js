@@ -1,7 +1,7 @@
 // Sport picker grid used on the public live page, bowling page and Mobile Legends page.
 // One tile per sport: drawn icon (in the sport's colour), name, date, and a red "LIVE" count.
 // No horizontal scrolling on phones: 4 tiles per row (6 on wide screens).
-import { shown, isDone } from "./livecfg.js?v=20261115d";
+import { shown, isDone, fetchPubDone } from "./livecfg.js?v=20261115e";
 export const SPORT_ICONS = {
 // karom: square board, corner pockets, centre circle, discs
 karom: `<rect x="5" y="5" width="22" height="22" rx="2"/><circle cx="8.5" cy="8.5" r="1.6"/><circle cx="23.5" cy="8.5" r="1.6"/><circle cx="8.5" cy="23.5" r="1.6"/><circle cx="23.5" cy="23.5" r="1.6"/><circle cx="16" cy="16" r="4"/><circle cx="16" cy="16" r="1.2" fill="currentColor"/>`,
@@ -67,12 +67,17 @@ export function sportItems(SPORTS, hrefOf, names = {}, liveCounts = {}, cfg = nu
     ...Object.entries(SPORTS).map(([id, s]) => ({ id, name: s.name, sub: shortDay(s.day), color: s.color, href: hrefOf(id), live: liveCounts[id] || 0 })),
     { id: "bowling", name: names.bowling || "Bowling", sub: "Tenpin", color: "#8b5cf6", href: hrefOf("bowling") },
     { id: "mlbb", name: names.mlbb || "Mobile Legends", sub: "E-Sport", color: "#f59e0b", href: hrefOf("mlbb") }
-  ].filter(it => shown(cfg, it.id)).map(it => ({ ...it, done: isDone(cfg, it.id), live: isDone(cfg, it.id) ? 0 : it.live }));
+  ].filter(it => shown(cfg, it.id)).map(it => {
+    const done = isDone(cfg, it.id) || !!((liveCounts._done || {})[it.id]);
+    return { ...it, done, live: done ? 0 : it.live };
+  });
 }
 // how many matches are live in each sport: reads only the keys of pub/<sport>/live (a few bytes each)
 export async function fetchLiveCounts(base, ids, cfg = null) {
   const out = {};
-  await Promise.all(ids.filter(id => shown(cfg, id) && !isDone(cfg, id)).map(async id => {
+  // sports the PIC marked done from the scorer page count as done too (see js/livecfg.js)
+  Object.defineProperty(out, "_done", { value: await fetchPubDone(base, ids.filter(id => shown(cfg, id))), enumerable: false });
+  await Promise.all(ids.filter(id => shown(cfg, id) && !isDone(cfg, id) && !out._done[id]).map(async id => {
     try { const r = await fetch(`${base}/pub/${id}/live.json?shallow=true`, { cache: "no-store" }); const j = r.ok ? await r.json() : null; out[id] = j ? Object.keys(j).length : 0; }
     catch (e) { out[id] = 0; }
   }));
