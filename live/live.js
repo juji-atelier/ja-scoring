@@ -1,11 +1,11 @@
 // Public live-score page. Uses plain HTTPS polling (no live connection),
 // so hundreds of spectators stay inside Firebase's free limits.
-import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261114z";
-import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261114z";
-import { standings, clockMs, mmss, catColor } from "../js/engines.js?v=20261114z";
-import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261114z";
-import { cfgOf, shown, isDone, KEEP } from "../js/livecfg.js?v=20261114z";
-import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261114z";
+import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261115a";
+import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261115a";
+import { standings, clockMs, mmss, catColor } from "../js/engines.js?v=20261115a";
+import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261115a";
+import { cfgOf, shown, isDone, KEEP } from "../js/livecfg.js?v=20261115a";
+import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261115a";
 
 const FAST_MS = 5000;     // live matches: small live-only list (pub/<sport>/live)
 const QUIET_MS = 8000;    // nothing live: the live list is empty, so this costs almost nothing
@@ -355,10 +355,20 @@ function render() {
   }
   if (isDone(cfg, sport)) h = `<div class="donebar">✅ <b>${esc(SPORTS[sport].name)} completed</b> · final results</div>` + h;
   const champs = champions();
-  if (champs.length) h = `<div class="champs">` + champs.map((c, i) => `<div class="champ" style="--cc:${c.cat ? catColor(c.cat, cats()) : "var(--sport)"};--d:${i * .25}s">
-    <div class="k"><span>${esc(SPORTS[sport].name)} champion</span>${c.ev ? `<b>${esc(c.ev)}</b>` : ""}</div>
-    <div class="w"><span class="cup">🏆</span><span class="nm">${esc(c.champ)}</span></div>
-    <div class="pod"><span class="pd s"><i>2</i>${esc(c.runner)}</span>${c.third ? `<span class="pd b"><i>3</i>${esc(c.third)}</span>` : ""}</div></div>`).join("") + `</div>` + h;
+  if (champs.length) h = `<div class="champs">` + champs.map((c, i) => {
+    // a podium per category: 2nd · 1st · 3rd, confetti falling behind it
+    const step = (n, team) => `<div class="pl p${n}">${n === 1 ? `<span class="cup">🏆</span>` : ""}
+      <span class="nm">${team ? esc(team) : "&nbsp;"}</span><div class="blk"><i>${n}</i></div></div>`;
+    const COL = ["#F2C14E", "#FF5D73", "#4FC3F7", "#7CE38B", "#B388FF", "#FF9F43"];
+    const bits = Array.from({ length: 18 }, (_, k) => {
+      const x = (k * 37 + i * 13) % 100, d = ((k * 7) % 10) / 3.3, t = 3.2 + ((k * 5) % 7) / 3;
+      return `<i style="left:${x}%;background:${COL[(k + i) % COL.length]};animation-delay:${d.toFixed(2)}s;animation-duration:${t.toFixed(2)}s;--r:${(k * 47) % 360}deg"></i>`;
+    }).join("");
+    return `<div class="champ" style="--cc:${c.cat ? catColor(c.cat, cats()) : "var(--sport)"};--d:${i * .2}s">
+      <div class="cf" aria-hidden="true">${bits}</div>
+      <div class="k"><span>${esc(SPORTS[sport].name)} champion</span>${c.ev ? `<b>${esc(c.ev)}</b>` : ""}</div>
+      <div class="podium">${step(2, c.runner)}${step(1, c.champ)}${step(3, c.third)}</div></div>`;
+  }).join("") + `</div>` + h;
   const nowS = Date.now() + clockSkew;
   if (ann && ann.t && (!ann.exp || ann.exp > nowS)) {
     const at = ann.at ? new Date(ann.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "";
