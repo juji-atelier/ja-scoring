@@ -1,11 +1,11 @@
-import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261114u";
-import { clockMs, mmss, catColor } from "../js/engines.js?v=20261114u";
-import * as C from "../js/common.js?v=20261114u";
-import { applySportInfo } from "../js/sportinfo.js?v=20261114u";
-import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261114u";
-import { bowlingStandings } from "../js/bowling-data.js?v=20261114u";
-import { firebaseConfig } from "../config.js?v=20261114u";
-import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261114u";
+import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261114v";
+import { clockMs, mmss, catColor, standings } from "../js/engines.js?v=20261114v";
+import * as C from "../js/common.js?v=20261114v";
+import { applySportInfo } from "../js/sportinfo.js?v=20261114v";
+import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261114v";
+import { bowlingStandings } from "../js/bowling-data.js?v=20261114v";
+import { firebaseConfig } from "../config.js?v=20261114v";
+import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261114v";
 const { $, esc, ref } = C;
 
 const P = new URLSearchParams(location.search);
@@ -304,6 +304,26 @@ function renderRot() {
   el.style.width = pct + "%"; el._p = pct;
 }
 
+// ---------------- group tables as a second slide
+// Badminton runs four categories of pure round robin, so once a few results are in the tables
+// are the interesting thing on screen - the match lists alone say very little. The panel
+// alternates between the matches and the tables; other sports are unaffected.
+const TABLE_SLIDE = new Set(["badminton"]);
+let slideOn = false, slideIx = 0, slideAt = 0;
+
+function tablesHTML(all, SP) {
+  const t = standings(all);
+  const groups = Object.entries(t).filter(([, rows]) => rows.length).sort((a, b) => a[0].localeCompare(b[0]));
+  if (!groups.length) return "";
+  const block = ([g, rows]) => `<div class="tbl" style="--cc:${catColor(g, catList, true)}">
+    <div class="tname">${esc(g)}</div>
+    <div class="thead"><span></span><span class="l">Team</span><span>P</span><span>W</span><span>L</span><span>Pts</span></div>
+    ${rows.map((r, i) => `<div class="trw${i < 2 ? " top" : ""}"><span class="tp">${i + 1}</span><span class="l">${esc(r.team)}</span>
+      <span>${r.p}</span><span>${r.w}</span><span>${r.l}</span><span class="tpt">${r.pts}</span></div>`).join("")}</div>`;
+  return `<h2>Standings · ${esc(SP.name)}</h2>
+    <div class="tables" style="--tc:${groups.length > 2 ? 2 : 1}">${groups.map(block).join("")}</div>`;
+}
+
 function renderView() {
   const ev = settings.event || EVENT_DEFAULTS.name;
   $("#evName").textContent = ev;
@@ -379,6 +399,13 @@ function renderView() {
       left = `<h2>Results · ${esc(SP.name)}</h2><div class="grid" style="--cols:2;--nm:calc(1.9*var(--u));--big:calc(3.2*var(--u))">${done.slice(0, 6).map(cardHTML).join("")}</div>`;
     } else {
       left = `<h2>${esc(SP.name)}</h2><div class="empty">Matches will appear here soon.</div>`;
+    }
+    // second slide: the group tables, once there is a result to build them from
+    slideOn = TABLE_SLIDE.has(sp) && done.length > 0 && all.some(r => r.gr);
+    if (!slideOn) { slideIx = 0; slideAt = Date.now(); }
+    if (slideOn && slideIx === 1) {
+      const tb = tablesHTML(all, SP);
+      if (tb) left = tb; else slideOn = false;
     }
     const right = `<h2>Up next</h2>${listHTML(next.slice(live.length ? 0 : 6, (live.length ? 0 : 6) + 6), "next")}
       <h2>Latest results</h2>${listHTML(done.slice(0, 6), "done")}`;
@@ -465,6 +492,10 @@ setInterval(() => {
   tick();
   renderRot();
   renderAnn();
+  if (slideOn) {
+    const secs = Math.max(8, Number(disp().slide) || 15);
+    if (Date.now() - slideAt > secs * 1000) { slideAt = Date.now(); slideIx = slideIx ? 0 : 1; render(); }
+  }
   if (!FORCE_SPORT && !featured() && (disp().mode || "auto") === "auto") {
     const before = current;
     pickSport();

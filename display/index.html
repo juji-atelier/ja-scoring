@@ -7,8 +7,8 @@
 <link rel="icon" type="image/png" sizes="192x192" href="../img/icon-192.png">
 <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
 <title>Big Screen · JA Scoring</title>
-<link rel="stylesheet" href="../css/theme.css?v=20261114u">
-<script src="../js/theme.js?v=20261114u"></script>
+<link rel="stylesheet" href="../css/theme.css?v=20261114v">
+<script src="../js/theme.js?v=20261114v"></script>
 <style>
 :root{--u:min(1vw,1.7778vh);--sport:#B3162D;--bg:#16181D;--card:#23262E;--line:#343844;--text:#F2F3F5;--muted:#9A9FAA;--gold:#D2AC70}
 *{box-sizing:border-box}
@@ -102,6 +102,28 @@ body.fx .qrc .qk .dot{animation:qrping 1.6s ease-out infinite}
 .bw-g{font-size:calc(.95*var(--u));color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
 .bw-r.fin .bw-g{color:var(--gold)}
 .bw-t{font-size:calc(2.1*var(--u));font-weight:900;font-variant-numeric:tabular-nums;text-align:right;line-height:1}
+/* group tables (the standings slide) */
+.tables{display:grid;grid-template-columns:repeat(var(--tc,1),minmax(0,1fr));gap:calc(1.1*var(--u));align-content:start;position:relative;z-index:1}
+.tbl{background:var(--card);border:1px solid var(--line);border-left:calc(.4*var(--u)) solid var(--cc,var(--sport));
+  border-radius:calc(.8*var(--u));padding:calc(.7*var(--u)) calc(1*var(--u)) calc(.5*var(--u));min-width:0}
+.tbl .tname{font-size:calc(1.05*var(--u));font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--cc,var(--sport));
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:calc(.4*var(--u))}
+.thead,.trw{display:grid;grid-template-columns:calc(1.9*var(--u)) minmax(0,1fr) repeat(4,calc(2.1*var(--u)));
+  align-items:center;gap:calc(.4*var(--u));text-align:center}
+.thead{font-size:calc(.85*var(--u));font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+  padding-bottom:calc(.25*var(--u));border-bottom:1px solid var(--line)}
+.trw{font-size:calc(1.25*var(--u));font-weight:700;font-variant-numeric:tabular-nums;padding:calc(.3*var(--u)) 0;border-bottom:1px solid var(--line)}
+.trw:last-child{border-bottom:0}
+.thead .l,.trw .l{text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trw .tp{color:var(--muted);font-weight:900}
+.trw.top .tp{color:var(--gold)}
+.trw.top .l{font-weight:900}
+.trw .tpt{font-weight:900}
+/* the JA mark, large and faint behind the tables */
+.col:has(>.tables){position:relative}
+.col:has(>.tables)::after{content:"";position:absolute;right:-2%;bottom:-4%;width:52%;aspect-ratio:140/79;
+  transform:rotate(-6deg);background:#fff;opacity:.05;pointer-events:none;z-index:0;
+  -webkit-mask:url(../img/ja.svg) center/contain no-repeat;mask:url(../img/ja.svg) center/contain no-repeat}
 /* side lists */
 .list .it{display:grid;grid-template-columns:auto 1fr auto;gap:calc(.8*var(--u));align-items:center;padding:calc(.6*var(--u)) calc(.8*var(--u));border-bottom:1px solid var(--line);font-size:calc(1.15*var(--u))}
 .list .it .n{color:var(--muted);font-weight:700;font-size:calc(.95*var(--u));white-space:nowrap}
@@ -239,6 +261,6 @@ body.fx .aw-wrap{position:relative;z-index:1}
   <div class="tick"><div class="lbl cond">RESULTS</div><div class="mq"><span id="ticker"></span></div><div class="ja"><span class="jamark"></span>JUJI-ATELIER</div></div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script type="module" src="display.js?v=20261114u"></script>
+<script type="module" src="display.js?v=20261114v"></script>
 </body>
 </html>
