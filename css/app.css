@@ -444,3 +444,9 @@ details.guide li{margin:4px 0}
 #updBar b{font-size:14px}
 #updBar small{flex:1 1 100%;order:3;color:var(--mute);font-weight:500;font-size:12px}
 #updBar .btns{margin-left:auto;display:flex;gap:8px}
+
+/* the organiser's own team label (A1, B3…) as a small box beside the name */
+.tlab{display:inline-block;margin-right:6px;padding:1px 6px;border-radius:6px;font-size:11px;font-weight:800;
+  letter-spacing:.02em;background:var(--bg2);border:1px solid var(--line);color:var(--mute);vertical-align:middle}
+.mnm .tlab,.sname .tlab{font-size:12px}
+.sname .tlab{display:block;margin:0 auto 4px;width:fit-content}

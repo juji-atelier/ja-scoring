@@ -1,9 +1,9 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261114t";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261114u";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261114t";
-import * as C from "../js/common.js?v=20261114t";
-import { applySportInfo } from "../js/sportinfo.js?v=20261114t";
-import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261114t";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261114u";
+import * as C from "../js/common.js?v=20261114u";
+import { applySportInfo } from "../js/sportinfo.js?v=20261114u";
+import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261114u";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -77,6 +77,9 @@ const tn = id => (teams[id] && teams[id].name) || "TBC";
 const tnm = (m, s) => { const id = s === "a" ? m.teamA : m.teamB; return (teams[id] && teams[id].name) || (s === "a" ? m.labA : m.labB) || "TBC"; };
 // pair / player names shown under the team (sports without a numbered roster, e.g. badminton "Ali / Abu")
 const tp = id => (KIND === "goals" && DETAILS[S]) ? "" : String((teams[id] && teams[id].players) || "").split(/\r?\n/).filter(Boolean).join(" / ");
+// The organiser's own label for a team (A1, B3, …) from the team's Short name, drawn as a
+// small box beside the name so a printed schedule can be followed without looking names up.
+const tlab = id => { const sh = (teams[id] || {}).short; return sh ? `<span class="tlab">${esc(sh)}</span>` : ""; };
 // Category = e.g. "MIX DOUBLE". Older teams had the category typed into "group".
 const isOld = t => !!t && t.category == null && !!t.group && t.group.length > 2;
 const catOf = t => (t ? (t.category != null ? t.category : (isOld(t) ? t.group : "")) : "") || "";
@@ -373,7 +376,7 @@ function matchCard(m, st) {
     if (st !== "live" || !v || !v.big) return "";
     const [x, y] = v.big.map(Number); return (side === "a" ? x > y : y > x) ? "lead" : "";
   };
-  const row = (side, id, sc) => `<div class="mrow ${lead(side)}"><div><div class="mnm">${esc(tn(id))}</div>${tp(id) ? `<div class="mpl">${esc(tp(id))}</div>` : ""}</div><b>${sc}</b></div>`;
+  const row = (side, id, sc) => `<div class="mrow ${lead(side)}"><div><div class="mnm">${tlab(id)}${esc(tn(id))}</div>${tp(id) ? `<div class="mpl">${esc(tp(id))}</div>` : ""}</div><b>${sc}</b></div>`;
   return `<button class="mcard m2 ${st}" data-open="${m.id}" style="--c:${col}">
     <div class="mtop">${st === "live" ? `<span class="badge live">LIVE</span>` : ""}${m.event ? `<span class="mcat">${esc(m.event)}</span>` : ""}
       <span>#${esc(m.no)}${m.time ? " · " + esc(m.time) : ""}</span>${round ? `<span>${esc(round)}</span>` : ""}
@@ -393,7 +396,7 @@ function matchRow(m, st) {
   const w = s => (st === "done" && m.winner === s ? "win" : "");
   return `<button class="crow ${st}" data-open="${m.id}" style="--c:${col}">
     <span class="cct">${m.court ? esc(CW) + " " + esc(m.court) : "#" + esc(m.no)}</span>
-    <span class="cnm"><span class="${w("a")}">${esc(tnm(m, "a"))}</span><i>vs</i><span class="${w("b")}">${esc(tnm(m, "b"))}</span></span>
+    <span class="cnm"><span class="${w("a")}">${tlab(m.teamA)}${esc(tnm(m, "a"))}</span><i>vs</i><span class="${w("b")}">${tlab(m.teamB)}${esc(tnm(m, "b"))}</span></span>
     ${st === "done" ? `<b class="csc">${esc(String(sa))}–${esc(String(sb))}</b>` : "<span></span>"}
     <span class="crd">${esc(round)}</span></button>`;
 }
@@ -428,9 +431,9 @@ function gridHTML(list) {
     const round = m.round && !/^group stage$/i.test(m.round) ? m.round : "";
     const w = s => (st === "done" && m.winner === s ? "win" : "");
     return `<button class="gcell ${st}" data-open="${m.id}" style="--c:${catColor(m.event || "", cats)}">
-      <span class="gn ${w("a")}">${esc(tnm(m, "a"))}</span>
+      <span class="gn ${w("a")}">${tlab(m.teamA)}${esc(tnm(m, "a"))}</span>
       <span class="gs">${st === "scheduled" ? "vs" : esc(String(sa)) + " – " + esc(String(sb))}</span>
-      <span class="gn ${w("b")}">${esc(tnm(m, "b"))}</span>
+      <span class="gn ${w("b")}">${tlab(m.teamB)}${esc(tnm(m, "b"))}</span>
       <span class="gr">${st === "live" ? "● LIVE" + (round ? " · " : "") : ""}${esc(round)}</span></button>`;
   };
   const head = `<tr><th></th>${courts.map(c => `<th>${c ? esc(CW) + " " + esc(c) : "No " + esc(cw)}</th>`).join("")}</tr>`;
@@ -980,7 +983,7 @@ function sideBox(m, s, opts) {
   if (opts.tag) opts.tag = String(opts.tag).replace("GAME POINT", UNIT.toUpperCase() + " POINT");
   const tag = opts.tag ? `<span class="stag">${esc(opts.tag)}</span>` : "";
   const srv = opts.serving ? `<span class="sserve">● ${KIND === "darts" ? "THROWING" : "SERVING"}</span>` : "";
-  const inner = `${srv}${tag}<div class="sname">${esc(sideName(m, s))}</div>${tp(s === "a" ? m.teamA : m.teamB) ? `<div class="splayers">${esc(tp(s === "a" ? m.teamA : m.teamB))}</div>` : ""}
+  const inner = `${srv}${tag}<div class="sname">${tlab(s === "a" ? m.teamA : m.teamB)}${esc(sideName(m, s))}</div>${tp(s === "a" ? m.teamA : m.teamB) ? `<div class="splayers">${esc(tp(s === "a" ? m.teamA : m.teamB))}</div>` : ""}
     <div class="sscore">${opts.big}</div><div class="ssmall">${opts.small || ""}</div>${opts.hint ? `<div class="hint">${opts.hint}</div>` : ""}`;
   return opts.button
     ? `<button class="side ${cls} ${opts.serving ? "serving" : ""}" data-pt="${s}" ${opts.disabled ? "disabled" : ""}>${inner}</button>`
