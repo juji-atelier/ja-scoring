@@ -1,11 +1,11 @@
 // Public live-score page. Uses plain HTTPS polling (no live connection),
 // so hundreds of spectators stay inside Firebase's free limits.
-import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261114p";
-import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261114p";
-import { standings, clockMs, mmss, catColor } from "../js/engines.js?v=20261114p";
-import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261114p";
-import { cfgOf, shown, isDone, KEEP } from "../js/livecfg.js?v=20261114p";
-import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261114p";
+import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261114q";
+import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261114q";
+import { standings, clockMs, mmss, catColor } from "../js/engines.js?v=20261114q";
+import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261114q";
+import { cfgOf, shown, isDone, KEEP } from "../js/livecfg.js?v=20261114q";
+import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261114q";
 
 const FAST_MS = 5000;     // live matches: small live-only list (pub/<sport>/live)
 const QUIET_MS = 8000;    // nothing live: the live list is empty, so this costs almost nothing

@@ -224,9 +224,10 @@ export function view(sport, m, now = Date.now()) {
       serve: m.status === "live" && f.serve !== "none" ? d.srv : null,
       status: d.winner ? "Final" : (m.status === "live" ? `${unit} ${d.gameNo}` + (d.deciding ? " (decider)" : "") : ""),
       tag: setsOnly ? { a: null, b: null } : d.point,
-      // setsOnly: the big number already IS the set score, so there is no per-set
-      // history worth repeating on the big screen (the scorer's own screen names them)
+      // setsOnly: "1-0" per set says nothing the big number doesn't, so the side that
+      // won each set is handed up instead - publicRecord turns it into names
       hist: setsOnly ? "" : d.games.map(g => g.join("-")).join("  ·  "),
+      setWins: setsOnly ? d.games.map(g => (g[0] > g[1] ? "a" : "b")) : null, unit,
       winner: d.winner, sc: d.won, bigIsFinal: !!d.winner
     };
   }
@@ -330,6 +331,11 @@ export function publicRecord(sport, m, teams) {
     sc: v.sc || [0, 0],
     t: m.updatedAt || Date.now()
   };
+  // sets won in one tap: show who took each set ("Set 1: TUPAI · Set 2: SJSM")
+  if (v.setWins && v.setWins.length) {
+    const side = s => (s === "a" ? (rec.as || rec.a) : (rec.bs || rec.b));
+    rec.v.hist = v.setWins.map((w, i) => `${v.unit || "Set"} ${i + 1}: ${side(w)}`).join("  ·  ");
+  }
   if (v.kind === "goals") {
     const tl = timeline(m).map(e => ({ k: e.k, s: e.s, n: e.n || "", m: e.min || 0 }));
     if (tl.length) rec.tl = tl;
