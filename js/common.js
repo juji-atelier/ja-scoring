@@ -1,5 +1,5 @@
 // Shared helpers for pages that use the Firebase SDK (scorer, admin, display).
-import { firebaseConfig } from "../config.js?v=20261114n";
+import { firebaseConfig } from "../config.js?v=20261114p";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";

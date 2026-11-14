@@ -1,7 +1,7 @@
 // Sport picker grid used on the public live page, bowling page and Mobile Legends page.
 // One tile per sport: drawn icon (in the sport's colour), name, date, and a red "LIVE" count.
 // No horizontal scrolling on phones: 4 tiles per row (6 on wide screens).
-import { shown, isDone } from "./livecfg.js?v=20261114n";
+import { shown, isDone } from "./livecfg.js?v=20261114p";
 export const SPORT_ICONS = {
 // karom: square board, corner pockets, centre circle, discs
 karom: `<rect x="5" y="5" width="22" height="22" rx="2"/><circle cx="8.5" cy="8.5" r="1.6"/><circle cx="23.5" cy="8.5" r="1.6"/><circle cx="8.5" cy="23.5" r="1.6"/><circle cx="23.5" cy="23.5" r="1.6"/><circle cx="16" cy="16" r="4"/><circle cx="16" cy="16" r="1.2" fill="currentColor"/>`,

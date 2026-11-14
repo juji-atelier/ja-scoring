@@ -1,11 +1,11 @@
-import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261114n";
-import { clockMs, mmss, catColor } from "../js/engines.js?v=20261114n";
-import * as C from "../js/common.js?v=20261114n";
-import { applySportInfo } from "../js/sportinfo.js?v=20261114n";
-import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261114n";
-import { bowlingStandings } from "../js/bowling-data.js?v=20261114n";
-import { firebaseConfig } from "../config.js?v=20261114n";
-import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261114n";
+import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261114p";
+import { clockMs, mmss, catColor } from "../js/engines.js?v=20261114p";
+import * as C from "../js/common.js?v=20261114p";
+import { applySportInfo } from "../js/sportinfo.js?v=20261114p";
+import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261114p";
+import { bowlingStandings } from "../js/bowling-data.js?v=20261114p";
+import { firebaseConfig } from "../config.js?v=20261114p";
+import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261114p";
 const { $, esc, ref } = C;
 
 const P = new URLSearchParams(location.search);
@@ -346,10 +346,17 @@ function renderView() {
     let left;
     catList = all.map(r => r.ev || "");
     cwNow = courtWord(sp);
-    const courts = [...new Set(all.map(r => String(r.ct || "")).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-    if (live.length && courts.length >= 2 && courts.length <= 6) {
+    // Only courts that are actually in play get a tile: a court that appears on finished
+    // matches alone is not in use, and would show as "free" while hiding the live matches.
+    const courtsOf = rs => [...new Set(rs.map(r => String(r.ct || "").trim()).filter(Boolean))];
+    const liveCourts = courtsOf(live);
+    const courts = [...new Set([...liveCourts, ...courtsOf(next)])].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    // a live match whose court has not been set yet still needs a card of its own
+    const noCourt = live.filter(r => !String(r.ct || "").trim());
+    const tiles = courts.length + noCourt.length;
+    if (live.length && liveCourts.length && tiles >= 2 && tiles <= 6) {
       // every court keeps its own spot: live match, or what is next on that court
-      const cols = courts.length <= 4 ? 2 : 3;
+      const cols = tiles <= 4 ? 2 : 3;
       const sz = cols === 2 ? "--nm:calc(2.2*var(--u));--big:calc(3.8*var(--u))" : "--nm:calc(1.6*var(--u));--big:calc(2.7*var(--u))";
       const tile = c => {
         const lv = live.find(r => String(r.ct) === c);
@@ -358,7 +365,7 @@ function renderView() {
         return `<div class="card idle" ${nx && nx.ev ? `style="--cc:${catColor(nx.ev, catList, true)}"` : ""}><div class="meta"><span class="ctb">${esc(cwNow)} ${esc(c)}</span></div>
           <div class="idlebox">${nx ? `<span>Next${nx.tm ? " at " + esc(nx.tm) : ""}</span><b class="cond">${esc(nx.a)} vs ${esc(nx.b)}</b>${nx.ev ? `<i>${esc(nx.ev)}</i>` : ""}` : `<span>${esc(cwNow)} free</span>`}</div></div>`;
       };
-      left = `<h2><span class="live">LIVE</span> ${esc(SP.name)}</h2><div class="grid courts" style="--cols:${cols};${sz}">${courts.map(tile).join("")}</div>`;
+      left = `<h2><span class="live">LIVE</span> ${esc(SP.name)}</h2><div class="grid courts" style="--cols:${cols};${sz}">${courts.map(tile).join("") + noCourt.map(cardHTML).join("")}</div>`;
     } else if (live.length) {
       const n = live.length, cols = n === 1 ? 1 : n <= 4 ? 2 : 3;
       const sz = cols === 1 ? "--nm:calc(3.6*var(--u));--big:calc(7*var(--u))" : cols === 2 ? "--nm:calc(2.2*var(--u));--big:calc(3.8*var(--u))" : "--nm:calc(1.6*var(--u));--big:calc(2.7*var(--u))";
