@@ -1,11 +1,11 @@
-import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261115c";
-import { clockMs, mmss, catColor, standings } from "../js/engines.js?v=20261115c";
-import * as C from "../js/common.js?v=20261115c";
-import { applySportInfo } from "../js/sportinfo.js?v=20261115c";
-import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261115c";
-import { bowlingStandings } from "../js/bowling-data.js?v=20261115c";
-import { firebaseConfig } from "../config.js?v=20261115c";
-import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261115c";
+import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261115d";
+import { clockMs, mmss, catColor, standings } from "../js/engines.js?v=20261115d";
+import * as C from "../js/common.js?v=20261115d";
+import { applySportInfo } from "../js/sportinfo.js?v=20261115d";
+import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261115d";
+import { bowlingStandings } from "../js/bowling-data.js?v=20261115d";
+import { firebaseConfig } from "../config.js?v=20261115d";
+import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261115d";
 const { $, esc, ref } = C;
 
 const P = new URLSearchParams(location.search);
@@ -322,7 +322,44 @@ function renderRot() {
 // are the interesting thing on screen - the match lists alone say very little. The panel
 // alternates between the matches and the tables; other sports are unaffected.
 const TABLE_SLIDE = new Set(["badminton"]);
-let slideOn = false, slideIx = 0, slideAt = 0;
+let slideOn = false, slideIx = 0, slideAt = 0, slideN = 1, slideSp = "", podiumSeen = false;
+// DRAFT: a podium slide (cup + confetti) for a sport marked Completed. Only on a screen opened
+// with &draft=podium, so the live screens stay as they are until it is approved.
+const PODIUM_SLIDE = P.get("draft") === "podium";
+
+// champions the same way the live page finds them: a "Final" match per category; or, for a sport
+// played in groups only, each group's table once Admin has marked the sport Completed
+function champsOf(sp, all) {
+  const fin = all.filter(r => r.st === "done" && r.w);
+  const isFinal = r => /\bfinal\b/i.test(r.rd || "") && !/semi|quarter|suku|separuh/i.test(r.rd || "");
+  const isThird = r => /3rd|third|bronze|tempat ke-?3/i.test(r.rd || "");
+  const evs = [...new Set(fin.filter(isFinal).map(r => r.ev || ""))];
+  const nm = (r, s) => s === "a" ? r.a : r.b;
+  if (evs.length) return evs.map(ev => {
+    const f = fin.find(r => isFinal(r) && !isThird(r) && (r.ev || "") === ev); if (!f) return null;
+    const t = fin.find(r => isThird(r) && (r.ev || "") === ev);
+    return { ev, cat: ev, champ: nm(f, f.w), runner: nm(f, f.w === "a" ? "b" : "a"), third: t ? nm(t, t.w) : "" };
+  }).filter(Boolean);
+  const done = settings.live && settings.live.done && settings.live.done[sp];
+  if (!done) return [];
+  const t = standings(all);
+  return Object.keys(t).sort().filter(g => t[g].length >= 2 && t[g][0].p > 0)
+    .map(g => ({ ev: g, cat: (all.find(r => r.gr === g) || {}).ev || "", champ: t[g][0].team, runner: t[g][1].team, third: t[g][2] ? t[g][2].team : "" }));
+}
+function podiumHTML(champs, SP) {
+  const step = (n, team) => `<div class="ps s${n}">${n === 1 ? `<span class="pcup">🏆</span>` : ""}<span class="pn">${team ? esc(team) : "&nbsp;"}</span><div class="pb"><i>${n}</i></div></div>`;
+  const COL = ["#F2C14E", "#FF5D73", "#4FC3F7", "#7CE38B", "#B388FF", "#FF9F43", "#FFFFFF"];
+  const bits = Array.from({ length: 46 }, (_, k) => {
+    const x = (k * 29) % 100, d = ((k * 7) % 23) / 4, t = 4 + ((k * 5) % 9) / 2.5;
+    return `<i style="left:${x}%;background:${COL[k % COL.length]};animation-delay:-${d.toFixed(2)}s;animation-duration:${t.toFixed(2)}s;--r:${(k * 53) % 360}deg"></i>`;
+  }).join("");
+  return `<div class="pconf" aria-hidden="true">${bits}</div>
+    <h2>🏆 Champions · ${esc(SP.name)}</h2>
+    <div class="pods" style="--pc:${champs.length <= 3 ? champs.length : 2}">${champs.map((c, i) => `
+      <div class="pod" style="--cc:${c.cat ? catColor(c.cat, catList, true) : "var(--sport)"};--d:${i * .2}s">
+        <div class="pk">${esc(c.ev || SP.name)}</div>
+        <div class="pg">${step(2, c.runner)}${step(1, c.champ)}${step(3, c.third)}</div></div>`).join("")}</div>`;
+}
 const slideSecs = () => Math.max(8, Number(disp().slide) || 15);
 
 function tablesHTML(all, SP) {
@@ -419,13 +456,20 @@ function renderView() {
     } else {
       left = `<h2>${esc(SP.name)}</h2><div class="empty">Matches will appear here soon.</div>`;
     }
-    // second slide: the group tables, once there is a result to build them from
-    slideOn = TABLE_SLIDE.has(sp) && done.length > 0 && all.some(r => r.gr);
-    if (!slideOn) { slideIx = 0; slideAt = Date.now(); }
-    if (slideOn && slideIx === 1) {
-      const tb = tablesHTML(all, SP);
-      if (tb) left = tb; else slideOn = false;
-    }
+    // the slides this sport has: matches, then the group tables (once a result exists),
+    // then (draft) the champions' podium once the sport is Completed
+    const slides = ["matches"];
+    if (TABLE_SLIDE.has(sp) && done.length > 0 && all.some(r => r.gr)) slides.push("tables");
+    const champs = PODIUM_SLIDE ? champsOf(sp, all) : [];
+    if (champs.length) slides.push("podium");
+    if (sp !== slideSp) { slideSp = sp; slideIx = 0; slideAt = Date.now(); }
+    // draft preview: open straight onto the podium the first time it is there
+    if (champs.length && !podiumSeen) { podiumSeen = true; slideIx = slides.indexOf("podium"); slideAt = Date.now(); }
+    slideN = slides.length; slideOn = slideN > 1;
+    if (slideIx >= slideN) slideIx = 0;
+    if (!slideOn) slideAt = Date.now();
+    if (slides[slideIx] === "tables") { const tb = tablesHTML(all, SP); if (tb) left = tb; }
+    if (slides[slideIx] === "podium") left = podiumHTML(champs, SP);
     const right = `<h2>Up next</h2>${listHTML(next.slice(live.length ? 0 : 6, (live.length ? 0 : 6) + 6), "next")}
       <h2>Latest results</h2>${listHTML(done.slice(0, 6), "done")}`;
     // the lists live in their own box above the QR card, so they can never run underneath it
@@ -512,7 +556,7 @@ setInterval(() => {
   renderRot();
   renderAnn();
   if (slideOn) {
-    if (Date.now() - slideAt > slideSecs() * 1000) { slideAt = Date.now(); slideIx = slideIx ? 0 : 1; render(); }
+    if (Date.now() - slideAt > slideSecs() * 1000) { slideAt = Date.now(); slideIx = (slideIx + 1) % slideN; render(); }
   }
   if (!FORCE_SPORT && !featured() && (disp().mode || "auto") === "auto") {
     const before = current;

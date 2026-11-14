@@ -7,8 +7,8 @@
 <link rel="icon" type="image/png" sizes="192x192" href="../img/icon-192.png">
 <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
 <title>Big Screen · JA Scoring</title>
-<link rel="stylesheet" href="../css/theme.css?v=20261115c">
-<script src="../js/theme.js?v=20261115c"></script>
+<link rel="stylesheet" href="../css/theme.css?v=20261115d">
+<script src="../js/theme.js?v=20261115d"></script>
 <style>
 :root{--u:min(1vw,1.7778vh);--sport:#B3162D;--bg:#16181D;--card:#23262E;--line:#343844;--text:#F2F3F5;--muted:#9A9FAA;--gold:#D2AC70}
 *{box-sizing:border-box}
@@ -131,6 +131,31 @@ body.fx .qrc .qk .dot{animation:qrping 1.6s ease-out infinite}
 .trw .tn,.trw.idle .tw,.trw.idle .tl{color:var(--muted)}
 .trw .tpt{font-weight:900;font-size:calc(1.5*var(--u));color:var(--cc,var(--sport))}
 .trw.idle .tpt{color:var(--muted)}
+/* champions' podium slide (draft: &draft=podium) */
+.col:has(>.pods){position:relative;overflow:hidden}
+.pods{position:relative;z-index:1;display:grid;grid-template-columns:repeat(var(--pc,1),minmax(0,1fr));gap:calc(1.2*var(--u));align-content:start}
+.pod{position:relative;overflow:hidden;border-radius:calc(1*var(--u));padding:calc(1*var(--u)) calc(1*var(--u)) 0;
+  background:radial-gradient(120% 90% at 50% 0%,color-mix(in srgb,var(--cc,var(--sport)) 26%,var(--card)),var(--card) 72%);
+  border:1px solid var(--line);border-top:calc(.35*var(--u)) solid var(--cc,var(--sport));animation:podIn .7s var(--d,0s) both}
+.pod .pk{text-align:center;font-size:calc(1.05*var(--u));font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--cc,var(--sport));
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pg{display:grid;grid-template-columns:1fr 1.2fr 1fr;align-items:end;gap:calc(.5*var(--u));margin-top:calc(.8*var(--u))}
+.ps{display:flex;flex-direction:column;align-items:center;text-align:center;min-width:0}
+.ps .pn{font-weight:800;text-transform:uppercase;line-height:1.05;font-size:calc(1.35*var(--u));margin-bottom:calc(.5*var(--u));
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.ps.s1 .pn{font-size:calc(1.9*var(--u));color:#FFE08A}
+.ps .pcup{font-size:calc(4*var(--u));line-height:1;margin-bottom:calc(.3*var(--u));filter:drop-shadow(0 calc(.4*var(--u)) calc(.8*var(--u)) #000a);animation:podCup 2.6s ease-in-out infinite}
+.ps .pb{width:100%;display:grid;place-items:center;border-radius:calc(.7*var(--u)) calc(.7*var(--u)) 0 0;box-shadow:inset 0 2px 0 #fff6}
+.ps .pb i{font-style:normal;font-weight:900;font-size:calc(2.2*var(--u));color:#0009}
+.ps.s1 .pb{height:calc(8.5*var(--u));background:linear-gradient(180deg,#FFE08A,#D2A13A)}
+.ps.s2 .pb{height:calc(6*var(--u));background:linear-gradient(180deg,#F4F6FA,#A9B3BF)}
+.ps.s3 .pb{height:calc(4.2*var(--u));background:linear-gradient(180deg,#F3BD8A,#B06A32)}
+.pconf{position:absolute;inset:0;z-index:0;pointer-events:none}
+.pconf i{position:absolute;top:-3%;width:calc(.55*var(--u));height:calc(.85*var(--u));border-radius:2px;opacity:.9;animation:podFall 5s linear infinite}
+.pconf i:nth-child(3n){width:calc(.5*var(--u));height:calc(.5*var(--u));border-radius:50%}
+@keyframes podFall{0%{transform:translateY(0) rotate(var(--r,0deg))}100%{transform:translateY(95vh) rotate(calc(var(--r,0deg) + 600deg));opacity:.2}}
+@keyframes podIn{from{opacity:0;transform:translateY(calc(1*var(--u))) scale(.97)}to{opacity:1;transform:none}}
+@keyframes podCup{0%,100%{transform:translateY(0) rotate(-5deg)}50%{transform:translateY(calc(-.5*var(--u))) rotate(5deg)}}
 /* side lists */
 .list .it{display:grid;grid-template-columns:auto 1fr auto;gap:calc(.8*var(--u));align-items:center;padding:calc(.6*var(--u)) calc(.8*var(--u));border-bottom:1px solid var(--line);font-size:calc(1.15*var(--u))}
 .list .it .n{color:var(--muted);font-weight:700;font-size:calc(.95*var(--u));white-space:nowrap}
@@ -268,6 +293,6 @@ body.fx .aw-wrap{position:relative;z-index:1}
   <div class="tick"><div class="lbl cond">RESULTS</div><div class="mq"><span id="ticker"></span></div><div class="ja"><span class="jamark"></span>JUJI-ATELIER</div></div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script type="module" src="display.js?v=20261115c"></script>
+<script type="module" src="display.js?v=20261115d"></script>
 </body>
 </html>
