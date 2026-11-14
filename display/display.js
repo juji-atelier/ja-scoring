@@ -1,11 +1,11 @@
-import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261114v";
-import { clockMs, mmss, catColor, standings } from "../js/engines.js?v=20261114v";
-import * as C from "../js/common.js?v=20261114v";
-import { applySportInfo } from "../js/sportinfo.js?v=20261114v";
-import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261114v";
-import { bowlingStandings } from "../js/bowling-data.js?v=20261114v";
-import { firebaseConfig } from "../config.js?v=20261114v";
-import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261114v";
+import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261114w";
+import { clockMs, mmss, catColor, standings } from "../js/engines.js?v=20261114w";
+import * as C from "../js/common.js?v=20261114w";
+import { applySportInfo } from "../js/sportinfo.js?v=20261114w";
+import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261114w";
+import { bowlingStandings } from "../js/bowling-data.js?v=20261114w";
+import { firebaseConfig } from "../config.js?v=20261114w";
+import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261114w";
 const { $, esc, ref } = C;
 
 const P = new URLSearchParams(location.search);
@@ -315,11 +315,16 @@ function tablesHTML(all, SP) {
   const t = standings(all);
   const groups = Object.entries(t).filter(([, rows]) => rows.length).sort((a, b) => a[0].localeCompare(b[0]));
   if (!groups.length) return "";
-  const block = ([g, rows]) => `<div class="tbl" style="--cc:${catColor(g, catList, true)}">
+  const block = ([g, rows]) => {
+    const most = Math.max(1, ...rows.map(r => r.pts));
+    return `<div class="tbl" style="--cc:${catColor(g, catList, true)}">
     <div class="tname">${esc(g)}</div>
     <div class="thead"><span></span><span class="l">Team</span><span>P</span><span>W</span><span>L</span><span>Pts</span></div>
-    ${rows.map((r, i) => `<div class="trw${i < 2 ? " top" : ""}"><span class="tp">${i + 1}</span><span class="l">${esc(r.team)}</span>
-      <span>${r.p}</span><span>${r.w}</span><span>${r.l}</span><span class="tpt">${r.pts}</span></div>`).join("")}</div>`;
+    ${rows.map((r, i) => `<div class="trw${i < 2 ? " top" : ""} ${r.p ? "" : "idle"}" style="--bar:${Math.round(r.pts / most * 100)}%">
+      <span class="tp">${i + 1}</span><span class="l">${esc(r.team)}</span>
+      <span class="tn">${r.p}</span><span class="tw">${r.w}</span><span class="tl">${r.l}</span>
+      <span class="tpt" data-k="st-${esc(g)}-${esc(r.team)}">${r.pts}</span></div>`).join("")}</div>`;
+  };
   return `<h2>Standings · ${esc(SP.name)}</h2>
     <div class="tables" style="--tc:${groups.length > 2 ? 2 : 1}">${groups.map(block).join("")}</div>`;
 }
