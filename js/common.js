@@ -1,5 +1,5 @@
 // Shared helpers for pages that use the Firebase SDK (scorer, admin, display).
-import { firebaseConfig } from "../config.js?v=20261114r";
+import { firebaseConfig } from "../config.js?v=20261114s";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -55,6 +55,17 @@ export function notConfiguredScreen() {
 // Admin writes settings/reload. Every page watches it and reacts only to a CHANGE, never to
 // the value that is already there when the page opens - so opening a page never reloads it.
 // No clocks are compared, so a phone with the wrong time still behaves.
+// GitHub Pages serves index.html with max-age=600, so for ten minutes after a deploy a plain
+// reload can hand back the OLD page - and with it the old script tags. Changing the URL makes
+// the browser fetch the document fresh, so a reload always lands on the published version.
+export function reloadFresh(key) {
+  try {
+    const u = new URL(location.href);
+    u.searchParams.set("r", String(key || Date.now()));
+    location.replace(u.toString());
+  } catch (e) { location.reload(); }
+}
+
 export function watchReload(onSignal) {
   if (!db) return;
   let seen, first = true;

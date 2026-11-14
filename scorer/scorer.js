@@ -1,9 +1,9 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261114r";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261114s";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261114r";
-import * as C from "../js/common.js?v=20261114r";
-import { applySportInfo } from "../js/sportinfo.js?v=20261114r";
-import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261114r";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261114s";
+import * as C from "../js/common.js?v=20261114s";
+import { applySportInfo } from "../js/sportinfo.js?v=20261114s";
+import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261114s";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -2556,11 +2556,12 @@ async function clearAnn() {
 // ---------------------------------------------------------------- "an update is ready"
 // Admin can ask every device to reload. A scorer is never reloaded out from under a match:
 // the bar offers it, and they tap when it suits them.
-function showUpdateBar() {
+function showUpdateBar(sig) {
   const old = $("#updBar"); if (old) old.remove();
   const inMatch = !!curId;
   const el = document.createElement("div");
   el.id = "updBar";
+  el.dataset.at = (sig && sig.at) || Date.now();
   el.innerHTML = `<b>An update is ready for this page.</b>
     <small>${inMatch ? "You are in a match \u2013 scores are saved, but you will come back to the match list." : "Nothing is lost, it takes a second."}</small>
     <span class="btns"><button class="primary small" data-u="now">Reload now</button><button class="small" data-u="later">Later</button></span>`;
@@ -2568,7 +2569,7 @@ function showUpdateBar() {
     const b = e.target.closest("[data-u]"); if (!b) return;
     if (b.dataset.u === "later") return el.remove();
     if (pending && !confirm("Some taps have not reached the server yet. Reload anyway?")) return;
-    location.reload();
+    C.reloadFresh(el.dataset.at);
   };
   document.body.appendChild(el);
 }
