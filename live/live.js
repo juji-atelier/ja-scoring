@@ -1,11 +1,11 @@
 // Public live-score page. Uses plain HTTPS polling (no live connection),
 // so hundreds of spectators stay inside Firebase's free limits.
-import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261114w";
-import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261114w";
-import { standings, clockMs, mmss, catColor } from "../js/engines.js?v=20261114w";
-import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261114w";
-import { cfgOf, shown, isDone, KEEP } from "../js/livecfg.js?v=20261114w";
-import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261114w";
+import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261114x";
+import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261114x";
+import { standings, clockMs, mmss, catColor } from "../js/engines.js?v=20261114x";
+import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261114x";
+import { cfgOf, shown, isDone, KEEP } from "../js/livecfg.js?v=20261114x";
+import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261114x";
 
 const FAST_MS = 5000;     // live matches: small live-only list (pub/<sport>/live)
 const QUIET_MS = 8000;    // nothing live: the live list is empty, so this costs almost nothing
@@ -172,6 +172,14 @@ function champions() {
   const isFinal = r => /\bfinal\b/i.test(r.rd || "") && !/semi|quarter|suku|separuh/i.test(r.rd || "");
   const isThird = r => /3rd|third|bronze|tempat ke-?3/i.test(r.rd || "");
   const evs = [...new Set(all.filter(isFinal).map(r => r.ev || ""))];
+  // A sport played as groups only (karom: pools, no final). Once Admin marks it Completed,
+  // each group's table decides its placings - the JUARA / N.JUARA on the score sheet.
+  if (!evs.length) {
+    if (!isDone(cfg, sport)) return [];
+    const tbl = standings(data);
+    return Object.keys(tbl).sort().filter(g => tbl[g].length >= 2 && tbl[g][0].p > 0)
+      .map(g => ({ ev: g, champ: tbl[g][0].team, runner: tbl[g][1].team, third: tbl[g][2] ? tbl[g][2].team : "" }));
+  }
   return evs.map(ev => {
     const f = all.find(r => isFinal(r) && !isThird(r) && (r.ev || "") === ev);
     if (!f) return null;
