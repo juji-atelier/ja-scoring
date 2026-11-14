@@ -266,6 +266,54 @@ export function view(sport, m, now = Date.now()) {
 // Tie-break: points, then head-to-head between the tied teams (points, then
 // score difference in the matches they played against each other), then
 // overall score difference, score for, name.
+// Who goes on the podium, for the live page and the big screen alike.
+// - A knockout: a match whose round says Final (not Semi) gives the champion and runner-up; a
+//   3rd-place match (3rd, third, bronze, 3/4, ketiga, tempat ke-3) gives the bronze. Rounds may
+//   be named in English or Malay ("Final", "Perlawanan Akhir", "Tempat 3/4"…).
+// - Groups that are not part of any knockout (a pools-only category like Mix Double, or the whole
+//   of karom): once the sport is completed, each group's table gives its placings.
+// A group whose teams went on to the knockout (Open Group A and B → semis → final) gets no
+// podium of its own: the final decides that category.
+export function champions(records, completed) {
+  const recs = Object.values(records || {}).filter(Boolean);
+  const rd = r => String(r.rd || "");
+  const isThird = r => /3rd|third|bronze|ketiga|3\s*[\/&-]\s*4|tempat\s*(ke-?\s*)?3/i.test(rd(r));
+  const isFinal = r => /\bfinal\b|\bakhir\b/i.test(rd(r)) && !/semi|quarter|suku|separuh/i.test(rd(r)) && !isThird(r);
+  const isKO = r => isFinal(r) || isThird(r) || /semi|quarter|suku|separuh/i.test(rd(r));
+  const win = r => (r.w === "a" ? r.a : r.b), lose = r => (r.w === "a" ? r.b : r.a);
+  const grOf = {}, evOfGr = {};
+  for (const r of recs) if (r.gr && !isKO(r)) { grOf[r.a] = grOf[r.a] || r.gr; grOf[r.b] = grOf[r.b] || r.gr; evOfGr[r.gr] = evOfGr[r.gr] || r.ev || ""; }
+  const out = [], fedKO = new Set();
+  for (const r of recs) if (isKO(r)) for (const t of [r.a, r.b]) if (grOf[t]) fedKO.add(grOf[t]);
+  const done = recs.filter(r => r.st === "done" && r.w);
+  for (const ev of [...new Set(done.filter(isFinal).map(r => r.ev || ""))]) {
+    const f = done.find(r => isFinal(r) && (r.ev || "") === ev);
+    const t = done.find(r => isThird(r) && (r.ev || "") === ev);
+    let label = ev, cat = ev;
+    if (!label) {
+      // a knockout across groups with no category of its own: name it after what the groups share
+      // ("OPEN GROUP A" + "OPEN GROUP B" → "OPEN")
+      const gs = [...new Set(recs.filter(r => isKO(r) && !(r.ev || "")).flatMap(r => [grOf[r.a], grOf[r.b]]).filter(Boolean))];
+      const words = gs.map(g => g.split(/\s+/));
+      const common = [];
+      for (let i = 0; words.length && words.every(w => w[i] && w[i] === words[0][i]); i++) common.push(words[0][i]);
+      while (common.length && /^(group|pool|kumpulan|grup|[-–])$/i.test(common[common.length - 1])) common.pop();
+      label = common.join(" ") || gs.join(" / ");
+      cat = gs.length ? evOfGr[gs[0]] || gs[0] : "";
+    }
+    out.push({ ev: label, cat, champ: win(f), runner: lose(f), third: t ? win(t) : "" });
+  }
+  if (completed) {
+    const tbl = standings(recs.filter(r => !isKO(r)));
+    for (const g of Object.keys(tbl).sort()) {
+      const rows = tbl[g];
+      if (!g || fedKO.has(g) || rows.length < 2 || !rows[0].p) continue;
+      out.push({ ev: g, cat: evOfGr[g] || "", champ: rows[0].team, runner: rows[1].team, third: rows[2] ? rows[2].team : "" });
+    }
+  }
+  return out;
+}
+
 export function standings(records) {
   const groups = {}, played = {};
   for (const r of Object.values(records || {})) {

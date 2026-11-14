@@ -1,11 +1,11 @@
-import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261115e";
-import { clockMs, mmss, catColor, standings } from "../js/engines.js?v=20261115e";
-import * as C from "../js/common.js?v=20261115e";
-import { applySportInfo } from "../js/sportinfo.js?v=20261115e";
-import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261115e";
-import { bowlingStandings } from "../js/bowling-data.js?v=20261115e";
-import { firebaseConfig } from "../config.js?v=20261115e";
-import { cfgOf, isDone, mlEffective, sportEffective, KEEP, withPubDone } from "../js/livecfg.js?v=20261115e";
+import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261115f";
+import { clockMs, mmss, catColor, standings, champions } from "../js/engines.js?v=20261115f";
+import * as C from "../js/common.js?v=20261115f";
+import { applySportInfo } from "../js/sportinfo.js?v=20261115f";
+import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261115f";
+import { bowlingStandings } from "../js/bowling-data.js?v=20261115f";
+import { firebaseConfig } from "../config.js?v=20261115f";
+import { cfgOf, isDone, mlEffective, sportEffective, KEEP, withPubDone } from "../js/livecfg.js?v=20261115f";
 // Completed: Admin's tick (settings) or the PIC's own confirmation (pub/<sport>/done)
 const cfgNow = () => withPubDone(cfgOf(settings), Object.fromEntries(Object.keys(SPORTS).filter(id => pub[id] && pub[id].done).map(id => [id, true])));
 const { $, esc, ref } = C;
@@ -330,22 +330,7 @@ const PODIUM_SLIDE = true;
 
 // champions the same way the live page finds them: a "Final" match per category; or, for a sport
 // played in groups only, each group's table once Admin has marked the sport Completed
-function champsOf(sp, all) {
-  const fin = all.filter(r => r.st === "done" && r.w);
-  const isFinal = r => /\bfinal\b/i.test(r.rd || "") && !/semi|quarter|suku|separuh/i.test(r.rd || "");
-  const isThird = r => /3rd|third|bronze|tempat ke-?3/i.test(r.rd || "");
-  const evs = [...new Set(fin.filter(isFinal).map(r => r.ev || ""))];
-  const nm = (r, s) => s === "a" ? r.a : r.b;
-  if (evs.length) return evs.map(ev => {
-    const f = fin.find(r => isFinal(r) && !isThird(r) && (r.ev || "") === ev); if (!f) return null;
-    const t = fin.find(r => isThird(r) && (r.ev || "") === ev);
-    return { ev, cat: ev, champ: nm(f, f.w), runner: nm(f, f.w === "a" ? "b" : "a"), third: t ? nm(t, t.w) : "" };
-  }).filter(Boolean);
-  if (!isDone(cfgNow(), sp)) return [];
-  const t = standings(all);
-  return Object.keys(t).sort().filter(g => t[g].length >= 2 && t[g][0].p > 0)
-    .map(g => ({ ev: g, cat: (all.find(r => r.gr === g) || {}).ev || "", champ: t[g][0].team, runner: t[g][1].team, third: t[g][2] ? t[g][2].team : "" }));
-}
+function champsOf(sp, all) { return champions(all, isDone(cfgNow(), sp)); }   // shared rule: js/engines.js
 function podiumHTML(champs, SP) {
   const step = (n, team) => `<div class="ps s${n}">${n === 1 ? `<span class="pcup">🏆</span>` : ""}<span class="pn">${team ? esc(team) : "&nbsp;"}</span><div class="pb"><i>${n}</i></div></div>`;
   const COL = ["#F2C14E", "#FF5D73", "#4FC3F7", "#7CE38B", "#B388FF", "#FF9F43", "#FFFFFF"];

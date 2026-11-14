@@ -1,11 +1,11 @@
 // Public live-score page. Uses plain HTTPS polling (no live connection),
 // so hundreds of spectators stay inside Firebase's free limits.
-import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261115e";
-import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261115e";
-import { standings, clockMs, mmss, catColor } from "../js/engines.js?v=20261115e";
-import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261115e";
-import { cfgOf, shown, isDone, KEEP, withPubDone } from "../js/livecfg.js?v=20261115e";
-import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261115e";
+import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261115f";
+import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261115f";
+import { standings, clockMs, mmss, catColor, champions as champsOf } from "../js/engines.js?v=20261115f";
+import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261115f";
+import { cfgOf, shown, isDone, KEEP, withPubDone } from "../js/livecfg.js?v=20261115f";
+import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261115f";
 
 const FAST_MS = 5000;     // live matches: small live-only list (pub/<sport>/live)
 const QUIET_MS = 8000;    // nothing live: the live list is empty, so this costs almost nothing
@@ -173,25 +173,8 @@ const teamHit = (name, sh) => !!q && (low(name).includes(q) || low(sh[name]).inc
 
 // 🏆 champion: a confirmed match whose round is "Final" (not semi / quarter); 3rd place from a "3rd place" match
 function champions() {
-  const all = list().filter(r => r.st === "done" && r.w);
-  const isFinal = r => /\bfinal\b/i.test(r.rd || "") && !/semi|quarter|suku|separuh/i.test(r.rd || "");
-  const isThird = r => /3rd|third|bronze|tempat ke-?3/i.test(r.rd || "");
-  const evs = [...new Set(all.filter(isFinal).map(r => r.ev || ""))];
-  // A sport played as groups only (karom: pools, no final). Once Admin marks it Completed,
-  // each group's table decides its placings - the JUARA / N.JUARA on the score sheet.
-  if (!evs.length) {
-    if (!isDone(cfg, sport)) return [];
-    const tbl = standings(data);
-    return Object.keys(tbl).sort().filter(g => tbl[g].length >= 2 && tbl[g][0].p > 0)
-      .map(g => ({ ev: g, cat: (list().find(r => r.gr === g) || {}).ev || "", champ: tbl[g][0].team, runner: tbl[g][1].team, third: tbl[g][2] ? tbl[g][2].team : "" }));
-  }
-  return evs.map(ev => {
-    const f = all.find(r => isFinal(r) && !isThird(r) && (r.ev || "") === ev);
-    if (!f) return null;
-    const t = all.find(r => isThird(r) && (r.ev || "") === ev);
-    const lose = r => (r.w === "a" ? r.b : r.a);
-    return { ev, cat: ev, champ: f.w === "a" ? f.a : f.b, runner: lose(f), third: t ? (t.w === "a" ? t.a : t.b) : "" };
-  }).filter(Boolean);
+  // finals show as soon as they are played; group podiums once the sport is Completed
+  return champsOf(list(), isDone(cfg, sport));
 }
 
 // point flash: remember the last big score of each live match; a change lights the card up for a moment

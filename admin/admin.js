@@ -1,11 +1,11 @@
-import { SPORTS, ADMIN_EMAIL, EVENT_DEFAULTS } from "../config.js?v=20261115e";
-import { publicRecord, standings, FORMATS, ENGINE_OF, DETAILS } from "../js/engines.js?v=20261115e";
-import { bowlingStandings, BOWL_ROOT } from "../js/bowling-data.js?v=20261115e";
-import { BOARDS, mlbbMatches, applyBoardInfo, boardBaseName } from "../js/boards.js?v=20261115e";
-import { applySportInfo, SPORT_BASE } from "../js/sportinfo.js?v=20261115e";
-import { firebaseConfig } from "../config.js?v=20261115e";
-import * as C from "../js/common.js?v=20261115e";
-import { cfgOf, shown, isDone, mlHas, mlEffective, KEEP, withPubDone } from "../js/livecfg.js?v=20261115e";
+import { SPORTS, ADMIN_EMAIL, EVENT_DEFAULTS } from "../config.js?v=20261115f";
+import { publicRecord, standings, FORMATS, ENGINE_OF, DETAILS } from "../js/engines.js?v=20261115f";
+import { bowlingStandings, BOWL_ROOT } from "../js/bowling-data.js?v=20261115f";
+import { BOARDS, mlbbMatches, applyBoardInfo, boardBaseName } from "../js/boards.js?v=20261115f";
+import { applySportInfo, SPORT_BASE } from "../js/sportinfo.js?v=20261115f";
+import { firebaseConfig } from "../config.js?v=20261115f";
+import * as C from "../js/common.js?v=20261115f";
+import { cfgOf, shown, isDone, mlHas, mlEffective, KEEP, withPubDone } from "../js/livecfg.js?v=20261115f";
 // Completed: this page's tick (settings) or the PIC's confirmation on the scorer page (pub/<sport>/done)
 const cfgA = () => withPubDone(cfgOf(settings), Object.fromEntries(Object.keys(SPORTS).filter(id => pub[id] && pub[id].done).map(id => [id, true])));
 const { $, $$, esc, toast, ref } = C;
