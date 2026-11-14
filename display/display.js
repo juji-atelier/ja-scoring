@@ -1,11 +1,11 @@
-import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261115a";
-import { clockMs, mmss, catColor, standings } from "../js/engines.js?v=20261115a";
-import * as C from "../js/common.js?v=20261115a";
-import { applySportInfo } from "../js/sportinfo.js?v=20261115a";
-import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261115a";
-import { bowlingStandings } from "../js/bowling-data.js?v=20261115a";
-import { firebaseConfig } from "../config.js?v=20261115a";
-import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261115a";
+import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261115b";
+import { clockMs, mmss, catColor, standings } from "../js/engines.js?v=20261115b";
+import * as C from "../js/common.js?v=20261115b";
+import { applySportInfo } from "../js/sportinfo.js?v=20261115b";
+import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261115b";
+import { bowlingStandings } from "../js/bowling-data.js?v=20261115b";
+import { firebaseConfig } from "../config.js?v=20261115b";
+import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261115b";
 const { $, esc, ref } = C;
 
 const P = new URLSearchParams(location.search);
@@ -299,7 +299,9 @@ function fx() {
 function renderRot() {
   const el = $("#rot"); if (!el) return;
   const on = !FORCE_SPORT && !featured() && (disp().mode || "auto") === "auto" && rotList.length > 1;
-  const pct = on ? Math.min(100, (Date.now() - rotStart) / (Math.max(5, Number(disp().rotate) || 15) * 1000) * 100) : 0;
+  // with matches / standings slides, the line counts down to the next slide instead
+  const pct = slideOn ? Math.min(100, (Date.now() - slideAt) / (slideSecs() * 1000) * 100)
+    : on ? Math.min(100, (Date.now() - rotStart) / (Math.max(5, Number(disp().rotate) || 15) * 1000) * 100) : 0;
   el.style.transition = pct < (el._p || 0) ? "none" : "";
   el.style.width = pct + "%"; el._p = pct;
 }
@@ -310,6 +312,7 @@ function renderRot() {
 // alternates between the matches and the tables; other sports are unaffected.
 const TABLE_SLIDE = new Set(["badminton"]);
 let slideOn = false, slideIx = 0, slideAt = 0;
+const slideSecs = () => Math.max(8, Number(disp().slide) || 15);
 
 function tablesHTML(all, SP) {
   const t = standings(all);
@@ -498,8 +501,7 @@ setInterval(() => {
   renderRot();
   renderAnn();
   if (slideOn) {
-    const secs = Math.max(8, Number(disp().slide) || 15);
-    if (Date.now() - slideAt > secs * 1000) { slideAt = Date.now(); slideIx = slideIx ? 0 : 1; render(); }
+    if (Date.now() - slideAt > slideSecs() * 1000) { slideAt = Date.now(); slideIx = slideIx ? 0 : 1; render(); }
   }
   if (!FORCE_SPORT && !featured() && (disp().mode || "auto") === "auto") {
     const before = current;

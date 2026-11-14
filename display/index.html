@@ -7,8 +7,8 @@
 <link rel="icon" type="image/png" sizes="192x192" href="../img/icon-192.png">
 <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
 <title>Big Screen · JA Scoring</title>
-<link rel="stylesheet" href="../css/theme.css?v=20261115a">
-<script src="../js/theme.js?v=20261115a"></script>
+<link rel="stylesheet" href="../css/theme.css?v=20261115b">
+<script src="../js/theme.js?v=20261115b"></script>
 <style>
 :root{--u:min(1vw,1.7778vh);--sport:#B3162D;--bg:#16181D;--card:#23262E;--line:#343844;--text:#F2F3F5;--muted:#9A9FAA;--gold:#D2AC70}
 *{box-sizing:border-box}
@@ -219,7 +219,7 @@ body.fx .bar::after{content:"";position:absolute;top:0;bottom:0;left:0;width:cal
 @keyframes shine{0%,72%{transform:translateX(-25vw)}100%{transform:translateX(calc(105*var(--u)))}}
 body.fx .bar .lg{animation:ring 3.2s ease-in-out infinite}
 @keyframes ring{0%,100%{box-shadow:0 0 0 calc(.2*var(--u)) #ffffff33}50%{box-shadow:0 0 0 calc(.2*var(--u)) #ffffff66,0 0 calc(1.6*var(--u)) calc(.2*var(--u)) color-mix(in srgb,var(--sport) 70%,transparent)}}
-body.fx .rot{display:block;position:absolute;left:0;bottom:0;height:calc(.22*var(--u));width:0;background:#ffffffa6;transition:width .5s linear}
+body.fx .rot{display:block;position:absolute;left:0;bottom:0;height:calc(.32*var(--u));width:0;background:#ffffffc0;box-shadow:0 0 calc(.6*var(--u)) #ffffff80;border-radius:0 99px 99px 0;transition:width .5s linear}
 body.fx .sportchip{transition:background .5s}
 body.fx .sportchip.pop{animation:chip .6s cubic-bezier(.2,.9,.3,1.3)}
 @keyframes chip{from{transform:scale(.6) rotate(-4deg);opacity:0}to{transform:none;opacity:1}}
@@ -268,6 +268,6 @@ body.fx .aw-wrap{position:relative;z-index:1}
   <div class="tick"><div class="lbl cond">RESULTS</div><div class="mq"><span id="ticker"></span></div><div class="ja"><span class="jamark"></span>JUJI-ATELIER</div></div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script type="module" src="display.js?v=20261115a"></script>
+<script type="module" src="display.js?v=20261115b"></script>
 </body>
 </html>
