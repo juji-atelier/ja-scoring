@@ -1,11 +1,11 @@
 // Public live-score page. Uses plain HTTPS polling (no live connection),
 // so hundreds of spectators stay inside Firebase's free limits.
-import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261114x";
-import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261114x";
-import { standings, clockMs, mmss, catColor } from "../js/engines.js?v=20261114x";
-import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261114x";
-import { cfgOf, shown, isDone, KEEP } from "../js/livecfg.js?v=20261114x";
-import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261114x";
+import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261114y";
+import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261114y";
+import { standings, clockMs, mmss, catColor } from "../js/engines.js?v=20261114y";
+import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261114y";
+import { cfgOf, shown, isDone, KEEP } from "../js/livecfg.js?v=20261114y";
+import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261114y";
 
 const FAST_MS = 5000;     // live matches: small live-only list (pub/<sport>/live)
 const QUIET_MS = 8000;    // nothing live: the live list is empty, so this costs almost nothing
@@ -250,6 +250,23 @@ function card(r) {
   return `<div class="m ${r.st === "live" ? "live" : ""} ${fl ? "flash" : ""} ${r.ev ? "hascat" : ""}" style="${cc}"><div class="meta">${r.ct ? `<span class="ctb">${esc(courtWord())} ${esc(r.ct)}</span>` : ""}${r.ev ? `<span class="evc">${esc(r.ev)}</span>` : ""}${rd ? `<span>${esc(rd)}</span>` : ""}${pt ? `<span class="ptb">${esc(pt)}</span>` : ""}<span class="st">${st}</span></div>
     ${row(r, "a", lead, false)}${row(r, "b", lead, false)}${v.hist ? `<div class="h">${esc(v.hist)}</div>` : ""}${events(r)}</div>`;
 }
+// A finished match as one compact strip: team A · score · team B on a single line, winner bright,
+// loser dimmed, a tint leaning toward the winner. Results lists are long; the two-row live card
+// spent a whole screen on four of them.
+function resCard(r) {
+  const v = r.v || {}, sc = r.sc || [], wa = r.w === "a", wb = r.w === "b";
+  const rd = r.rd && !/^group stage$/i.test(r.rd) ? r.rd : "";
+  const cc = r.ev ? `--cc:${catColor(r.ev, cats())}` : "";
+  const side = (s, w) => `<div class="rt ${s} ${w ? "w" : r.w ? "l" : ""} ${isMe(r[s]) ? "me" : ""}">
+    <b>${isMe(r[s]) ? "\u2605 " : ""}${mark(r[s])}</b>${r["p" + s] ? `<small>${esc(r["p" + s])}</small>` : ""}</div>`;
+  const score = r.wo ? `<span class="w">W/O</span>`
+    : `<span class="${wa ? "w" : ""}">${esc(sc[0] ?? "")}</span><i>\u2013</i><span class="${wb ? "w" : ""}">${esc(sc[1] ?? "")}</span>`;
+  return `<div class="rc ${wa ? "wa" : wb ? "wb" : ""}" style="${cc}">
+    <div class="rh">${r.ct ? `<span class="ctb">${esc(courtWord())} ${esc(r.ct)}</span>` : ""}${r.ev ? `<span class="evc">${esc(r.ev)}</span>` : ""}${rd ? `<span>${esc(rd)}</span>` : ""}<span class="st">Final</span></div>
+    <div class="rb">${side("a", wa)}<div class="rs">${score}</div>${side("b", wb)}</div>
+    ${v.hist ? `<div class="hh">${esc(v.hist)}</div>` : ""}${events(r)}</div>`;
+}
+const resList = rs => `<div class="rgrid">${rs.map(resCard).join("")}</div>`;
 // 🏆 a result from the last 10 minutes
 function finCard(r) {
   const sc = r.wo ? "by walkover" : `${(r.sc || [])[0]}–${(r.sc || [])[1]}`;
@@ -314,7 +331,7 @@ function render() {
     // always the whole bracket, whatever is typed in the search box: the followed team is starred in it
     h += bracketHTML(list(), { esc, courtWord: courtWord(), isMe });
   } else if (sub === "live" && isDone(cfg, sport)) {
-    h += `<h2>Final results</h2>` + (done.length ? done.map(card).join("") : `<div class="empty">No results.</div>`);
+    h += `<h2>Final results</h2>` + (done.length ? resList(done) : `<div class="empty">No results.</div>`);
   } else if (sub === "live") {
     h += `<h2>${live.length ? '<span class="lv">LIVE</span>' : ""} Now playing</h2>` + (live.length ? live.map(card).join("") : `<div class="empty">No match in progress.</div>`);
     const nowS = Date.now() + clockSkew;
@@ -322,7 +339,7 @@ function render() {
     if (fresh.length) h += `<h2>Just finished</h2>` + fresh.map(finCard).join("");
     h += `<h2>Up next</h2>` + (next.length ? nextHTML(next) : `<div class="empty">No more scheduled matches.</div>`);
   } else if (sub === "results") {
-    h += `<h2>Results</h2>` + (done.length ? done.map(card).join("") : `<div class="empty">No results yet.</div>`);
+    h += `<h2>Results</h2>` + (done.length ? resList(done) : `<div class="empty">No results yet.</div>`);
   } else {
     const tbl = standings(data);
     const gs = Object.keys(tbl).sort();

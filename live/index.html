@@ -17,8 +17,8 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#F6F4F2">
 <title>Live Scores</title>
-<link rel="stylesheet" href="../css/theme.css?v=20261114x">
-<script src="../js/theme.js?v=20261114x"></script>
+<link rel="stylesheet" href="../css/theme.css?v=20261114y">
+<script src="../js/theme.js?v=20261114y"></script>
 <style>
 :root{--sport:var(--acc);--text:var(--ink);--muted:var(--mute)}
 *{box-sizing:border-box}
@@ -75,6 +75,30 @@ h2 .lv:before{content:"";width:7px;height:7px;border-radius:50%;background:var(-
 .r.win .b{color:var(--acc)}
 .tag{background:var(--acc-soft);color:var(--acc);font-size:10px;font-weight:800;border-radius:5px;padding:2px 6px;margin-left:6px;vertical-align:middle}
 .h{font-size:12px;color:var(--mute);margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-variant-numeric:tabular-nums}
+/* finished matches: one compact strip each, two across on a wide screen */
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(340px,100%),1fr));gap:10px;margin:10px 0}
+.rc{position:relative;isolation:isolate;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--cc,var(--sport));
+  border-radius:14px;padding:9px 14px 8px;box-shadow:var(--shadow);overflow:hidden}
+.rc:before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(90deg,color-mix(in srgb,var(--cc,var(--sport)) 14%,transparent),transparent 55%)}
+.rc.wb:before{background:linear-gradient(270deg,color-mix(in srgb,var(--cc,var(--sport)) 14%,transparent),transparent 55%)}
+.rc .rh{display:flex;gap:8px;align-items:center;font-size:11px;color:var(--mute);margin-bottom:5px;white-space:nowrap;overflow:hidden}
+.rc .rh .evc{color:var(--cc,var(--mute));font-weight:800}
+.rc .rh .ctb{background:var(--ink);color:var(--bg);border-radius:5px;padding:0 6px;font-weight:900;font-size:10.5px}
+.rc .rh .st{margin-left:auto;font-weight:800;letter-spacing:.1em;text-transform:uppercase;font-size:10px}
+.rc .rb{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:12px}
+.rc .rt{min-width:0}
+.rc .rt.b{text-align:right}
+.rc .rt b{display:block;font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rc .rt.w b{font-weight:900}
+.rc .rt.l b{color:var(--mute);font-weight:600}
+.rc .rt small{display:block;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.rc .rt.me b{color:var(--acc)}
+.rc .rs{display:flex;align-items:center;gap:6px;font-family:Inter,sans-serif;font-size:24px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums}
+.rc .rs span{color:var(--mute)}
+.rc .rs span.w{color:var(--acc)}
+.rc .rs i{font-style:normal;font-size:15px;color:var(--mute)}
+.rc .hh{font-size:11px;color:var(--mute);margin-top:6px;padding-top:5px;border-top:1px dashed var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .empty{color:var(--mute);padding:12px 2px;font-size:14px}
 .donebar{margin:4px 0 10px;padding:10px 14px;border-radius:12px;font-size:14px;background:color-mix(in srgb,#16a34a 16%,var(--card));border:1px solid color-mix(in srgb,#16a34a 45%,var(--line))}
 table{width:100%;border-collapse:separate;border-spacing:0;font-size:14px;background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
@@ -271,6 +295,6 @@ try{var n=performance.getEntriesByType("navigation")[0],t=n?n.type:"navigate",se
   </main>
 </div>
 <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
-<script type="module" src="live.js?v=20261114x"></script>
+<script type="module" src="live.js?v=20261114y"></script>
 </body>
 </html>
