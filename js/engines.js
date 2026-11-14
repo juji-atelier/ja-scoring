@@ -10,7 +10,8 @@
 // =====================================================================
 
 export const FORMATS = {
-  badminton:   { bestOf: 3, points: 21, cap: 30, serve: "winner" },
+  // HQ Games plays a single straight game to 15 - no deuce, so a game never runs past 15
+  badminton:   { bestOf: 1, points: 15, cap: 15, serve: "winner" },
   pingpong:    { bestOf: 3, points: 11, cap: 0,  serve: "tt" },
   sepaktakraw: { bestOf: 3, points: 21, cap: 25, decPoints: 15, decCap: 17, serve: "takraw", unit: "Set" },
   futsal:      { periods: 2, minutes: 20, fouls: true },
