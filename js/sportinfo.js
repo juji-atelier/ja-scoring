@@ -5,7 +5,7 @@
 //  Every page calls applySportInfo() when it gets the settings, so the
 //  scorer header, the public tabs, Admin and the big screen all agree.
 // =====================================================================
-import { SPORTS } from "../config.js?v=20261114q";
+import { SPORTS } from "../config.js?v=20261114r";
 
 export const SPORT_BASE = Object.fromEntries(Object.entries(SPORTS).map(([id, s]) => [id, { name: s.name, day: s.day, venue: s.venue || "" }]));
 

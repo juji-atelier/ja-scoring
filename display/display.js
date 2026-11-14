@@ -1,11 +1,11 @@
-import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261114q";
-import { clockMs, mmss, catColor } from "../js/engines.js?v=20261114q";
-import * as C from "../js/common.js?v=20261114q";
-import { applySportInfo } from "../js/sportinfo.js?v=20261114q";
-import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261114q";
-import { bowlingStandings } from "../js/bowling-data.js?v=20261114q";
-import { firebaseConfig } from "../config.js?v=20261114q";
-import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261114q";
+import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261114r";
+import { clockMs, mmss, catColor } from "../js/engines.js?v=20261114r";
+import * as C from "../js/common.js?v=20261114r";
+import { applySportInfo } from "../js/sportinfo.js?v=20261114r";
+import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261114r";
+import { bowlingStandings } from "../js/bowling-data.js?v=20261114r";
+import { firebaseConfig } from "../config.js?v=20261114r";
+import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261114r";
 const { $, esc, ref } = C;
 
 const P = new URLSearchParams(location.search);
@@ -220,6 +220,9 @@ function listHTML(arr, kind) {
 }
 
 function render() { renderView(); fx(); fitText(); }
+
+// Admin asked every device to reload: a big screen holds no state, so just do it.
+C.watchReload(() => location.reload());
 
 // ---------------- QR to the live page, bottom of the right-hand column
 // One persistent card, moved into each new render; the code is drawn once per sport and opens the

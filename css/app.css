@@ -436,3 +436,11 @@ details.guide li{margin:4px 0}
 .chips.ctpick .lab{align-self:center;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin-right:2px}
 .chips.ctpick button{min-width:40px}
 .chips.ctpick button.ghost{min-width:0;font-size:12px}
+
+/* "an update is ready" bar – Admin asked the devices to reload */
+#updBar{position:fixed;left:10px;right:10px;bottom:10px;z-index:60;display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+  padding:12px 14px;border-radius:14px;background:var(--card);border:1px solid color-mix(in srgb,var(--acc) 45%,var(--line));
+  box-shadow:0 10px 30px rgba(0,0,0,.35)}
+#updBar b{font-size:14px}
+#updBar small{flex:1 1 100%;order:3;color:var(--mute);font-weight:500;font-size:12px}
+#updBar .btns{margin-left:auto;display:flex;gap:8px}

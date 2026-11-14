@@ -1,11 +1,11 @@
 // Public live-score page. Uses plain HTTPS polling (no live connection),
 // so hundreds of spectators stay inside Firebase's free limits.
-import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261114q";
-import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261114q";
-import { standings, clockMs, mmss, catColor } from "../js/engines.js?v=20261114q";
-import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261114q";
-import { cfgOf, shown, isDone, KEEP } from "../js/livecfg.js?v=20261114q";
-import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261114q";
+import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261114r";
+import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261114r";
+import { standings, clockMs, mmss, catColor } from "../js/engines.js?v=20261114r";
+import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261114r";
+import { cfgOf, shown, isDone, KEEP } from "../js/livecfg.js?v=20261114r";
+import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261114r";
 
 const FAST_MS = 5000;     // live matches: small live-only list (pub/<sport>/live)
 const QUIET_MS = 8000;    // nothing live: the live list is empty, so this costs almost nothing
@@ -76,6 +76,7 @@ async function getJSON(path) {
 }
 
 let settingsAt = 0, fullAt = 0, countsAt = 0;
+let reloadKey;   // settings.reload.at as last seen; undefined until the first read
 async function poll() {
   clearTimeout(timer);
   if (document.hidden) return;
@@ -117,8 +118,12 @@ async function poll() {
 document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
 
 async function loadSettings() {
+  const prevReload = reloadKey;
   settings = (await getJSON("settings")) || {};
   settingsAt = Date.now();
+  // Admin asked every device to reload. React only to a change, never to what was already there.
+  reloadKey = settings.reload ? String(settings.reload.at || "") : "";
+  if (prevReload !== undefined && reloadKey && reloadKey !== prevReload) return location.reload();
   applySportInfo(settings.sportInfo);
   const was = JSON.stringify(cfg);
   cfg = cfgOf(settings);

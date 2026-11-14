@@ -8,9 +8,9 @@
 <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
 <title>Admin · JA Scoring</title>
 <meta name="theme-color" content="#F6F4F2">
-<script src="../js/hints.js?v=20261114q"></script>
-<script src="../js/theme.js?v=20261114q"></script>
-<link rel="stylesheet" href="../css/app.css?v=20261114q">
+<script src="../js/hints.js?v=20261114r"></script>
+<script src="../js/theme.js?v=20261114r"></script>
+<link rel="stylesheet" href="../css/app.css?v=20261114r">
 <style>
 :root{--sport:var(--acc)}
 .rsum{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
@@ -186,6 +186,11 @@ table.lv .inf{font-size:12.5px;color:var(--muted)}
         </div>
       </div>
       <div class="card">
+        <h3>Update everyone's pages</h3>
+        <p class="muted">Use this after a change has been published. Big screens and the public page reload themselves. Scorers get a bar offering the reload and tap it when it suits them, so nobody is pulled out of a match they are scoring.</p>
+        <div class="row"><button class="primary" id="btnAskReload">Ask all devices to reload</button></div>
+      </div>
+      <div class="card">
         <h3>Sport names, dates &amp; venues</h3>
         <p class="muted">Shown at the top of each scorer page, on the public page's sport tabs and on the big screen. Leave a box empty to keep the standard text shown in grey. An empty venue means the main venue above.</p>
         <div id="sportInfo" style="overflow-x:auto"></div>
@@ -276,6 +281,6 @@ table.lv .inf{font-size:12.5px;color:var(--muted)}
 <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
 <div id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script type="module" src="admin.js?v=20261114q"></script>
+<script type="module" src="admin.js?v=20261114r"></script>
 </body>
 </html>

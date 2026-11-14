@@ -1,5 +1,5 @@
 // Shared helpers for pages that use the Firebase SDK (scorer, admin, display).
-import { firebaseConfig } from "../config.js?v=20261114q";
+import { firebaseConfig } from "../config.js?v=20261114r";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -49,6 +49,20 @@ export function toast(msg, ms = 2200) {
 export function notConfiguredScreen() {
   document.body.innerHTML = `<div style="font-family:system-ui;padding:32px;max-width:560px;margin:auto">
     <h2>Setup needed</h2><p>Paste your Firebase web config into <b>config.js</b> first. See SETUP.md.</p></div>`;
+}
+
+// ---------------------------------------------------------------- "reload your page" from Admin
+// Admin writes settings/reload. Every page watches it and reacts only to a CHANGE, never to
+// the value that is already there when the page opens - so opening a page never reloads it.
+// No clocks are compared, so a phone with the wrong time still behaves.
+export function watchReload(onSignal) {
+  if (!db) return;
+  let seen, first = true;
+  onValue(ref(db, "settings/reload"), s => {
+    const v = s.val() || null, key = v ? String(v.at || "") : "";
+    if (first) { first = false; seen = key; return; }
+    if (key && key !== seen) { seen = key; onSignal(v); }
+  });
 }
 
 export const byNo = (x, y) => (Number(x.no) || 9999) - (Number(y.no) || 9999) || String(x.no).localeCompare(String(y.no));

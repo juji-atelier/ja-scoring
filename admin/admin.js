@@ -1,11 +1,11 @@
-import { SPORTS, ADMIN_EMAIL, EVENT_DEFAULTS } from "../config.js?v=20261114q";
-import { publicRecord, standings, FORMATS, ENGINE_OF, DETAILS } from "../js/engines.js?v=20261114q";
-import { bowlingStandings, BOWL_ROOT } from "../js/bowling-data.js?v=20261114q";
-import { BOARDS, mlbbMatches, applyBoardInfo, boardBaseName } from "../js/boards.js?v=20261114q";
-import { applySportInfo, SPORT_BASE } from "../js/sportinfo.js?v=20261114q";
-import { firebaseConfig } from "../config.js?v=20261114q";
-import * as C from "../js/common.js?v=20261114q";
-import { cfgOf, shown, isDone, mlHas, mlEffective, KEEP } from "../js/livecfg.js?v=20261114q";
+import { SPORTS, ADMIN_EMAIL, EVENT_DEFAULTS } from "../config.js?v=20261114r";
+import { publicRecord, standings, FORMATS, ENGINE_OF, DETAILS } from "../js/engines.js?v=20261114r";
+import { bowlingStandings, BOWL_ROOT } from "../js/bowling-data.js?v=20261114r";
+import { BOARDS, mlbbMatches, applyBoardInfo, boardBaseName } from "../js/boards.js?v=20261114r";
+import { applySportInfo, SPORT_BASE } from "../js/sportinfo.js?v=20261114r";
+import { firebaseConfig } from "../config.js?v=20261114r";
+import * as C from "../js/common.js?v=20261114r";
+import { cfgOf, shown, isDone, mlHas, mlEffective, KEEP } from "../js/livecfg.js?v=20261114r";
 const { $, $$, esc, toast, ref } = C;
 
 if (!C.configured) { C.notConfiguredScreen(); throw new Error("not configured"); }
@@ -286,6 +286,14 @@ function renderOverview() {
   $$("[data-feat]").forEach(b => b.onclick = () => saveDisplay({ mode: "match", match: b.dataset.feat }, "Featured on big screen"));
   $$("[data-pin]").forEach(b => b.onclick = () => saveDisplay({ mode: "sport", sport: b.dataset.pin }, `${nameOf(b.dataset.pin)} pinned`));
 }
+
+$("#btnAskReload").onclick = async () => {
+  if (!confirm("Ask every open scorer page, big screen and public page to reload?\n\nScorers choose when - they are never interrupted mid-match.")) return;
+  try {
+    await C.update(ref(db, "settings"), { reload: { at: Date.now(), by: "admin" } });
+    toast("Asked. Big screens reload now, scorers get a bar on their page.", 4500);
+  } catch (e) { toast("Could not send: " + (e.code || e.message), 4000); }
+};
 
 async function saveDisplay(patch, msg) {
   await C.update(ref(db, "settings/display"), patch);
