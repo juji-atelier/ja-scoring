@@ -17,8 +17,8 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#F6F4F2">
 <title>Live Scores</title>
-<link rel="stylesheet" href="../css/theme.css?v=20261114y">
-<script src="../js/theme.js?v=20261114y"></script>
+<link rel="stylesheet" href="../css/theme.css?v=20261114z">
+<script src="../js/theme.js?v=20261114z"></script>
 <style>
 :root{--sport:var(--acc);--text:var(--ink);--muted:var(--mute)}
 *{box-sizing:border-box}
@@ -122,10 +122,32 @@ tr:nth-child(2) td.t:before{content:"1";display:inline-grid;place-items:center;w
 .r .n.me:before{content:"★ "}
 mark{background:color-mix(in srgb,var(--warn) 40%,transparent);color:inherit;border-radius:3px;padding:0 1px}
 tr.me td{background:color-mix(in srgb,var(--gold) 14%,var(--card))}
-.champ{margin:14px 0 4px;border-radius:18px;padding:16px 18px;color:#fff;background:linear-gradient(120deg,#6f5220,#a8823f 55%,#6f5220);box-shadow:var(--shadow)}
-.champ .k{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;opacity:.85}
-.champ .w{font-family:Rajdhani,Inter;font-size:30px;font-weight:700;line-height:1.05;text-transform:uppercase;margin:4px 0 8px}
-.champ .o{display:flex;gap:6px 16px;flex-wrap:wrap;font-size:14px;font-weight:600;opacity:.95}
+/* champions: a podium card per category, side by side, with a slow gold shine */
+.champs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:12px;margin:14px 0 6px}
+.champ{position:relative;overflow:hidden;isolation:isolate;border-radius:18px;padding:16px 18px 14px;color:#fff;
+  background:radial-gradient(120% 140% at 0% 0%,#b8924a 0%,#7a5a24 45%,#3f2e12 100%);
+  border:1px solid #e6c37a66;box-shadow:0 10px 30px -12px #d2ac70aa,var(--shadow);animation:chIn .6s var(--d,0s) both}
+.champ:before{content:"";position:absolute;inset:0 0 auto 0;height:4px;background:var(--cc,#D2AC70)}
+.champ:after{content:"";position:absolute;inset:-40% auto -40% -60%;width:40%;z-index:-1;pointer-events:none;
+  background:linear-gradient(100deg,transparent,#fff3 45%,#fff6 50%,#fff3 55%,transparent);transform:skewX(-18deg);
+  animation:chShine 5s calc(1s + var(--d,0s)) infinite}
+.champ .k{display:flex;flex-direction:column;gap:2px;font-size:10.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#f6e3b8cc}
+.champ .k b{font-size:12px;letter-spacing:.08em;color:#fff}
+.champ .w{display:flex;align-items:center;gap:10px;margin:10px 0 12px}
+.champ .cup{font-size:34px;line-height:1;filter:drop-shadow(0 4px 10px #0007);animation:chCup 2.6s ease-in-out infinite}
+.champ .nm{font-family:Rajdhani,Inter;font-size:32px;font-weight:700;line-height:1;text-transform:uppercase;min-width:0;
+  background:linear-gradient(180deg,#fff 30%,#f3d38f);-webkit-background-clip:text;background-clip:text;color:transparent;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.champ .pod{display:flex;flex-wrap:wrap;gap:6px}
+.champ .pd{display:inline-flex;align-items:center;gap:7px;padding:4px 10px 4px 4px;border-radius:999px;font-size:13px;font-weight:700;
+  background:#0003;border:1px solid #fff2;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.champ .pd i{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;font-style:normal;font-size:11px;font-weight:900;color:#000;flex:none}
+.champ .pd.s i{background:linear-gradient(180deg,#f1f4f8,#aab4c0)}
+.champ .pd.b i{background:linear-gradient(180deg,#f0b27a,#a8642e)}
+@keyframes chIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes chShine{0%{left:-60%}35%,100%{left:130%}}
+@keyframes chCup{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-4px) rotate(4deg)}}
+@media (prefers-reduced-motion:reduce){.champ,.champ:after,.champ .cup{animation:none}}
 .upd{font-size:12px;color:var(--mute);text-align:right;margin-top:6px}
 @media(max-width:600px){.wrap{padding:0 14px}.hd .wrap{height:60px;gap:8px}.hd .brand b{font-size:18px}.hd .brand small{display:none}.logo-org{height:16px}.logo-dragon{width:36px;height:36px}.hero{padding:20px}.hero h1{font-size:30px}}
 /* JA splash: logo in the middle, then fades into the page (on open and on refresh) */
@@ -295,6 +317,6 @@ try{var n=performance.getEntriesByType("navigation")[0],t=n?n.type:"navigate",se
   </main>
 </div>
 <footer class="jafoot"><span class="jamark"></span>Powered by JUJI-ATELIER</footer>
-<script type="module" src="live.js?v=20261114y"></script>
+<script type="module" src="live.js?v=20261114z"></script>
 </body>
 </html>

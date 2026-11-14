@@ -1,11 +1,11 @@
 // Public live-score page. Uses plain HTTPS polling (no live connection),
 // so hundreds of spectators stay inside Firebase's free limits.
-import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261114y";
-import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261114y";
-import { standings, clockMs, mmss, catColor } from "../js/engines.js?v=20261114y";
-import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261114y";
-import { cfgOf, shown, isDone, KEEP } from "../js/livecfg.js?v=20261114y";
-import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261114y";
+import { firebaseConfig, SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261114z";
+import { applySportInfo, boardTabName } from "../js/sportinfo.js?v=20261114z";
+import { standings, clockMs, mmss, catColor } from "../js/engines.js?v=20261114z";
+import { renderSportGrid, sportItems, fetchLiveCounts } from "../js/sportnav.js?v=20261114z";
+import { cfgOf, shown, isDone, KEEP } from "../js/livecfg.js?v=20261114z";
+import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261114z";
 
 const FAST_MS = 5000;     // live matches: small live-only list (pub/<sport>/live)
 const QUIET_MS = 8000;    // nothing live: the live list is empty, so this costs almost nothing
@@ -178,14 +178,14 @@ function champions() {
     if (!isDone(cfg, sport)) return [];
     const tbl = standings(data);
     return Object.keys(tbl).sort().filter(g => tbl[g].length >= 2 && tbl[g][0].p > 0)
-      .map(g => ({ ev: g, champ: tbl[g][0].team, runner: tbl[g][1].team, third: tbl[g][2] ? tbl[g][2].team : "" }));
+      .map(g => ({ ev: g, cat: (list().find(r => r.gr === g) || {}).ev || "", champ: tbl[g][0].team, runner: tbl[g][1].team, third: tbl[g][2] ? tbl[g][2].team : "" }));
   }
   return evs.map(ev => {
     const f = all.find(r => isFinal(r) && !isThird(r) && (r.ev || "") === ev);
     if (!f) return null;
     const t = all.find(r => isThird(r) && (r.ev || "") === ev);
     const lose = r => (r.w === "a" ? r.b : r.a);
-    return { ev, champ: f.w === "a" ? f.a : f.b, runner: lose(f), third: t ? (t.w === "a" ? t.a : t.b) : "" };
+    return { ev, cat: ev, champ: f.w === "a" ? f.a : f.b, runner: lose(f), third: t ? (t.w === "a" ? t.a : t.b) : "" };
   }).filter(Boolean);
 }
 
@@ -331,7 +331,7 @@ function render() {
     // always the whole bracket, whatever is typed in the search box: the followed team is starred in it
     h += bracketHTML(list(), { esc, courtWord: courtWord(), isMe });
   } else if (sub === "live" && isDone(cfg, sport)) {
-    h += `<h2>Final results</h2>` + (done.length ? resList(done) : `<div class="empty">No results.</div>`);
+    // completed: the champions say it - every result is in the Results tab
   } else if (sub === "live") {
     h += `<h2>${live.length ? '<span class="lv">LIVE</span>' : ""} Now playing</h2>` + (live.length ? live.map(card).join("") : `<div class="empty">No match in progress.</div>`);
     const nowS = Date.now() + clockSkew;
@@ -355,8 +355,10 @@ function render() {
   }
   if (isDone(cfg, sport)) h = `<div class="donebar">✅ <b>${esc(SPORTS[sport].name)} completed</b> · final results</div>` + h;
   const champs = champions();
-  if (champs.length) h = champs.map(c => `<div class="champ"><div class="k">🏆 ${esc(SPORTS[sport].name)}${c.ev ? " · " + esc(c.ev) : ""} · Champion</div>
-    <div class="w">${esc(c.champ)}</div><div class="o"><span>🥈 Runner-up: ${esc(c.runner)}</span>${c.third ? `<span>🥉 3rd: ${esc(c.third)}</span>` : ""}</div></div>`).join("") + h;
+  if (champs.length) h = `<div class="champs">` + champs.map((c, i) => `<div class="champ" style="--cc:${c.cat ? catColor(c.cat, cats()) : "var(--sport)"};--d:${i * .25}s">
+    <div class="k"><span>${esc(SPORTS[sport].name)} champion</span>${c.ev ? `<b>${esc(c.ev)}</b>` : ""}</div>
+    <div class="w"><span class="cup">🏆</span><span class="nm">${esc(c.champ)}</span></div>
+    <div class="pod"><span class="pd s"><i>2</i>${esc(c.runner)}</span>${c.third ? `<span class="pd b"><i>3</i>${esc(c.third)}</span>` : ""}</div></div>`).join("") + `</div>` + h;
   const nowS = Date.now() + clockSkew;
   if (ann && ann.t && (!ann.exp || ann.exp > nowS)) {
     const at = ann.at ? new Date(ann.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "";

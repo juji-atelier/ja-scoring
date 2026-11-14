@@ -1,9 +1,9 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261114y";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261114z";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261114y";
-import * as C from "../js/common.js?v=20261114y";
-import { applySportInfo } from "../js/sportinfo.js?v=20261114y";
-import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261114y";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261114z";
+import * as C from "../js/common.js?v=20261114z";
+import { applySportInfo } from "../js/sportinfo.js?v=20261114z";
+import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261114z";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
