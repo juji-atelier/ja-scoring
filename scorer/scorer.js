@@ -1,9 +1,9 @@
-import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261115b";
+import { SPORTS, ADMIN_EMAIL, EMAIL_DOMAIN, EVENT_DEFAULTS } from "../config.js?v=20261115c";
 import { FORMATS, ENGINE_OF, fmtOf, deriveRally, deriveGoals, deriveDarts, view, publicRecord,
-         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261115b";
-import * as C from "../js/common.js?v=20261115b";
-import { applySportInfo } from "../js/sportinfo.js?v=20261115b";
-import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261115b";
+         clockMs, mmss, periodName, timeline, parsePlayers, DETAILS, catColor, standings } from "../js/engines.js?v=20261115c";
+import * as C from "../js/common.js?v=20261115c";
+import { applySportInfo } from "../js/sportinfo.js?v=20261115c";
+import { bracketHTML, hasBracket } from "../js/bracket.js?v=20261115c";
 const { $, $$, esc, toast, store, ref } = C;
 
 // ---------------------------------------------------------------- boot
@@ -2566,12 +2566,15 @@ function showUpdateBar(sig) {
   el.id = "updBar";
   el.dataset.at = (sig && sig.at) || Date.now();
   el.innerHTML = `<b>An update is ready for this page.</b>
-    <small>${inMatch ? "You are in a match \u2013 scores are saved, but you will come back to the match list." : "Nothing is lost, it takes a second."}</small>
+    <small>${inMatch ? "You are in a match \u2013 scores are saved, but you will come back to the match list." : "Nothing is lost, it takes a second."} Your ${esc(SP.name)} big screen reloads with it.</small>
     <span class="btns"><button class="primary small" data-u="now">Reload now</button><button class="small" data-u="later">Later</button></span>`;
-  el.onclick = e => {
+  el.onclick = async e => {
     const b = e.target.closest("[data-u]"); if (!b) return;
     if (b.dataset.u === "later") return el.remove();
     if (pending && !confirm("Some taps have not reached the server yet. Reload anyway?")) return;
+    // the PIC's reload also reloads this sport's own big screen (one opened with ?sport=…)
+    b.disabled = true;
+    try { await Promise.race([C.set(ref(db, `pub/${S}/reload`), { at: Date.now() }), new Promise(r => setTimeout(r, 2500))]); } catch (err) {}
     C.reloadFresh(el.dataset.at);
   };
   document.body.appendChild(el);

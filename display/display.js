@@ -1,11 +1,11 @@
-import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261115b";
-import { clockMs, mmss, catColor, standings } from "../js/engines.js?v=20261115b";
-import * as C from "../js/common.js?v=20261115b";
-import { applySportInfo } from "../js/sportinfo.js?v=20261115b";
-import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261115b";
-import { bowlingStandings } from "../js/bowling-data.js?v=20261115b";
-import { firebaseConfig } from "../config.js?v=20261115b";
-import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261115b";
+import { SPORTS, EVENT_DEFAULTS } from "../config.js?v=20261115c";
+import { clockMs, mmss, catColor, standings } from "../js/engines.js?v=20261115c";
+import * as C from "../js/common.js?v=20261115c";
+import { applySportInfo } from "../js/sportinfo.js?v=20261115c";
+import { BOARDS, mlbbMatches, applyBoardInfo } from "../js/boards.js?v=20261115c";
+import { bowlingStandings } from "../js/bowling-data.js?v=20261115c";
+import { firebaseConfig } from "../config.js?v=20261115c";
+import { cfgOf, isDone, mlEffective, sportEffective, KEEP } from "../js/livecfg.js?v=20261115c";
 const { $, esc, ref } = C;
 
 const P = new URLSearchParams(location.search);
@@ -18,7 +18,18 @@ if (!C.configured) { document.body.innerHTML = `<div class="setup">Paste your Fi
 let pub = {}, settings = {};
 let current = null, rotStart = 0, rotList = [];
 
-C.onValue(ref(C.db, "pub"), s => { pub = s.val() || {}; render(); checkGoals(); });
+// pub/<sport>/reload: the sport's PIC tapped "Reload now" on the scorer page. A screen pinned to
+// that sport (?sport=…) reloads with it; react to a change only, never to the value seen on opening.
+let sportReloadSeen;
+C.onValue(ref(C.db, "pub"), s => {
+  pub = s.val() || {};
+  if (FORCE_SPORT) {
+    const k = String(((pub[FORCE_SPORT] || {}).reload || {}).at || "");
+    if (sportReloadSeen === undefined) sportReloadSeen = k;
+    else if (k && k !== sportReloadSeen) return C.reloadFresh(k);
+  }
+  render(); checkGoals();
+});
 C.onValue(ref(C.db, "settings"), s => { settings = s.val() || {}; applySportInfo(settings.sportInfo); applyBoardInfo(settings.sportInfo); rotStart = 0; render(); });
 // Boards with their own page (bowling, Mobile Legends) can be shown here too – see js/boards.js.
 // Their data is only loaded while Admin has them pinned or ticked for the rotation.
